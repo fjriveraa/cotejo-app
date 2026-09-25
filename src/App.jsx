@@ -31,11 +31,18 @@ function RoleHome() {
 
 function ErrorScreen({ message }) {
   const { signOut } = useAuth()
+  const isNoMembership = message === 'Tu usuario no tiene una membresía activa en ninguna organización.'
   return (
     <div className="login-wrap">
       <div className="card login-card">
         <h1>No se pudo cargar tu cuenta</h1>
         <p className="error-text" style={{ marginBottom: 16 }}>{message}</p>
+        {isNoMembership && (
+          <p style={{ fontSize: 13, marginBottom: 16 }}>
+            Si estás creando una empresa nueva, <Link to="/signup">completa aquí el nombre de tu empresa</Link>.
+            Si te invitaron a una empresa, pide el enlace de invitación y ábrelo con esta misma sesión.
+          </p>
+        )}
         <button className="btn btn-secondary" onClick={signOut}>Cerrar sesión e intentar de nuevo</button>
       </div>
     </div>

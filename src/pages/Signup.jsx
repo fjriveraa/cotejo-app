@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 import { useAuth, writePendingAction, clearPendingAction } from '../hooks/useAuth'
 
 export default function Signup() {
-  const { session, signUpWithPassword, signInWithOAuth } = useAuth()
+  const { session, membership, loadingMembership, signUpWithPassword, signInWithOAuth } = useAuth()
   const navigate = useNavigate()
   const [orgName, setOrgName] = useState('')
   const [branchName, setBranchName] = useState('Principal')
@@ -14,9 +15,36 @@ export default function Signup() {
   const [needsConfirmation, setNeedsConfirmation] = useState(false)
   const [oauthLoading, setOauthLoading] = useState(false)
 
+  // Alguien puede llegar aquí con sesión ya abierta pero sin empresa todavía
+  // (por ejemplo, entró con Google desde /login antes de tener una). En ese
+  // caso no lo mandamos para "/" — ahí se quedaría atascado — sino que
+  // creamos la empresa directo, sin pedirle contraseña de nuevo.
+  async function handleSubmitWithSession() {
+    setError(null)
+    if (!orgName.trim()) {
+      setError('Ingresa el nombre de tu empresa.')
+      return
+    }
+    setLoading(true)
+    const { error } = await supabase.rpc('create_organization_and_owner', {
+      p_org_name: orgName.trim(),
+      p_branch_name: branchName.trim() || 'Principal'
+    })
+    setLoading(false)
+    if (error) {
+      setError(error.message || 'No se pudo crear la empresa.')
+      return
+    }
+    navigate('/')
+  }
+
   async function handleGoogle() {
     if (!orgName.trim()) {
       setError('Primero escribe el nombre de tu empresa, luego continúa con Google.')
+      return
+    }
+    if (session) {
+      await handleSubmitWithSession()
       return
     }
     setError(null)
@@ -38,6 +66,12 @@ export default function Signup() {
       setError('Ingresa el nombre de tu empresa.')
       return
     }
+
+    if (session) {
+      await handleSubmitWithSession()
+      return
+    }
+
     if (password.length < 6) {
       setError('La contraseña debe tener al menos 6 caracteres.')
       return
@@ -67,11 +101,19 @@ export default function Signup() {
     navigate('/')
   }
 
-  if (session && !needsConfirmation) {
-    // Ya hay una sesión (por ejemplo, alguien logueado que abre /signup por error).
-    // Dejamos que el flujo normal de la app decida a dónde va.
+  if (session && membership) {
+    // Ya tiene sesión Y empresa (por ejemplo, alguien logueado que abre
+    // /signup por error). Ahí sí lo mandamos a la app normal.
     navigate('/')
     return null
+  }
+
+  if (session && loadingMembership) {
+    return (
+      <div className="login-wrap">
+        <p style={{ opacity: 0.6 }}>Cargando...</p>
+      </div>
+    )
   }
 
   if (needsConfirmation) {
@@ -93,7 +135,11 @@ export default function Signup() {
     <div className="login-wrap">
       <div className="card login-card">
         <h1>Crear tu empresa en Cotejo</h1>
-        <p>Regístrate como dueño y arma tu equipo después con un enlace de invitación.</p>
+        <p>
+          {session
+            ? `Ya iniciaste sesión como ${session.user.email}. Solo falta el nombre de tu empresa.`
+            : 'Regístrate como dueño y arma tu equipo después con un enlace de invitación.'}
+        </p>
         <form onSubmit={handleSubmit}>
           <div className="field">
             <label htmlFor="orgName">Nombre de la empresa</label>
@@ -116,34 +162,40 @@ export default function Signup() {
               placeholder="Principal"
             />
           </div>
-          <div className="field">
-            <label htmlFor="email">Tu correo</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="password">Contraseña</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="new-password"
-              minLength={6}
-            />
-          </div>
+          {!session && (
+            <>
+              <div className="field">
+                <label htmlFor="email">Tu correo</label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="password">Contraseña</label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  minLength={6}
+                />
+              </div>
+            </>
+          )}
           {error && <p className="error-text">{error}</p>}
           <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
             {loading ? 'Creando...' : 'Crear mi empresa'}
           </button>
         </form>
+        {!session && (
+        <>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0', fontSize: 12, opacity: 0.6 }}>
           <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
           o
@@ -158,9 +210,13 @@ export default function Signup() {
         >
           {oauthLoading ? 'Conectando...' : 'Crear mi empresa con Google'}
         </button>
-        <p style={{ marginTop: 16, fontSize: 13, opacity: 0.7 }}>
-          ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>
-        </p>
+        </>
+        )}
+        {!session && (
+          <p style={{ marginTop: 16, fontSize: 13, opacity: 0.7 }}>
+            ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>
+          </p>
+        )}
       </div>
     </div>
   )
