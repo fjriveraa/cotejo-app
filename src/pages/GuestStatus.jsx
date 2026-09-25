@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 const STATUS_INFO = {
@@ -22,6 +22,8 @@ const STATUS_INFO = {
 
 export default function GuestStatus() {
   const { token } = useParams()
+  const [searchParams] = useSearchParams()
+  const alreadySent = searchParams.get('ya_enviado') === '1'
   const [info, setInfo] = useState(undefined) // undefined = cargando, null = no encontrado
   const [copied, setCopied] = useState(false)
 
@@ -67,6 +69,11 @@ export default function GuestStatus() {
     <div className="login-wrap">
       <div className="card login-card">
         <h1>{info.organization_name}</h1>
+        {alreadySent && (
+          <p style={{ fontSize: 13, background: '#FEF3C7', color: '#92400E', padding: '8px 12px', borderRadius: 8, marginTop: -8 }}>
+            Ya habíamos recibido este mismo comprobante antes — aquí está su estado.
+          </p>
+        )}
         <div style={{ display: 'inline-block', padding: '4px 12px', borderRadius: 999, background: status.color, color: '#fff', fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
           {status.label}
         </div>

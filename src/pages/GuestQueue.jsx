@@ -20,6 +20,53 @@ function ViewEvidence({ path }) {
   )
 }
 
+function LinkRow({ label, hint, link }) {
+  const [copied, setCopied] = useState(false)
+  function copyLink() {
+    navigator.clipboard?.writeText(link).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontWeight: 600, fontSize: 13 }}>{label}</div>
+      <p style={{ fontSize: 12, opacity: 0.7, margin: '2px 0 6px' }}>{hint}</p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <input readOnly value={link} onFocus={(e) => e.target.select()} style={{ flex: '1 1 220px', fontSize: 13 }} />
+        <button type="button" className="btn btn-secondary" onClick={copyLink}>
+          {copied ? 'Copiado' : 'Copiar'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function CustomerLinkCard({ organizationId, organizationName }) {
+  const remoteLink = `${window.location.origin}/comprobante/${organizationId}`
+  const inPersonLink = `${remoteLink}?presencial=1`
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(inPersonLink)}`
+
+  return (
+    <div className="card" style={{ marginBottom: 24, display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      <img src={qrUrl} alt={`Código QR para enviar comprobantes a ${organizationName} en tienda`} width={120} height={120} style={{ borderRadius: 8 }} />
+      <div style={{ flex: '1 1 260px' }}>
+        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Enlaces para tus clientes (no necesitan cuenta)</div>
+        <LinkRow
+          label="Código QR / enlace para imprimir en tienda"
+          hint="Para cuando el cliente está frente a ti pagando. Queda marcado como 'en tienda' en la cola."
+          link={inPersonLink}
+        />
+        <LinkRow
+          label="Enlace para WhatsApp / Instagram"
+          hint="Para cuando pides el comprobante a distancia. Queda marcado como 'a distancia' en la cola."
+          link={remoteLink}
+        />
+      </div>
+    </div>
+  )
+}
+
 export default function GuestQueue() {
   const { membership } = useAuth()
   const [items, setItems] = useState([])
@@ -73,6 +120,10 @@ export default function GuestQueue() {
         confirmar, la persona ve el resultado en el enlace que le dimos al enviarlo.
       </p>
 
+      {membership && (
+        <CustomerLinkCard organizationId={membership.organization_id} organizationName={membership.organizations?.name} />
+      )}
+
       {error && <p className="error-text">{error}</p>}
 
       {items.length === 0 ? (
@@ -93,6 +144,16 @@ export default function GuestQueue() {
                   {new Date(s.created_at).toLocaleString('es-HN')}
                   {s.origin_account_holder ? ` · de: ${s.origin_account_holder}` : ''}
                   {s.origin_bank ? ` (${s.origin_bank})` : ''}
+                </div>
+                <div style={{ marginTop: 4 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: s.is_in_person ? '#2B6459' : '#6B7280' }}>
+                    {s.is_in_person ? '📍 Enviado en tienda' : 'Enviado a distancia'}
+                  </span>
+                  {s.duplicate_reference && (
+                    <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 600, color: '#B91C1C' }}>
+                      ⚠ Esta referencia ya se usó en otra solicitud — revisa con cuidado
+                    </span>
+                  )}
                 </div>
                 {s.notes && <div className="meta">Nota del cliente: {s.notes}</div>}
               </div>

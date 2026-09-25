@@ -256,6 +256,7 @@ export default function App() {
       />
       <Route path="/comprobante" element={<GuestSubmit />} />
       <Route path="/comprobante/estado/:token" element={<GuestStatus />} />
+      <Route path="/comprobante/:organizationId" element={<GuestSubmit />} />
       <Route
         path="/comprobantes-invitados"
         element={

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 const emptyForm = {
@@ -15,17 +15,48 @@ const emptyForm = {
   notes: ''
 }
 
+async function hashFile(file) {
+  const buffer = await file.arrayBuffer()
+  const digest = await crypto.subtle.digest('SHA-256', buffer)
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 export default function GuestSubmit() {
   const navigate = useNavigate()
+  const { organizationId } = useParams() // presente solo si llegó por un enlace directo de una empresa
+  const [searchParams] = useSearchParams()
+  const isDirectLink = Boolean(organizationId)
+  // El mismo enlace directo puede ser para el QR de la tienda (?presencial=1)
+  // o para compartir por WhatsApp/Instagram (sin el parámetro) — son casos
+  // distintos aunque apunten a la misma empresa.
+  const isInPerson = isDirectLink && searchParams.get('presencial') === '1'
+
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
   const [searched, setSearched] = useState(false)
   const [selectedOrg, setSelectedOrg] = useState(null)
+  const [loadingDirectOrg, setLoadingDirectOrg] = useState(isDirectLink)
   const [form, setForm] = useState(emptyForm)
   const [file, setFile] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+
+  useEffect(() => {
+    if (!isDirectLink) return
+    let cancelled = false
+    supabase.rpc('public_get_organization_for_payment', { p_organization_id: organizationId }).then(({ data, error }) => {
+      if (cancelled) return
+      setLoadingDirectOrg(false)
+      if (error || !data || data.length === 0) {
+        setError('No encontramos esta empresa. Pídele el enlace correcto.')
+      } else {
+        setSelectedOrg(data[0])
+      }
+    })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organizationId])
 
   async function handleSearch(e) {
     e.preventDefault()
@@ -55,7 +86,9 @@ export default function GuestSubmit() {
     setSubmitting(true)
     try {
       let evidencePath = null
+      let fileHash = null
       if (file) {
+        fileHash = await hashFile(file)
         const ext = file.name.split('.').pop()
         const path = `${selectedOrg.organization_id}/${crypto.randomUUID()}.${ext}`
         const { error: uploadError } = await supabase.storage.from('guest-evidence').upload(path, file)
@@ -75,10 +108,17 @@ export default function GuestSubmit() {
         p_origin_account_holder: form.originAccountHolder.trim() || null,
         p_origin_account_number: form.originAccountNumber.trim() || null,
         p_notes: form.notes.trim() || null,
-        p_evidence_path: evidencePath
+        p_evidence_path: evidencePath,
+        p_file_hash: fileHash,
+        p_is_in_person: isInPerson
       })
 
       if (rpcError) throw rpcError
+
+      if (data?.duplicate) {
+        navigate(`/comprobante/estado/${data.tracking_token}?ya_enviado=1`)
+        return
+      }
 
       navigate(`/comprobante/estado/${data.tracking_token}`)
     } catch (err) {
@@ -88,11 +128,19 @@ export default function GuestSubmit() {
     }
   }
 
+  if (loadingDirectOrg) {
+    return (
+      <div className="login-wrap">
+        <p style={{ opacity: 0.6 }}>Cargando...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="login-wrap">
       <div className="card login-card" style={{ maxWidth: 480 }}>
         <h1>Enviar comprobante de pago</h1>
-        <p>Busca la empresa a la que le hiciste la transferencia para que confirmen tu pago.</p>
+        {!isDirectLink && <p>Busca la empresa a la que le hiciste la transferencia para que confirmen tu pago.</p>}
 
         {!selectedOrg ? (
           <>
@@ -141,9 +189,11 @@ export default function GuestSubmit() {
           <>
             <p style={{ fontSize: 14 }}>
               Enviando comprobante a <strong>{selectedOrg.name}</strong>.{' '}
-              <button type="button" onClick={() => setSelectedOrg(null)} style={{ background: 'none', border: 'none', color: '#2B6459', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: 14 }}>
-                Cambiar empresa
-              </button>
+              {!isDirectLink && (
+                <button type="button" onClick={() => setSelectedOrg(null)} style={{ background: 'none', border: 'none', color: '#2B6459', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: 14 }}>
+                  Cambiar empresa
+                </button>
+              )}
             </p>
             <form onSubmit={handleSubmit}>
               <div className="field">
@@ -189,9 +239,11 @@ export default function GuestSubmit() {
           </>
         )}
 
-        <p style={{ marginTop: 16, fontSize: 13, opacity: 0.7 }}>
-          ¿Trabajas en una empresa registrada en Cotejo? <Link to="/login">Inicia sesión aquí</Link>
-        </p>
+        {!isDirectLink && (
+          <p style={{ marginTop: 16, fontSize: 13, opacity: 0.7 }}>
+            ¿Trabajas en una empresa registrada en Cotejo? <Link to="/login">Inicia sesión aquí</Link>
+          </p>
+        )}
       </div>
     </div>
   )
