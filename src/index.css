@@ -63,6 +63,8 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: 10px;
   padding: 16px 24px;
   border-bottom: 1px solid var(--border);
   background: var(--card);
@@ -75,9 +77,15 @@ a {
   color: var(--teal-strong);
 }
 
+.topbar nav {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
 .topbar .user-info {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   font-size: 14px;
 }
@@ -247,13 +255,52 @@ a {
 
 .actions-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.actions-row .btn {
+  flex: 1 1 130px;
 }
 
 .empty-state {
   text-align: center;
   padding: 48px 24px;
   opacity: 0.6;
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    padding: 12px 16px;
+  }
+
+  .topbar .user-info {
+    font-size: 12px;
+    gap: 8px;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .container {
+    padding: 20px 16px;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .payment-row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .actions-row {
+    width: 100%;
+  }
+
+  .actions-row .btn {
+    flex: 1 1 calc(50% - 4px);
+  }
 }
 
 @media (prefers-color-scheme: dark) {
