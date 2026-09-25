@@ -7,6 +7,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined) // undefined = loading, null = signed out
   const [membership, setMembership] = useState(null) // { role, organization_id, branch_id, ... }
   const [loadingMembership, setLoadingMembership] = useState(false)
+  const [membershipError, setMembershipError] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -26,9 +27,11 @@ export function AuthProvider({ children }) {
     async function loadMembership() {
       if (!session?.user) {
         setMembership(null)
+        setMembershipError(null)
         return
       }
       setLoadingMembership(true)
+      setMembershipError(null)
       const { data, error } = await supabase
         .from('memberships')
         .select('id, role, user_id, organization_id, branch_scope, organizations(name)')
@@ -42,6 +45,14 @@ export function AuthProvider({ children }) {
       if (error) {
         console.error('Error cargando membership:', error)
         setMembership(null)
+        setMembershipError(error.message || 'Error desconocido al cargar tu cuenta.')
+        setLoadingMembership(false)
+        return
+      }
+
+      if (!data) {
+        setMembership(null)
+        setMembershipError('Tu usuario no tiene una membresía activa en ninguna organización.')
         setLoadingMembership(false)
         return
       }
@@ -81,7 +92,8 @@ export function AuthProvider({ children }) {
     user: session?.user ?? null,
     membership,
     loadingMembership,
-    isLoading: session === undefined || (session && loadingMembership && membership === null),
+    membershipError,
+    isLoading: session === undefined || (session && loadingMembership),
     signInWithPassword,
     signOut
   }

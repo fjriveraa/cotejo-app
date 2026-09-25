@@ -23,12 +23,27 @@ function RoleHome() {
   return <Navigate to="/registrar" replace />
 }
 
+function ErrorScreen({ message }) {
+  const { signOut } = useAuth()
+  return (
+    <div className="login-wrap">
+      <div className="card login-card">
+        <h1>No se pudo cargar tu cuenta</h1>
+        <p className="error-text" style={{ marginBottom: 16 }}>{message}</p>
+        <button className="btn btn-secondary" onClick={signOut}>Cerrar sesión e intentar de nuevo</button>
+      </div>
+    </div>
+  )
+}
+
 function ProtectedLayout({ children }) {
-  const { session, membership, isLoading } = useAuth()
+  const { session, membership, isLoading, membershipError } = useAuth()
 
   if (session === undefined) return <LoadingScreen />
   if (session === null) return <Navigate to="/login" replace />
-  if (isLoading || !membership) return <LoadingScreen />
+  if (isLoading) return <LoadingScreen />
+  if (membershipError) return <ErrorScreen message={membershipError} />
+  if (!membership) return <ErrorScreen message="No se encontró tu cuenta." />
 
   return (
     <div className="app-shell">
