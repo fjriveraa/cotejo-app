@@ -8,6 +8,8 @@ import AccountantQueue from './pages/AccountantQueue'
 import InviteTeam from './pages/InviteTeam'
 import Team from './pages/Team'
 import JoinManual from './pages/JoinManual'
+import Directory from './pages/Directory'
+import JoinRequests from './pages/JoinRequests'
 import TopBar from './components/TopBar'
 
 const OWNER_ROLES = ['propietario', 'admin']
@@ -165,6 +167,24 @@ export default function App() {
           <RequireSessionLayout>
             <JoinManual />
           </RequireSessionLayout>
+        }
+      />
+      <Route
+        path="/empresas"
+        element={
+          <RequireSessionLayout>
+            <Directory />
+          </RequireSessionLayout>
+        }
+      />
+      <Route
+        path="/solicitudes"
+        element={
+          <ProtectedLayout>
+            <RequireOwner>
+              <JoinRequests />
+            </RequireOwner>
+          </ProtectedLayout>
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />

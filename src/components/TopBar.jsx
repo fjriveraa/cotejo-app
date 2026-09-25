@@ -24,7 +24,9 @@ export default function TopBar() {
         {canSeeQueue && <NavLink to="/cola" style={navLinkStyle}>Cola de confirmación</NavLink>}
         {canInvite && <NavLink to="/invitar" style={navLinkStyle}>Invitar equipo</NavLink>}
         {canInvite && <NavLink to="/equipo" style={navLinkStyle}>Mi equipo</NavLink>}
+        {canInvite && <NavLink to="/solicitudes" style={navLinkStyle}>Solicitudes</NavLink>}
         <NavLink to="/unirme" style={navLinkStyle}>Unirme a otra empresa</NavLink>
+        <NavLink to="/empresas" style={navLinkStyle}>Buscar empresas</NavLink>
       </nav>
       <div className="user-info">
         <span>{user?.email}</span>
