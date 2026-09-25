@@ -43,3 +43,5 @@ npm run dev
 - UI de comparación de posibles duplicados.
 - Integración de IA/OCR vía Edge Function (Fase 5 del brief).
 - Piloto interno en FARO HN (Fase 6).
+
+Desplegado en Vercel el 2026-09-25 11:07 hora Honduras.
