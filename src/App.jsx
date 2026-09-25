@@ -32,17 +32,30 @@ function RoleHome() {
 function ErrorScreen({ message }) {
   const { signOut } = useAuth()
   const isNoMembership = message === 'Tu usuario no tiene una membresía activa en ninguna organización.'
+
+  if (isNoMembership) {
+    return (
+      <div className="login-wrap">
+        <div className="card login-card">
+          <h1>Todavía no tienes empresa en Cotejo</h1>
+          <p style={{ marginBottom: 20 }}>Elige una opción para continuar:</p>
+          <Link to="/signup" className="btn btn-primary" style={{ width: '100%', display: 'block', textAlign: 'center', marginBottom: 12, textDecoration: 'none' }}>
+            Crear mi empresa
+          </Link>
+          <p style={{ fontSize: 13, opacity: 0.7, marginBottom: 20 }}>
+            ¿Te invitaron a una empresa? Pide el enlace de invitación y ábrelo con esta misma sesión iniciada.
+          </p>
+          <button className="btn btn-secondary" style={{ width: '100%' }} onClick={signOut}>Cerrar sesión e intentar de nuevo</button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="login-wrap">
       <div className="card login-card">
         <h1>No se pudo cargar tu cuenta</h1>
         <p className="error-text" style={{ marginBottom: 16 }}>{message}</p>
-        {isNoMembership && (
-          <p style={{ fontSize: 13, marginBottom: 16 }}>
-            Si estás creando una empresa nueva, <Link to="/signup">completa aquí el nombre de tu empresa</Link>.
-            Si te invitaron a una empresa, pide el enlace de invitación y ábrelo con esta misma sesión.
-          </p>
-        )}
         <button className="btn btn-secondary" onClick={signOut}>Cerrar sesión e intentar de nuevo</button>
       </div>
     </div>
