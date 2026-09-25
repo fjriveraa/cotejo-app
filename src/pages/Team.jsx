@@ -12,15 +12,30 @@ const ROLE_LABELS = {
 }
 
 export default function Team() {
-  const { membership: myMembership } = useAuth()
+  const { membership: myMembership, refreshMemberships } = useAuth()
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [busyId, setBusyId] = useState(null)
+  const [visibilityBusy, setVisibilityBusy] = useState(false)
 
   useEffect(() => {
     loadMembers()
   }, [])
+
+  async function handleToggleVisibility() {
+    if (!myMembership) return
+    const nextValue = !myMembership.organizations?.is_public
+    setVisibilityBusy(true)
+    setError(null)
+    const { error } = await supabase.rpc('set_organization_visibility', {
+      p_organization_id: myMembership.organization_id,
+      p_is_public: nextValue
+    })
+    setVisibilityBusy(false)
+    if (error) setError(error.message)
+    else refreshMemberships()
+  }
 
   async function loadMembers() {
     setLoading(true)
@@ -63,6 +78,24 @@ export default function Team() {
       </p>
 
       {error && <p className="error-text">{error}</p>}
+
+      <div className="card" style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>Visible en el directorio de Cotejo</div>
+          <div style={{ fontSize: 13, opacity: 0.7 }}>
+            {myMembership?.organizations?.is_public === false
+              ? 'Tu empresa está oculta. Nadie puede encontrarla buscando; solo entra quien tenga un enlace de invitación.'
+              : 'Cualquier usuario de Cotejo puede encontrar tu empresa buscando y pedir unirse.'}
+          </div>
+        </div>
+        <button className="btn btn-secondary" disabled={visibilityBusy} onClick={handleToggleVisibility}>
+          {visibilityBusy
+            ? 'Un momento...'
+            : myMembership?.organizations?.is_public === false
+              ? 'Hacer visible'
+              : 'Ocultar del directorio'}
+        </button>
+      </div>
 
       {members.length === 0 ? (
         <p className="empty-state">Todavía no hay nadie en tu equipo.</p>
