@@ -2,12 +2,118 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 
+const FIELD_LABELS = {
+  amount: 'Monto',
+  bank: 'Banco',
+  account_last4: 'Últimos 4 dígitos',
+  reference_raw: 'Referencia'
+}
+
+function EvidenceModal({ payment, onClose }) {
+  const [signedUrl, setSignedUrl] = useState(null)
+  const [loadingUrl, setLoadingUrl] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadUrl() {
+      if (!payment.evidence_path) {
+        setLoadingUrl(false)
+        return
+      }
+      const { data, error } = await supabase.storage
+        .from('evidence')
+        .createSignedUrl(payment.evidence_path, 300)
+      if (!cancelled) {
+        if (!error) setSignedUrl(data?.signedUrl ?? null)
+        setLoadingUrl(false)
+      }
+    }
+    loadUrl()
+    return () => { cancelled = true }
+  }, [payment.evidence_path])
+
+  const extraction = payment.extraction
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="card"
+        style={{ maxWidth: 720, width: '100%', maxHeight: '90vh', overflow: 'auto', background: 'white' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <h3 style={{ margin: 0 }}>Comprobante</h3>
+          <button className="btn btn-secondary" onClick={onClose}>Cerrar</button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 280px', minWidth: 240 }}>
+            {loadingUrl && <p style={{ opacity: 0.6 }}>Cargando imagen...</p>}
+            {!loadingUrl && !signedUrl && <p className="empty-state">Sin comprobante adjunto.</p>}
+            {signedUrl && (
+              <img
+                src={signedUrl}
+                alt="Comprobante"
+                style={{ maxWidth: '100%', borderRadius: 8, border: '1px solid #e5e0d8' }}
+              />
+            )}
+          </div>
+
+          <div style={{ flex: '1 1 240px', minWidth: 220 }}>
+            <h4 style={{ marginTop: 0 }}>Datos detectados por IA</h4>
+            {!extraction && <p className="empty-state">Este pago no tiene datos de IA (registrado manualmente).</p>}
+            {extraction && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {Object.entries(FIELD_LABELS).map(([key, label]) => {
+                  const value = extraction[key]
+                  const confidence = extraction.confidence?.[key]
+                  return (
+                    <div key={key} style={{ fontSize: 13 }}>
+                      <span style={{ opacity: 0.6 }}>{label}: </span>
+                      <strong>{value ?? '—'}</strong>
+                      {typeof confidence === 'number' && (
+                        <span style={{
+                          marginLeft: 6, fontSize: 11,
+                          color: confidence >= 0.7 ? '#2B6459' : confidence > 0 ? '#B08900' : '#A2483A'
+                        }}>
+                          ({Math.round(confidence * 100)}% confianza)
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+                {extraction.notes && (
+                  <p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>Nota IA: {extraction.notes}</p>
+                )}
+              </div>
+            )}
+
+            <h4 style={{ marginTop: 20 }}>Datos registrados</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+              <div><span style={{ opacity: 0.6 }}>Monto: </span><strong>{payment.currency} {Number(payment.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}</strong></div>
+              <div><span style={{ opacity: 0.6 }}>Banco: </span><strong>{payment.bank}{payment.account_last4 ? ` (${payment.account_last4})` : ''}</strong></div>
+              <div><span style={{ opacity: 0.6 }}>Referencia: </span><strong>{payment.reference_raw || '—'}</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AccountantQueue() {
   const { membership } = useAuth()
   const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [busyId, setBusyId] = useState(null)
+  const [viewingPayment, setViewingPayment] = useState(null)
 
   useEffect(() => {
     if (!membership) return
@@ -21,7 +127,8 @@ export default function AccountantQueue() {
       .from('payment_records')
       .select(`
         id, amount, currency, reference_raw, notes, bank, account_last4,
-        verification_status, processing_status, customer_waiting, version, created_at
+        verification_status, processing_status, customer_waiting, version, created_at,
+        evidence_path, extraction
       `)
       .eq('organization_id', membership.organization_id)
       .in('verification_status', ['pending', 'under_review'])
@@ -107,9 +214,26 @@ export default function AccountantQueue() {
                       {new Date(p.created_at).toLocaleString('es-HN')} {p.reference_raw ? `· ref: ${p.reference_raw}` : ''}
                     </div>
                     {p.notes && <div className="meta" style={{ marginTop: 2 }}>{p.notes}</div>}
-                    <span className={`status-pill status-${p.verification_status}`} style={{ marginTop: 6 }}>
-                      {p.verification_status}
-                    </span>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
+                      <span className={`status-pill status-${p.verification_status}`}>
+                        {p.verification_status}
+                      </span>
+                      {p.extraction && (
+                        <span style={{ fontSize: 11, opacity: 0.6 }}>✓ leído por IA</span>
+                      )}
+                      {p.evidence_path && (
+                        <button
+                          type="button"
+                          onClick={() => setViewingPayment(p)}
+                          style={{
+                            fontSize: 12, background: 'none', border: 'none', textDecoration: 'underline',
+                            cursor: 'pointer', color: '#2B6459', padding: 0
+                          }}
+                        >
+                          Ver comprobante
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="actions-row">
                     <button
@@ -146,6 +270,10 @@ export default function AccountantQueue() {
             </div>
           </div>
         ))
+      )}
+
+      {viewingPayment && (
+        <EvidenceModal payment={viewingPayment} onClose={() => setViewingPayment(null)} />
       )}
     </div>
   )
