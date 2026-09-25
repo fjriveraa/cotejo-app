@@ -154,6 +154,18 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut()
   }
 
+  // Google (y en el futuro Apple) reemplazan la sesión con un redirect de ida y
+  // vuelta, no devuelven un error/data como el login por contraseña. Por eso
+  // quien llama debe guardar la acción pendiente (writePendingAction) ANTES de
+  // invocar esto, igual que con signUpWithPassword.
+  async function signInWithOAuth(provider, redirectTo) {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: redirectTo || window.location.href }
+    })
+    return { error }
+  }
+
   const value = {
     session,
     user: session?.user ?? null,
@@ -163,6 +175,7 @@ export function AuthProvider({ children }) {
     isLoading: session === undefined || (session && loadingMembership),
     signInWithPassword,
     signUpWithPassword,
+    signInWithOAuth,
     signOut
   }
 

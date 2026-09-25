@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { useAuth, writePendingAction } from '../hooks/useAuth'
+import { useAuth, writePendingAction, clearPendingAction } from '../hooks/useAuth'
 
 const ROLE_LABELS = {
   empleado: 'Empleado',
@@ -11,7 +11,7 @@ const ROLE_LABELS = {
 
 export default function Join() {
   const { token } = useParams()
-  const { session, signInWithPassword, signUpWithPassword } = useAuth()
+  const { session, signInWithPassword, signUpWithPassword, signInWithOAuth } = useAuth()
   const navigate = useNavigate()
 
   const [info, setInfo] = useState(undefined) // undefined = cargando, null = inválido
@@ -22,6 +22,19 @@ export default function Join() {
   const [error, setError] = useState(null)
   const [needsConfirmation, setNeedsConfirmation] = useState(false)
   const [joining, setJoining] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState(false)
+
+  async function handleGoogle() {
+    setError(null)
+    setOauthLoading(true)
+    writePendingAction({ type: 'join_invite', token })
+    const { error } = await signInWithOAuth('google', window.location.href)
+    if (error) {
+      clearPendingAction()
+      setOauthLoading(false)
+      setError('No se pudo continuar con Google.')
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -58,6 +71,7 @@ export default function Join() {
       const { data, error: signUpError } = await signUpWithPassword(email, password)
       setLoading(false)
       if (signUpError) {
+        clearPendingAction()
         setError(signUpError.message || 'No se pudo crear la cuenta.')
         return
       }
@@ -73,6 +87,7 @@ export default function Join() {
     const { error: loginError } = await signInWithPassword(email, password)
     setLoading(false)
     if (loginError) {
+      clearPendingAction()
       setError('Correo o contraseña incorrectos.')
       return
     }
@@ -189,6 +204,20 @@ export default function Join() {
             {loading ? 'Un momento...' : mode === 'signup' ? 'Crear cuenta y unirme' : 'Iniciar sesión y unirme'}
           </button>
         </form>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0', fontSize: 12, opacity: 0.6 }}>
+          <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
+          o
+          <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
+        </div>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          style={{ width: '100%' }}
+          onClick={handleGoogle}
+          disabled={oauthLoading}
+        >
+          {oauthLoading ? 'Conectando...' : 'Continuar con Google'}
+        </button>
       </div>
     </div>
   )

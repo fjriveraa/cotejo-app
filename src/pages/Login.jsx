@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
 export default function Login() {
-  const { signInWithPassword } = useAuth()
+  const { signInWithPassword, signInWithOAuth } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState(false)
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -18,6 +19,17 @@ export default function Login() {
     if (error) {
       setError('Correo o contraseña incorrectos.')
     }
+  }
+
+  async function handleGoogle() {
+    setError(null)
+    setOauthLoading(true)
+    const { error } = await signInWithOAuth('google', `${window.location.origin}/`)
+    if (error) {
+      setOauthLoading(false)
+      setError('No se pudo continuar con Google.')
+    }
+    // Si no hay error, el navegador redirige a Google y vuelve solo.
   }
 
   return (
@@ -53,6 +65,20 @@ export default function Login() {
             {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0', fontSize: 12, opacity: 0.6 }}>
+          <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
+          o
+          <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
+        </div>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          style={{ width: '100%' }}
+          onClick={handleGoogle}
+          disabled={oauthLoading}
+        >
+          {oauthLoading ? 'Conectando...' : 'Continuar con Google'}
+        </button>
         <p style={{ marginTop: 16, fontSize: 13, opacity: 0.7 }}>
           ¿Tu empresa no tiene cuenta todavía? <Link to="/signup">Créala aquí</Link>
         </p>

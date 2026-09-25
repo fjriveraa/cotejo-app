@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth, writePendingAction, clearPendingAction } from '../hooks/useAuth'
 
 export default function Signup() {
-  const { session, signUpWithPassword } = useAuth()
+  const { session, signUpWithPassword, signInWithOAuth } = useAuth()
   const navigate = useNavigate()
   const [orgName, setOrgName] = useState('')
   const [branchName, setBranchName] = useState('Principal')
@@ -12,6 +12,23 @@ export default function Signup() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [needsConfirmation, setNeedsConfirmation] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState(false)
+
+  async function handleGoogle() {
+    if (!orgName.trim()) {
+      setError('Primero escribe el nombre de tu empresa, luego continúa con Google.')
+      return
+    }
+    setError(null)
+    setOauthLoading(true)
+    writePendingAction({ type: 'create_org', orgName: orgName.trim(), branchName: branchName.trim() })
+    const { error } = await signInWithOAuth('google', `${window.location.origin}/`)
+    if (error) {
+      clearPendingAction()
+      setOauthLoading(false)
+      setError('No se pudo continuar con Google.')
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -127,6 +144,20 @@ export default function Signup() {
             {loading ? 'Creando...' : 'Crear mi empresa'}
           </button>
         </form>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0', fontSize: 12, opacity: 0.6 }}>
+          <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
+          o
+          <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
+        </div>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          style={{ width: '100%' }}
+          onClick={handleGoogle}
+          disabled={oauthLoading}
+        >
+          {oauthLoading ? 'Conectando...' : 'Crear mi empresa con Google'}
+        </button>
         <p style={{ marginTop: 16, fontSize: 13, opacity: 0.7 }}>
           ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>
         </p>
