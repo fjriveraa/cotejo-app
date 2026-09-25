@@ -27,6 +27,7 @@ export default function TopBar() {
         {canInvite && <NavLink to="/solicitudes" style={navLinkStyle}>Solicitudes</NavLink>}
         <NavLink to="/unirme" style={navLinkStyle}>Unirme a otra empresa</NavLink>
         <NavLink to="/empresas" style={navLinkStyle}>Buscar empresas</NavLink>
+        <NavLink to="/autonomo" style={navLinkStyle}>Trabajar como autónomo</NavLink>
       </nav>
       <div className="user-info">
         <span>{user?.email}</span>

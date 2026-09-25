@@ -10,6 +10,7 @@ import Team from './pages/Team'
 import JoinManual from './pages/JoinManual'
 import Directory from './pages/Directory'
 import JoinRequests from './pages/JoinRequests'
+import Autonomo from './pages/Autonomo'
 import TopBar from './components/TopBar'
 
 const OWNER_ROLES = ['propietario', 'admin']
@@ -45,8 +46,14 @@ function ErrorScreen({ message }) {
           <Link to="/signup" className="btn btn-primary" style={{ width: '100%', display: 'block', textAlign: 'center', marginBottom: 12, textDecoration: 'none' }}>
             Crear mi empresa
           </Link>
-          <Link to="/unirme" className="btn btn-secondary" style={{ width: '100%', display: 'block', textAlign: 'center', marginBottom: 20, textDecoration: 'none' }}>
+          <Link to="/unirme" className="btn btn-secondary" style={{ width: '100%', display: 'block', textAlign: 'center', marginBottom: 12, textDecoration: 'none' }}>
             Unirme a una empresa con un enlace
+          </Link>
+          <Link to="/empresas" className="btn btn-secondary" style={{ width: '100%', display: 'block', textAlign: 'center', marginBottom: 12, textDecoration: 'none' }}>
+            Buscar una empresa registrada
+          </Link>
+          <Link to="/autonomo" className="btn btn-secondary" style={{ width: '100%', display: 'block', textAlign: 'center', marginBottom: 20, textDecoration: 'none' }}>
+            Trabajar como autónomo / comerciante individual
           </Link>
           <button className="btn btn-secondary" style={{ width: '100%' }} onClick={signOut}>Cerrar sesión e intentar de nuevo</button>
         </div>
@@ -185,6 +192,14 @@ export default function App() {
               <JoinRequests />
             </RequireOwner>
           </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/autonomo"
+        element={
+          <RequireSessionLayout>
+            <Autonomo />
+          </RequireSessionLayout>
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
