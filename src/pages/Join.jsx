@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth, writePendingAction, clearPendingAction } from '../hooks/useAuth'
 
 const ROLE_LABELS = {
-  empleado: 'Empleado',
+  empleado: 'Colaborador',
   contador: 'Contador',
   supervisor: 'Supervisor'
 }

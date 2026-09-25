@@ -12,6 +12,7 @@ import Directory from './pages/Directory'
 import JoinRequests from './pages/JoinRequests'
 import Autonomo from './pages/Autonomo'
 import Verify from './pages/Verify'
+import MyIdentification from './pages/MyIdentification'
 import AdminVerifications from './pages/AdminVerifications'
 import TopBar from './components/TopBar'
 
@@ -230,6 +231,14 @@ export default function App() {
             <RequirePlatformAdmin>
               <AdminVerifications />
             </RequirePlatformAdmin>
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/mi-identificacion"
+        element={
+          <ProtectedLayout>
+            <MyIdentification />
           </ProtectedLayout>
         }
       />

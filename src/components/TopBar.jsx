@@ -38,6 +38,7 @@ export default function TopBar() {
         <NavLink to="/unirme" style={navLinkStyle}>Unirme a otra empresa</NavLink>
         <NavLink to="/empresas" style={navLinkStyle}>Buscar empresas</NavLink>
         <NavLink to="/autonomo" style={navLinkStyle}>Trabajar como autónomo</NavLink>
+        <NavLink to="/mi-identificacion" style={navLinkStyle}>Mi identificación</NavLink>
       </nav>
       <div className="user-info">
         <span>{user?.email}</span>

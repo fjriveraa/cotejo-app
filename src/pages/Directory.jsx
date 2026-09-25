@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const ROLE_LABELS = {
-  empleado: 'Empleado',
+  empleado: 'Colaborador',
   contador: 'Contador',
   supervisor: 'Supervisor'
 }

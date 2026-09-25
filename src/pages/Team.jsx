@@ -3,12 +3,30 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 
 const ROLE_LABELS = {
-  empleado: 'Empleado',
+  empleado: 'Colaborador',
   contador: 'Contador',
   supervisor: 'Supervisor',
   propietario: 'Dueño',
   admin: 'Admin',
   auditor: 'Auditor'
+}
+
+function ViewIdDoc({ path }) {
+  const [loading, setLoading] = useState(false)
+
+  async function open() {
+    setLoading(true)
+    const { data, error } = await supabase.storage.from('id-docs').createSignedUrl(path, 300)
+    setLoading(false)
+    if (!error && data?.signedUrl) window.open(data.signedUrl, '_blank', 'noopener')
+  }
+
+  if (!path) return null
+  return (
+    <button type="button" className="btn btn-secondary" onClick={open} disabled={loading} style={{ fontSize: 12, padding: '2px 8px' }}>
+      {loading ? 'Abriendo...' : 'Ver foto de ID'}
+    </button>
+  )
 }
 
 export default function Team() {
@@ -21,7 +39,8 @@ export default function Team() {
 
   useEffect(() => {
     loadMembers()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myMembership?.organization_id])
 
   async function handleToggleVisibility() {
     if (!myMembership) return
@@ -38,9 +57,10 @@ export default function Team() {
   }
 
   async function loadMembers() {
+    if (!myMembership) return
     setLoading(true)
     setError(null)
-    const { data, error } = await supabase.rpc('list_team_members')
+    const { data, error } = await supabase.rpc('list_team_members', { p_organization_id: myMembership.organization_id })
     if (error) setError(error.message)
     else setMembers(data || [])
     setLoading(false)
@@ -112,10 +132,15 @@ export default function Team() {
                   {ROLE_LABELS[m.role] || m.role}
                   {m.status === 'disabled' && <span style={{ marginLeft: 8 }}>· fuera del equipo</span>}
                   {' · desde '}{new Date(m.created_at).toLocaleDateString('es-HN')}
+                  {' · '}
+                  <span style={{ color: m.has_id ? '#2B6459' : '#B45309' }}>
+                    {m.has_id ? `✓ ID: ${m.id_number || 'foto agregada'}` : 'Sin identificación'}
+                  </span>
                 </div>
               </div>
               {m.membership_id !== myMembership?.id && (
                 <div className="actions-row">
+                  {m.id_doc_path && <ViewIdDoc path={m.id_doc_path} />}
                   {m.status === 'disabled' ? (
                     <button className="btn btn-secondary" disabled={busyId === m.membership_id} onClick={() => handleReactivate(m)}>
                       {busyId === m.membership_id ? 'Un momento...' : 'Reactivar'}
