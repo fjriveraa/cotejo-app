@@ -6,6 +6,7 @@ import Join from './pages/Join'
 import EmployeeDashboard from './pages/EmployeeDashboard'
 import AccountantQueue from './pages/AccountantQueue'
 import InviteTeam from './pages/InviteTeam'
+import Team from './pages/Team'
 import TopBar from './components/TopBar'
 
 const OWNER_ROLES = ['propietario', 'admin']
@@ -104,6 +105,16 @@ export default function App() {
           <ProtectedLayout>
             <RequireOwner>
               <InviteTeam />
+            </RequireOwner>
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/equipo"
+        element={
+          <ProtectedLayout>
+            <RequireOwner>
+              <Team />
             </RequireOwner>
           </ProtectedLayout>
         }

@@ -23,6 +23,7 @@ export default function TopBar() {
         <NavLink to="/registrar" style={navLinkStyle}>Registrar pago</NavLink>
         {canSeeQueue && <NavLink to="/cola" style={navLinkStyle}>Cola de confirmación</NavLink>}
         {canInvite && <NavLink to="/invitar" style={navLinkStyle}>Invitar equipo</NavLink>}
+        {canInvite && <NavLink to="/equipo" style={navLinkStyle}>Mi equipo</NavLink>}
       </nav>
       <div className="user-info">
         <span>{user?.email}</span>
