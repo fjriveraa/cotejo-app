@@ -93,7 +93,10 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/signup" element={session ? <Navigate to="/" replace /> : <Signup />} />
+      {/* /signup decide por sí mismo qué mostrar: si hay sesión pero sin
+          empresa (por ejemplo, entró con Google), tiene que poder abrirse
+          igual. Solo Login se cierra automáticamente con sesión. */}
+      <Route path="/signup" element={<Signup />} />
       <Route path="/join/:token" element={<Join />} />
       <Route
         path="/"
