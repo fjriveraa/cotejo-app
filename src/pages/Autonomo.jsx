@@ -9,6 +9,8 @@ export default function Autonomo() {
   const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [duplicateWarning, setDuplicateWarning] = useState(null)
+  const [confirmedDuplicate, setConfirmedDuplicate] = useState(false)
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -17,10 +19,21 @@ export default function Autonomo() {
       setError('Ingresa tu nombre o el nombre con el que trabajas.')
       return
     }
+
+    if (!confirmedDuplicate) {
+      const { data: similar } = await supabase.rpc('check_similar_organization_names', { p_name: displayName.trim() })
+      if (similar && similar.length > 0) {
+        setDuplicateWarning(similar[0].name)
+        setConfirmedDuplicate(true)
+        return
+      }
+    }
+
     setLoading(true)
     const { data, error } = await supabase.rpc('create_organization_and_owner', {
       p_org_name: displayName.trim(),
-      p_branch_name: 'Principal'
+      p_branch_name: 'Principal',
+      p_org_type: 'autonomo'
     })
     setLoading(false)
     if (error) {
@@ -49,14 +62,25 @@ export default function Autonomo() {
               id="displayName"
               type="text"
               value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
+              onChange={(e) => {
+                setDisplayName(e.target.value)
+                setDuplicateWarning(null)
+                setConfirmedDuplicate(false)
+              }}
               placeholder="ej. Andrea Osorio, o Repostería Andrea"
               required
             />
           </div>
+          {duplicateWarning && (
+            <p style={{ color: '#B45309', fontSize: 13, marginBottom: 12 }}>
+              Ya existe un registro llamado "{duplicateWarning}" en Cotejo. Si es tuyo, mejor pídele a esa persona
+              un enlace de invitación o búscalo en "Buscar empresas". Si es otro negocio, toca de nuevo para
+              continuar de todas formas.
+            </p>
+          )}
           {error && <p className="error-text">{error}</p>}
           <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-            {loading ? 'Creando...' : 'Empezar a usar Cotejo'}
+            {loading ? 'Creando...' : duplicateWarning ? 'Continuar de todas formas' : 'Empezar a usar Cotejo'}
           </button>
         </form>
       </div>

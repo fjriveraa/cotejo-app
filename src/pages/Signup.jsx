@@ -14,6 +14,19 @@ export default function Signup() {
   const [error, setError] = useState(null)
   const [needsConfirmation, setNeedsConfirmation] = useState(false)
   const [oauthLoading, setOauthLoading] = useState(false)
+  const [duplicateWarning, setDuplicateWarning] = useState(null)
+  const [confirmedDuplicate, setConfirmedDuplicate] = useState(false)
+
+  async function nameIsFreeToUse() {
+    if (confirmedDuplicate) return true
+    const { data: similar } = await supabase.rpc('check_similar_organization_names', { p_name: orgName.trim() })
+    if (similar && similar.length > 0) {
+      setDuplicateWarning(similar[0].name)
+      setConfirmedDuplicate(true)
+      return false
+    }
+    return true
+  }
 
   // Alguien puede llegar aquí con sesión ya abierta pero sin empresa todavía
   // (por ejemplo, entró con Google desde /login antes de tener una). En ese
@@ -25,6 +38,7 @@ export default function Signup() {
       setError('Ingresa el nombre de tu empresa.')
       return
     }
+    if (!(await nameIsFreeToUse())) return
     setLoading(true)
     const { data, error } = await supabase.rpc('create_organization_and_owner', {
       p_org_name: orgName.trim(),
@@ -49,6 +63,7 @@ export default function Signup() {
       await handleSubmitWithSession()
       return
     }
+    if (!(await nameIsFreeToUse())) return
     setError(null)
     setOauthLoading(true)
     writePendingAction({ type: 'create_org', orgName: orgName.trim(), branchName: branchName.trim() })
@@ -78,6 +93,8 @@ export default function Signup() {
       setError('La contraseña debe tener al menos 6 caracteres.')
       return
     }
+
+    if (!(await nameIsFreeToUse())) return
 
     setLoading(true)
     // Se guarda antes de crear la cuenta: si el correo requiere confirmación,
@@ -149,7 +166,11 @@ export default function Signup() {
               id="orgName"
               type="text"
               value={orgName}
-              onChange={(e) => setOrgName(e.target.value)}
+              onChange={(e) => {
+                setOrgName(e.target.value)
+                setDuplicateWarning(null)
+                setConfirmedDuplicate(false)
+              }}
               placeholder="ej. FARO HN"
               required
             />
@@ -191,9 +212,16 @@ export default function Signup() {
               </div>
             </>
           )}
+          {duplicateWarning && (
+            <p style={{ color: '#B45309', fontSize: 13, marginBottom: 12 }}>
+              Ya existe un registro llamado "{duplicateWarning}" en Cotejo. Si esa empresa es tuya, mejor pídele
+              a quien la creó un enlace de invitación, o búscala en "Buscar empresas" para unirte. Si es otro
+              negocio distinto, toca de nuevo para continuar de todas formas.
+            </p>
+          )}
           {error && <p className="error-text">{error}</p>}
           <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-            {loading ? 'Creando...' : 'Crear mi empresa'}
+            {loading ? 'Creando...' : duplicateWarning ? 'Continuar de todas formas' : 'Crear mi empresa'}
           </button>
         </form>
         {!session && (

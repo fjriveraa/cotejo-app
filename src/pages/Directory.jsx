@@ -78,7 +78,9 @@ export default function Directory() {
             <div key={org.organization_id} className="payment-row" style={{ flexWrap: 'wrap', gap: 12 }}>
               <div>
                 <div className="amount" style={{ fontSize: 14 }}>{org.name}</div>
-                <div className="meta">{org.country || 'HN'}</div>
+                <div className="meta">
+                  {org.country || 'HN'} · {org.org_type === 'autonomo' ? 'Comerciante individual' : 'Empresa'}
+                </div>
               </div>
               <div className="actions-row" style={{ alignItems: 'center' }}>
                 {org.already_member ? (
