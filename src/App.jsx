@@ -14,9 +14,13 @@ import Autonomo from './pages/Autonomo'
 import Verify from './pages/Verify'
 import MyIdentification from './pages/MyIdentification'
 import AdminVerifications from './pages/AdminVerifications'
+import GuestSubmit from './pages/GuestSubmit'
+import GuestStatus from './pages/GuestStatus'
+import GuestQueue from './pages/GuestQueue'
 import TopBar from './components/TopBar'
 
 const OWNER_ROLES = ['propietario', 'admin']
+const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
 
 function LoadingScreen() {
   return (
@@ -95,6 +99,14 @@ function ProtectedLayout({ children }) {
 function RequireOwner({ children }) {
   const { membership } = useAuth()
   if (!membership || !OWNER_ROLES.includes(membership.role)) {
+    return <Navigate to="/" replace />
+  }
+  return children
+}
+
+function RequireQueueAccess({ children }) {
+  const { membership } = useAuth()
+  if (!membership || !QUEUE_ROLES.includes(membership.role)) {
     return <Navigate to="/" replace />
   }
   return children
@@ -239,6 +251,18 @@ export default function App() {
         element={
           <ProtectedLayout>
             <MyIdentification />
+          </ProtectedLayout>
+        }
+      />
+      <Route path="/comprobante" element={<GuestSubmit />} />
+      <Route path="/comprobante/estado/:token" element={<GuestStatus />} />
+      <Route
+        path="/comprobantes-invitados"
+        element={
+          <ProtectedLayout>
+            <RequireQueueAccess>
+              <GuestQueue />
+            </RequireQueueAccess>
           </ProtectedLayout>
         }
       />

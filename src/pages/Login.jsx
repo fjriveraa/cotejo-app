@@ -82,6 +82,9 @@ export default function Login() {
         <p style={{ marginTop: 16, fontSize: 13, opacity: 0.7 }}>
           ¿Tu empresa no tiene cuenta todavía? <Link to="/signup">Créala aquí</Link>
         </p>
+        <p style={{ marginTop: 8, fontSize: 13, opacity: 0.7 }}>
+          ¿Solo vienes a confirmar un pago que hiciste? <Link to="/comprobante">Envía tu comprobante aquí</Link>
+        </p>
       </div>
     </div>
   )

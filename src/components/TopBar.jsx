@@ -30,6 +30,7 @@ export default function TopBar() {
       <nav style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
         <NavLink to="/registrar" style={navLinkStyle}>Registrar pago</NavLink>
         {canSeeQueue && <NavLink to="/cola" style={navLinkStyle}>Cola de confirmación</NavLink>}
+        {canSeeQueue && <NavLink to="/comprobantes-invitados" style={navLinkStyle}>Comprobantes de invitados</NavLink>}
         {canInvite && <NavLink to="/invitar" style={navLinkStyle}>Invitar equipo</NavLink>}
         {canInvite && <NavLink to="/equipo" style={navLinkStyle}>Mi equipo</NavLink>}
         {canInvite && <NavLink to="/solicitudes" style={navLinkStyle}>Solicitudes</NavLink>}
