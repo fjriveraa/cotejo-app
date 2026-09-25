@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 const PENDING_ACTION_KEY = 'cotejo_pending_action'
+const ACTIVE_ORG_KEY = 'cotejo_active_org_id'
 
 export function readPendingAction() {
   try {
@@ -29,6 +30,23 @@ export function clearPendingAction() {
   }
 }
 
+function readActiveOrgId() {
+  try {
+    return localStorage.getItem(ACTIVE_ORG_KEY)
+  } catch {
+    return null
+  }
+}
+
+function writeActiveOrgId(orgId) {
+  try {
+    if (orgId) localStorage.setItem(ACTIVE_ORG_KEY, orgId)
+    else localStorage.removeItem(ACTIVE_ORG_KEY)
+  } catch {
+    // no-op
+  }
+}
+
 async function runPendingAction(action) {
   if (!action) return { error: null }
   if (action.type === 'create_org') {
@@ -47,9 +65,11 @@ async function runPendingAction(action) {
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined) // undefined = loading, null = signed out
-  const [membership, setMembership] = useState(null) // { role, organization_id, branch_id, ... }
+  const [memberships, setMemberships] = useState([]) // todas las empresas activas de este usuario
+  const [activeOrgId, setActiveOrgId] = useState(readActiveOrgId())
   const [loadingMembership, setLoadingMembership] = useState(false)
   const [membershipError, setMembershipError] = useState(null)
+  const [reloadTick, setReloadTick] = useState(0)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -66,9 +86,9 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let cancelled = false
 
-    async function loadMembership({ afterPendingAction = false } = {}) {
+    async function loadMemberships({ afterPendingAction = false } = {}) {
       if (!session?.user) {
-        setMembership(null)
+        setMemberships([])
         setMembershipError(null)
         return
       }
@@ -79,22 +99,22 @@ export function AuthProvider({ children }) {
         .select('id, role, user_id, organization_id, branch_scope, organizations(name, country)')
         .eq('user_id', session.user.id)
         .eq('status', 'active')
-        .limit(1)
-        .maybeSingle()
+        .order('created_at', { ascending: true })
 
       if (cancelled) return
 
       if (error) {
-        console.error('Error cargando membership:', error)
-        setMembership(null)
+        console.error('Error cargando membresías:', error)
+        setMemberships([])
         setMembershipError(error.message || 'Error desconocido al cargar tu cuenta.')
         setLoadingMembership(false)
         return
       }
 
-      if (!data) {
-        // Sin membresía todavía: si venimos de un signup (crear empresa o unirse
-        // por invitación), completamos ese paso automáticamente ahora que ya hay sesión.
+      if (!data || data.length === 0) {
+        // Sin ninguna empresa todavía: si venimos de un signup (crear empresa o
+        // unirse por invitación), completamos ese paso automáticamente ahora que
+        // ya hay sesión.
         if (!afterPendingAction) {
           const pending = readPendingAction()
           if (pending) {
@@ -103,42 +123,59 @@ export function AuthProvider({ children }) {
             if (pendingError) {
               console.error('Error ejecutando acción pendiente:', pendingError)
               clearPendingAction()
-              setMembership(null)
+              setMemberships([])
               setMembershipError(pendingError.message || 'No se pudo completar tu registro.')
               setLoadingMembership(false)
               return
             }
             clearPendingAction()
-            await loadMembership({ afterPendingAction: true })
+            await loadMemberships({ afterPendingAction: true })
             return
           }
         }
-        setMembership(null)
+        setMemberships([])
         setMembershipError('Tu usuario no tiene una membresía activa en ninguna organización.')
         setLoadingMembership(false)
         return
       }
 
-      let branch_name = null
-      const firstBranchId = data?.branch_scope?.[0]
-      if (data && firstBranchId) {
-        const { data: branch } = await supabase
-          .from('branches')
-          .select('name')
-          .eq('id', firstBranchId)
-          .maybeSingle()
-        branch_name = branch?.name ?? null
-      }
+      // Trae el nombre de la primera sucursal de cada membresía (para mostrarla).
+      const withBranchNames = await Promise.all(
+        data.map(async (m) => {
+          const firstBranchId = m?.branch_scope?.[0]
+          if (!firstBranchId) return { ...m, branch_name: null }
+          const { data: branch } = await supabase
+            .from('branches')
+            .select('name')
+            .eq('id', firstBranchId)
+            .maybeSingle()
+          return { ...m, branch_name: branch?.name ?? null }
+        })
+      )
 
       if (!cancelled) {
-        setMembership(data ? { ...data, branch_name } : null)
+        setMemberships(withBranchNames)
         setLoadingMembership(false)
       }
     }
 
-    loadMembership()
+    loadMemberships()
     return () => { cancelled = true }
-  }, [session])
+  }, [session, reloadTick])
+
+  function refreshMemberships() {
+    setReloadTick((t) => t + 1)
+  }
+
+  // La empresa "activa" es la que el usuario eligió (guardada en el
+  // teléfono) si todavía pertenece a ella, o la primera que tenga.
+  const membership =
+    memberships.find((m) => m.organization_id === activeOrgId) || memberships[0] || null
+
+  function switchOrg(orgId) {
+    setActiveOrgId(orgId)
+    writeActiveOrgId(orgId)
+  }
 
   async function signInWithPassword(email, password) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -151,6 +188,7 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
+    writeActiveOrgId(null)
     await supabase.auth.signOut()
   }
 
@@ -169,7 +207,10 @@ export function AuthProvider({ children }) {
   const value = {
     session,
     user: session?.user ?? null,
+    memberships,
     membership,
+    switchOrg,
+    refreshMemberships,
     loadingMembership,
     membershipError,
     isLoading: session === undefined || (session && loadingMembership),

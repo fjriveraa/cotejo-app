@@ -11,7 +11,7 @@ const ROLE_LABELS = {
 
 export default function Join() {
   const { token } = useParams()
-  const { session, signInWithPassword, signUpWithPassword, signInWithOAuth } = useAuth()
+  const { session, signInWithPassword, signUpWithPassword, signInWithOAuth, switchOrg, refreshMemberships } = useAuth()
   const navigate = useNavigate()
 
   const [info, setInfo] = useState(undefined) // undefined = cargando, null = inválido
@@ -52,12 +52,16 @@ export default function Join() {
   async function handleJoinNow() {
     setJoining(true)
     setError(null)
-    const { error: joinError } = await supabase.rpc('join_via_invite', { p_token: token })
+    const { data, error: joinError } = await supabase.rpc('join_via_invite', { p_token: token })
     setJoining(false)
     if (joinError) {
       setError(joinError.message || 'No se pudo completar la vinculación.')
       return
     }
+    // Deja esta empresa (a la que se acaba de unir, pudiendo ya tener otras)
+    // como la activa, y vuelve al inicio.
+    if (data?.organization_id) switchOrg(data.organization_id)
+    refreshMemberships()
     navigate('/')
   }
 

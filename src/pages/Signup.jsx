@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth, writePendingAction, clearPendingAction } from '../hooks/useAuth'
 
 export default function Signup() {
-  const { session, membership, loadingMembership, signUpWithPassword, signInWithOAuth } = useAuth()
+  const { session, membership, loadingMembership, signUpWithPassword, signInWithOAuth, switchOrg, refreshMemberships } = useAuth()
   const navigate = useNavigate()
   const [orgName, setOrgName] = useState('')
   const [branchName, setBranchName] = useState('Principal')
@@ -26,7 +26,7 @@ export default function Signup() {
       return
     }
     setLoading(true)
-    const { error } = await supabase.rpc('create_organization_and_owner', {
+    const { data, error } = await supabase.rpc('create_organization_and_owner', {
       p_org_name: orgName.trim(),
       p_branch_name: branchName.trim() || 'Principal'
     })
@@ -35,6 +35,8 @@ export default function Signup() {
       setError(error.message || 'No se pudo crear la empresa.')
       return
     }
+    if (data?.organization_id) switchOrg(data.organization_id)
+    refreshMemberships()
     navigate('/')
   }
 

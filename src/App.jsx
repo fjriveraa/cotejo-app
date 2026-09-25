@@ -7,6 +7,7 @@ import EmployeeDashboard from './pages/EmployeeDashboard'
 import AccountantQueue from './pages/AccountantQueue'
 import InviteTeam from './pages/InviteTeam'
 import Team from './pages/Team'
+import JoinManual from './pages/JoinManual'
 import TopBar from './components/TopBar'
 
 const OWNER_ROLES = ['propietario', 'admin']
@@ -42,9 +43,9 @@ function ErrorScreen({ message }) {
           <Link to="/signup" className="btn btn-primary" style={{ width: '100%', display: 'block', textAlign: 'center', marginBottom: 12, textDecoration: 'none' }}>
             Crear mi empresa
           </Link>
-          <p style={{ fontSize: 13, opacity: 0.7, marginBottom: 20 }}>
-            ¿Te invitaron a una empresa? Pide el enlace de invitación y ábrelo con esta misma sesión iniciada.
-          </p>
+          <Link to="/unirme" className="btn btn-secondary" style={{ width: '100%', display: 'block', textAlign: 'center', marginBottom: 20, textDecoration: 'none' }}>
+            Unirme a una empresa con un enlace
+          </Link>
           <button className="btn btn-secondary" style={{ width: '100%' }} onClick={signOut}>Cerrar sesión e intentar de nuevo</button>
         </div>
       </div>
@@ -85,6 +86,22 @@ function RequireOwner({ children }) {
     return <Navigate to="/" replace />
   }
   return children
+}
+
+// A diferencia de ProtectedLayout, no exige ya tener una empresa — sirve
+// tanto para alguien que ya tiene una y quiere sumarse a otra, como para
+// alguien que todavía no tiene ninguna.
+function RequireSessionLayout({ children }) {
+  const { session, isLoading } = useAuth()
+  if (session === undefined) return <LoadingScreen />
+  if (session === null) return <Navigate to="/login" replace />
+  if (isLoading) return <LoadingScreen />
+  return (
+    <div className="app-shell">
+      <TopBar />
+      {children}
+    </div>
+  )
 }
 
 export default function App() {
@@ -140,6 +157,14 @@ export default function App() {
               <Team />
             </RequireOwner>
           </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/unirme"
+        element={
+          <RequireSessionLayout>
+            <JoinManual />
+          </RequireSessionLayout>
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
