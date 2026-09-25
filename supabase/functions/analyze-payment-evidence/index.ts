@@ -8,23 +8,36 @@ const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
 
 const EXTRACTION_PROMPT = `Eres un asistente que lee comprobantes de pago hondureños (transferencias bancarias, capturas de apps bancarias como BAC, Ficohsa, Atlántida, Banpais, transferencias interbancarias, depósitos).
 
-Extrae los datos del comprobante en la imagen. Responde ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después, con esta forma exacta:
+Extrae TODOS los datos que aparezcan en el comprobante de la imagen, con el mayor detalle posible. Responde ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después, con esta forma exacta:
 {
   "amount": number o null,
   "currency": "HNL" o "USD" o null,
   "bank": string o null,
   "account_last4": string de 4 dígitos o null,
+  "origin_bank": string o null,
+  "origin_account_holder": string o null,
+  "origin_account_number": string o null,
+  "destination_account_holder": string o null,
   "reference_raw": string o null,
   "transaction_date": "YYYY-MM-DD" o null,
-  "confidence": { "amount": 0-1, "bank": 0-1, "account_last4": 0-1, "reference_raw": 0-1 },
+  "confidence": {
+    "amount": 0-1, "bank": 0-1, "account_last4": 0-1, "reference_raw": 0-1,
+    "origin_account_holder": 0-1, "origin_account_number": 0-1,
+    "destination_account_holder": 0-1, "transaction_date": 0-1
+  },
   "notes": string o null
 }
 
 Reglas:
 - Si un dato no aparece claramente en la imagen, usa null en ese campo y confidence 0 para ese campo. Nunca inventes datos.
-- "amount" es el monto de la transacción, como número (sin símbolos de moneda ni comas).
-- "account_last4" son los últimos 4 dígitos de la cuenta que RECIBE el pago, si aparecen.
-- "reference_raw" es el número de referencia, autorización o folio de la transacción, tal como aparece.
+- "amount" es el monto de la transacción (el campo "Monto" o "Monto debitado"), como número (sin símbolos de moneda ni comas).
+- "bank" es el banco de la cuenta que RECIBE el pago (cuenta destino). "account_last4" son los últimos 4 dígitos de esa cuenta destino, si aparecen.
+- "origin_bank" es el banco de la cuenta que ENVÍA el pago, si se puede determinar (puede ser el mismo banco que "bank" si es transferencia interna).
+- "origin_account_holder" es el nombre completo de la persona o empresa titular de la cuenta ORIGEN (quien envía), tal como aparece en "Cuenta origen".
+- "origin_account_number" es el número de cuenta completo de origen, tal como aparece (no solo los últimos 4 dígitos).
+- "destination_account_holder" es el nombre o razón social del titular de la cuenta DESTINO (quien recibe), tal como aparece en "Cuenta destino".
+- "reference_raw" es el número de referencia, autorización, folio o "N° comprobante" de la transacción, tal como aparece.
+- "transaction_date" es la fecha de la transacción en formato YYYY-MM-DD. Si el comprobante solo trae día y mes (ej. "23 septiembre") sin año, asume el año actual.
 - "notes" puede incluir cualquier detalle relevante que notes pero no encaje en los campos anteriores (ej. "captura borrosa", "parece un comprobante de otro banco").`
 
 function mimeFromPath(path) {

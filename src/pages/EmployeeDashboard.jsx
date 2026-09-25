@@ -10,6 +10,11 @@ const emptyForm = {
   receiving_account_id: '',
   manual_bank: '',
   reference_raw: '',
+  transaction_date: '',
+  origin_bank: '',
+  origin_account_holder: '',
+  origin_account_number: '',
+  destination_account_holder: '',
   notes: '',
   customer_waiting: false
 }
@@ -84,6 +89,11 @@ export default function EmployeeDashboard() {
       if (data.amount && !prev.amount) next.amount = String(data.amount)
       if (data.currency && (data.currency === 'HNL' || data.currency === 'USD')) next.currency = data.currency
       if (data.reference_raw && !prev.reference_raw) next.reference_raw = data.reference_raw
+      if (data.transaction_date && !prev.transaction_date) next.transaction_date = data.transaction_date
+      if (data.origin_bank && !prev.origin_bank) next.origin_bank = data.origin_bank
+      if (data.origin_account_holder && !prev.origin_account_holder) next.origin_account_holder = data.origin_account_holder
+      if (data.origin_account_number && !prev.origin_account_number) next.origin_account_number = data.origin_account_number
+      if (data.destination_account_holder && !prev.destination_account_holder) next.destination_account_holder = data.destination_account_holder
 
       if (data.bank) {
         const match = accounts.find(
@@ -182,6 +192,11 @@ export default function EmployeeDashboard() {
         amount: Number(form.amount),
         currency: form.currency,
         reference_raw: form.reference_raw || null,
+        transaction_date: form.transaction_date || null,
+        origin_bank: form.origin_bank || null,
+        origin_account_holder: form.origin_account_holder || null,
+        origin_account_number: form.origin_account_number || null,
+        destination_account_holder: form.destination_account_holder || null,
         notes: form.notes || null,
         evidence_path: evidencePath,
         extraction: extraction,
@@ -278,12 +293,55 @@ export default function EmployeeDashboard() {
           )}
 
           <div className="field">
-            <label htmlFor="reference_raw">Referencia (opcional)</label>
+            <label htmlFor="reference_raw">Referencia / N° comprobante (opcional)</label>
             <input
               id="reference_raw"
               type="text"
               value={form.reference_raw}
               onChange={(e) => updateField('reference_raw', e.target.value)}
+            />
+          </div>
+
+          <div className="field">
+            <label htmlFor="transaction_date">Fecha de la transacción (opcional)</label>
+            <input
+              id="transaction_date"
+              type="date"
+              value={form.transaction_date}
+              onChange={(e) => updateField('transaction_date', e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <div className="field" style={{ flex: '1 1 200px' }}>
+              <label htmlFor="origin_account_holder">Cuenta origen · nombre (opcional)</label>
+              <input
+                id="origin_account_holder"
+                type="text"
+                value={form.origin_account_holder}
+                onChange={(e) => updateField('origin_account_holder', e.target.value)}
+                placeholder="Quién envía"
+              />
+            </div>
+            <div className="field" style={{ flex: '1 1 160px' }}>
+              <label htmlFor="origin_account_number">Cuenta origen · número (opcional)</label>
+              <input
+                id="origin_account_number"
+                type="text"
+                value={form.origin_account_number}
+                onChange={(e) => updateField('origin_account_number', e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="field">
+            <label htmlFor="destination_account_holder">Cuenta destino · nombre/razón social (opcional)</label>
+            <input
+              id="destination_account_holder"
+              type="text"
+              value={form.destination_account_holder}
+              onChange={(e) => updateField('destination_account_holder', e.target.value)}
+              placeholder="A nombre de quién está la cuenta receptora"
             />
           </div>
 

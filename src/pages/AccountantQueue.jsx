@@ -4,9 +4,14 @@ import { useAuth } from '../hooks/useAuth'
 
 const FIELD_LABELS = {
   amount: 'Monto',
-  bank: 'Banco',
+  bank: 'Banco destino',
   account_last4: 'Últimos 4 dígitos',
-  reference_raw: 'Referencia'
+  reference_raw: 'Referencia',
+  transaction_date: 'Fecha',
+  origin_bank: 'Banco origen',
+  origin_account_holder: 'Cuenta origen (nombre)',
+  origin_account_number: 'Cuenta origen (número)',
+  destination_account_holder: 'Cuenta destino (nombre)'
 }
 
 function EvidenceModal({ payment, onClose }) {
@@ -97,8 +102,24 @@ function EvidenceModal({ payment, onClose }) {
             <h4 style={{ marginTop: 20 }}>Datos registrados</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
               <div><span style={{ opacity: 0.6 }}>Monto: </span><strong>{payment.currency} {Number(payment.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}</strong></div>
-              <div><span style={{ opacity: 0.6 }}>Banco: </span><strong>{payment.bank}{payment.account_last4 ? ` (${payment.account_last4})` : ''}</strong></div>
+              <div><span style={{ opacity: 0.6 }}>Banco destino: </span><strong>{payment.bank}{payment.account_last4 ? ` (${payment.account_last4})` : ''}</strong></div>
               <div><span style={{ opacity: 0.6 }}>Referencia: </span><strong>{payment.reference_raw || '—'}</strong></div>
+              {payment.transaction_date && (
+                <div><span style={{ opacity: 0.6 }}>Fecha: </span><strong>{payment.transaction_date}</strong></div>
+              )}
+              {(payment.origin_account_holder || payment.origin_account_number || payment.origin_bank) && (
+                <div>
+                  <span style={{ opacity: 0.6 }}>Cuenta origen: </span>
+                  <strong>
+                    {payment.origin_account_holder || '—'}
+                    {payment.origin_account_number ? ` · ${payment.origin_account_number}` : ''}
+                    {payment.origin_bank ? ` (${payment.origin_bank})` : ''}
+                  </strong>
+                </div>
+              )}
+              {payment.destination_account_holder && (
+                <div><span style={{ opacity: 0.6 }}>Cuenta destino: </span><strong>{payment.destination_account_holder}</strong></div>
+              )}
             </div>
           </div>
         </div>
@@ -128,7 +149,8 @@ export default function AccountantQueue() {
       .select(`
         id, amount, currency, reference_raw, notes, bank, account_last4,
         verification_status, processing_status, customer_waiting, version, created_at,
-        evidence_path, extraction
+        evidence_path, extraction, transaction_date, origin_bank,
+        origin_account_holder, origin_account_number, destination_account_holder
       `)
       .eq('organization_id', membership.organization_id)
       .in('verification_status', ['pending', 'under_review'])
