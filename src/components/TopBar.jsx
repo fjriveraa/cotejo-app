@@ -1,11 +1,26 @@
+import { NavLink } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+
+const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
+
+const navLinkStyle = ({ isActive }) => ({
+  color: isActive ? '#2B6459' : 'inherit',
+  fontWeight: isActive ? 600 : 400,
+  textDecoration: 'none',
+  fontSize: 14
+})
 
 export default function TopBar() {
   const { membership, signOut, user } = useAuth()
+  const canSeeQueue = membership && QUEUE_ROLES.includes(membership.role)
 
   return (
     <header className="topbar">
       <div className="brand">Cotejo</div>
+      <nav style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+        <NavLink to="/registrar" style={navLinkStyle}>Registrar pago</NavLink>
+        {canSeeQueue && <NavLink to="/cola" style={navLinkStyle}>Cola de confirmación</NavLink>}
+      </nav>
       <div className="user-info">
         <span>{user?.email}</span>
         {membership && (
