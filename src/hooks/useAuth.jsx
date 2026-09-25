@@ -70,6 +70,8 @@ export function AuthProvider({ children }) {
   const [loadingMembership, setLoadingMembership] = useState(false)
   const [membershipError, setMembershipError] = useState(null)
   const [reloadTick, setReloadTick] = useState(0)
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
+  const [loadingPlatformAdmin, setLoadingPlatformAdmin] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -84,6 +86,22 @@ export function AuthProvider({ children }) {
   }, [])
 
   useEffect(() => {
+    if (!session?.user) {
+      setIsPlatformAdmin(false)
+      setLoadingPlatformAdmin(false)
+      return
+    }
+    let cancelled = false
+    setLoadingPlatformAdmin(true)
+    supabase.rpc('am_i_platform_admin').then(({ data }) => {
+      if (cancelled) return
+      setIsPlatformAdmin(Boolean(data))
+      setLoadingPlatformAdmin(false)
+    })
+    return () => { cancelled = true }
+  }, [session])
+
+  useEffect(() => {
     let cancelled = false
 
     async function loadMemberships({ afterPendingAction = false } = {}) {
@@ -96,7 +114,7 @@ export function AuthProvider({ children }) {
       setMembershipError(null)
       const { data, error } = await supabase
         .from('memberships')
-        .select('id, role, user_id, organization_id, branch_scope, organizations(name, country, is_public)')
+        .select('id, role, user_id, organization_id, branch_scope, organizations(name, country, is_public, org_type, verification_status)')
         .eq('user_id', session.user.id)
         .eq('status', 'active')
         .order('created_at', { ascending: true })
@@ -213,6 +231,8 @@ export function AuthProvider({ children }) {
     refreshMemberships,
     loadingMembership,
     membershipError,
+    isPlatformAdmin,
+    loadingPlatformAdmin,
     isLoading: session === undefined || (session && loadingMembership),
     signInWithPassword,
     signUpWithPassword,

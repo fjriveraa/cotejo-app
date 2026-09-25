@@ -11,6 +11,8 @@ import JoinManual from './pages/JoinManual'
 import Directory from './pages/Directory'
 import JoinRequests from './pages/JoinRequests'
 import Autonomo from './pages/Autonomo'
+import Verify from './pages/Verify'
+import AdminVerifications from './pages/AdminVerifications'
 import TopBar from './components/TopBar'
 
 const OWNER_ROLES = ['propietario', 'admin']
@@ -92,6 +94,15 @@ function ProtectedLayout({ children }) {
 function RequireOwner({ children }) {
   const { membership } = useAuth()
   if (!membership || !OWNER_ROLES.includes(membership.role)) {
+    return <Navigate to="/" replace />
+  }
+  return children
+}
+
+function RequirePlatformAdmin({ children }) {
+  const { isPlatformAdmin, loadingPlatformAdmin } = useAuth()
+  if (loadingPlatformAdmin) return <LoadingScreen />
+  if (!isPlatformAdmin) {
     return <Navigate to="/" replace />
   }
   return children
@@ -200,6 +211,26 @@ export default function App() {
           <RequireSessionLayout>
             <Autonomo />
           </RequireSessionLayout>
+        }
+      />
+      <Route
+        path="/verificar"
+        element={
+          <ProtectedLayout>
+            <RequireOwner>
+              <Verify />
+            </RequireOwner>
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/admin/verificaciones"
+        element={
+          <ProtectedLayout>
+            <RequirePlatformAdmin>
+              <AdminVerifications />
+            </RequirePlatformAdmin>
+          </ProtectedLayout>
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />

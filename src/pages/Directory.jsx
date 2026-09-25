@@ -77,7 +77,12 @@ export default function Directory() {
           {results.map((org) => (
             <div key={org.organization_id} className="payment-row" style={{ flexWrap: 'wrap', gap: 12 }}>
               <div>
-                <div className="amount" style={{ fontSize: 14 }}>{org.name}</div>
+                <div className="amount" style={{ fontSize: 14 }}>
+                  {org.name}
+                  {org.verification_status === 'verified' && (
+                    <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 600, color: '#2B6459' }}>✓ Verificada</span>
+                  )}
+                </div>
                 <div className="meta">
                   {org.country || 'HN'} · {org.org_type === 'autonomo' ? 'Comerciante individual' : 'Empresa'}
                 </div>
