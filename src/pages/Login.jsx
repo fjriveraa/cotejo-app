@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
 export default function Login() {
@@ -52,6 +53,9 @@ export default function Login() {
             {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
+        <p style={{ marginTop: 16, fontSize: 13, opacity: 0.7 }}>
+          ¿Tu empresa no tiene cuenta todavía? <Link to="/signup">Créala aquí</Link>
+        </p>
       </div>
     </div>
   )

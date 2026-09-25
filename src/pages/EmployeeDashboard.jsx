@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { bankNamesForCountry, DEFAULT_COUNTRY } from '../lib/banks'
 
 const OTHER = '__other__'
 
@@ -21,6 +22,8 @@ const emptyForm = {
 
 export default function EmployeeDashboard() {
   const { membership } = useAuth()
+  const country = membership?.organizations?.country || DEFAULT_COUNTRY
+  const bankOptions = bankNamesForCountry(country)
   const [accounts, setAccounts] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [file, setFile] = useState(null)
@@ -285,6 +288,7 @@ export default function EmployeeDashboard() {
               <input
                 id="manual_bank"
                 type="text"
+                list="bank-options"
                 value={form.manual_bank}
                 onChange={(e) => updateField('manual_bank', e.target.value)}
                 placeholder="ej. Ficohsa"
@@ -332,7 +336,23 @@ export default function EmployeeDashboard() {
                 onChange={(e) => updateField('origin_account_number', e.target.value)}
               />
             </div>
+            <div className="field" style={{ flex: '1 1 160px' }}>
+              <label htmlFor="origin_bank">Banco origen (opcional)</label>
+              <input
+                id="origin_bank"
+                type="text"
+                list="bank-options"
+                value={form.origin_bank}
+                onChange={(e) => updateField('origin_bank', e.target.value)}
+                placeholder="Banco de quien envía"
+              />
+            </div>
           </div>
+          <datalist id="bank-options">
+            {bankOptions.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
 
           <div className="field">
             <label htmlFor="destination_account_holder">Cuenta destino · nombre/razón social (opcional)</label>

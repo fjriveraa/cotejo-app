@@ -1,9 +1,14 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import Login from './pages/Login'
+import Signup from './pages/Signup'
+import Join from './pages/Join'
 import EmployeeDashboard from './pages/EmployeeDashboard'
 import AccountantQueue from './pages/AccountantQueue'
+import InviteTeam from './pages/InviteTeam'
 import TopBar from './components/TopBar'
+
+const OWNER_ROLES = ['propietario', 'admin']
 
 function LoadingScreen() {
   return (
@@ -53,12 +58,22 @@ function ProtectedLayout({ children }) {
   )
 }
 
+function RequireOwner({ children }) {
+  const { membership } = useAuth()
+  if (!membership || !OWNER_ROLES.includes(membership.role)) {
+    return <Navigate to="/" replace />
+  }
+  return children
+}
+
 export default function App() {
   const { session } = useAuth()
 
   return (
     <Routes>
       <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/signup" element={session ? <Navigate to="/" replace /> : <Signup />} />
+      <Route path="/join/:token" element={<Join />} />
       <Route
         path="/"
         element={
@@ -80,6 +95,16 @@ export default function App() {
         element={
           <ProtectedLayout>
             <AccountantQueue />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/invitar"
+        element={
+          <ProtectedLayout>
+            <RequireOwner>
+              <InviteTeam />
+            </RequireOwner>
           </ProtectedLayout>
         }
       />

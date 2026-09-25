@@ -6,15 +6,46 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
 
-const EXTRACTION_PROMPT = `Eres un asistente que lee comprobantes de pago hondureños (transferencias bancarias, capturas de apps bancarias como BAC, Ficohsa, Atlántida, Banpais, transferencias interbancarias, depósitos).
+const BANK_CATALOG = `Bancos conocidos de Honduras (HN) y sus rasgos visuales típicos (logo/colores), útiles para reconocer el banco aunque el texto no sea perfectamente legible:
+- Banco Atlántida: logo rojo, texto "Banco Atlántida"
+- Ficohsa: logo azul/turquesa, texto "Ficohsa"
+- BAC Credomatic: logo rojo y azul, texto "BAC"
+- Banco de Occidente: logo verde, texto "Occidente"
+- Banpaís: logo naranja, texto "Banpaís"
+- Davivienda Honduras: logo rojo, texto "Davivienda"
+- Lafise Honduras: logo azul oscuro, texto "Lafise"
+- Banco Promerica: logo verde y azul, texto "Promerica"
+- Banco Azteca Honduras: logo verde, texto "Azteca"
+- Banco Popular Honduras: texto "Banco Popular"
+- BANHCAFE: texto "Banhcafe"
+
+Bancos conocidos de Guatemala (GT) y sus rasgos visuales típicos:
+- Banrural: logo verde, texto "Banrural"
+- Banco Industrial: logo rojo, texto "Industrial" o "BI"
+- G&T Continental: logo azul/dorado, texto "G&T Continental"
+- BAC Credomatic Guatemala: logo rojo y azul, texto "BAC"
+- Banco Agromercantil (BAM): logo verde, texto "BAM" o "Agromercantil"
+- Banco Promerica Guatemala: logo verde y azul, texto "Promerica"
+- Bantrab: logo azul, texto "Bantrab"
+- Vivibanco: logo morado, texto "Vivibanco"
+- CHN: texto "CHN" o "Crédito Hipotecario Nacional"
+- Interbanco: texto "Interbanco"`
+
+const EXTRACTION_PROMPT = `Eres un asistente que lee comprobantes de pago centroamericanos (transferencias bancarias, capturas de apps bancarias, transferencias interbancarias, depósitos), principalmente de Honduras y Guatemala.
+
+${BANK_CATALOG}
+
+Usa ese catálogo para reconocer el banco por patrones visuales (color del logo, forma, tipografía, estructura del comprobante) además del texto, incluso si el nombre del banco no aparece completo o legible en la imagen. Si el diseño coincide claramente con uno de esos bancos, usa su nombre exacto del catálogo en el campo correspondiente ("bank" u "origin_bank"). Si no coincide con ninguno del catálogo, usa el nombre que sí puedas leer en la imagen. Nunca adivines un banco si no hay ninguna señal visual o textual que lo respalde.
 
 Extrae TODOS los datos que aparezcan en el comprobante de la imagen, con el mayor detalle posible. Responde ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después, con esta forma exacta:
 {
   "amount": number o null,
   "currency": "HNL" o "USD" o null,
   "bank": string o null,
+  "bank_country": "HN" o "GT" o null,
   "account_last4": string de 4 dígitos o null,
   "origin_bank": string o null,
+  "origin_bank_country": "HN" o "GT" o null,
   "origin_account_holder": string o null,
   "origin_account_number": string o null,
   "destination_account_holder": string o null,
@@ -31,8 +62,8 @@ Extrae TODOS los datos que aparezcan en el comprobante de la imagen, con el mayo
 Reglas:
 - Si un dato no aparece claramente en la imagen, usa null en ese campo y confidence 0 para ese campo. Nunca inventes datos.
 - "amount" es el monto de la transacción (el campo "Monto" o "Monto debitado"), como número (sin símbolos de moneda ni comas).
-- "bank" es el banco de la cuenta que RECIBE el pago (cuenta destino). "account_last4" son los últimos 4 dígitos de esa cuenta destino, si aparecen.
-- "origin_bank" es el banco de la cuenta que ENVÍA el pago, si se puede determinar (puede ser el mismo banco que "bank" si es transferencia interna).
+- "bank" es el banco de la cuenta que RECIBE el pago (cuenta destino), usando el catálogo de arriba cuando sea reconocible. "bank_country" es el país de ese banco (HN o GT) si se puede determinar. "account_last4" son los últimos 4 dígitos de esa cuenta destino, si aparecen.
+- "origin_bank" es el banco de la cuenta que ENVÍA el pago, si se puede determinar (puede ser el mismo banco que "bank" si es transferencia interna). "origin_bank_country" es su país (HN o GT) si se puede determinar.
 - "origin_account_holder" es el nombre completo de la persona o empresa titular de la cuenta ORIGEN (quien envía), tal como aparece en "Cuenta origen".
 - "origin_account_number" es el número de cuenta completo de origen, tal como aparece (no solo los últimos 4 dígitos).
 - "destination_account_holder" es el nombre o razón social del titular de la cuenta DESTINO (quien recibe), tal como aparece en "Cuenta destino".
