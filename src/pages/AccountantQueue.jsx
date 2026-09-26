@@ -18,27 +18,51 @@ const FIELD_LABELS = {
 function EvidenceModal({ payment, onClose }) {
   const [signedUrl, setSignedUrl] = useState(null)
   const [loadingUrl, setLoadingUrl] = useState(true)
+  const [loadError, setLoadError] = useState(null)
+  const [retryTick, setRetryTick] = useState(0)
 
   useEffect(() => {
+    if (!payment.evidence_path) {
+      setLoadingUrl(false)
+      return
+    }
     let cancelled = false
     async function loadUrl() {
-      if (!payment.evidence_path) {
-        setLoadingUrl(false)
-        return
-      }
+      setLoadingUrl(true)
+      setLoadError(null)
       const { data, error } = await supabase.storage
         .from('evidence')
         .createSignedUrl(payment.evidence_path, 300)
       if (!cancelled) {
-        if (!error) setSignedUrl(data?.signedUrl ?? null)
+        // Antes, cualquier error (conexión débil, permiso, lo que sea) se
+        // mostraba igual que "nunca se adjuntó un comprobante" — un mensaje
+        // engañoso cuando el archivo sí existe. Ahora se distingue: sin
+        // ruta guardada vs. error al cargarlo (con opción de reintentar).
+        if (error) setLoadError(error.message || 'No se pudo cargar el comprobante.')
+        else setSignedUrl(data?.signedUrl ?? null)
         setLoadingUrl(false)
       }
     }
     loadUrl()
     return () => { cancelled = true }
-  }, [payment.evidence_path])
+  }, [payment.evidence_path, retryTick])
 
   const extraction = payment.extraction
+
+  // Compara lo que la IA detectó contra lo que quedó registrado, campo por
+  // campo, para que un desajuste salte a la vista en vez de tener que leer
+  // dos listas por separado y comparar de memoria.
+  const compareRows = Object.entries(FIELD_LABELS).map(([key, label]) => {
+    const iaValue = extraction?.[key] ?? null
+    const registeredValue = payment[key] ?? null
+    const iaStr = iaValue === null || iaValue === undefined ? '' : String(iaValue).trim().toLowerCase()
+    const regStr = registeredValue === null || registeredValue === undefined ? '' : String(registeredValue).trim().toLowerCase()
+    const mismatch = Boolean(iaStr) && Boolean(regStr) && iaStr !== regStr
+    return {
+      key, label, iaValue, registeredValue, mismatch,
+      confidence: extraction?.confidence?.[key]
+    }
+  })
 
   return (
     <div
@@ -59,9 +83,15 @@ function EvidenceModal({ payment, onClose }) {
         </div>
 
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 280px', minWidth: 240 }}>
+          <div style={{ flex: '1 1 260px', minWidth: 220 }}>
             {loadingUrl && <p style={{ opacity: 0.6 }}>Cargando imagen...</p>}
-            {!loadingUrl && !signedUrl && <p className="empty-state">Sin comprobante adjunto.</p>}
+            {!loadingUrl && !payment.evidence_path && <p className="empty-state">Este pago no tiene comprobante adjunto.</p>}
+            {!loadingUrl && payment.evidence_path && loadError && (
+              <div className="empty-state" style={{ textAlign: 'left' }}>
+                <p style={{ margin: '0 0 8px', color: '#A2483A' }}>No se pudo cargar la imagen ({loadError}). El archivo sigue guardado, solo falló mostrarlo — puede ser la conexión.</p>
+                <button type="button" className="btn btn-secondary" onClick={() => setRetryTick((t) => t + 1)}>Reintentar</button>
+              </div>
+            )}
             {signedUrl && (
               <img
                 src={signedUrl}
@@ -71,61 +101,76 @@ function EvidenceModal({ payment, onClose }) {
             )}
           </div>
 
-          <div style={{ flex: '1 1 240px', minWidth: 220 }}>
-            <h4 style={{ marginTop: 0 }}>Datos detectados por IA</h4>
-            {!extraction && <p className="empty-state">Este pago no tiene datos de IA (registrado manualmente).</p>}
-            {extraction && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {Object.entries(FIELD_LABELS).map(([key, label]) => {
-                  const value = extraction[key]
-                  const confidence = extraction.confidence?.[key]
+          <div style={{ flex: '2 1 320px', minWidth: 280 }}>
+            <h4 style={{ marginTop: 0 }}>
+              {extraction ? 'Detectado por IA vs. registrado' : 'Datos registrados'}
+            </h4>
+            {!extraction && <p style={{ fontSize: 12.5, opacity: 0.6, marginTop: -6 }}>Este pago se registró manualmente, sin lectura automática.</p>}
+
+            <table className="compare-table">
+              <thead>
+                {extraction && <tr><th>Campo</th><th>IA</th><th>Registrado</th></tr>}
+              </thead>
+              <tbody>
+                {compareRows.map((row) => {
+                  const isAmount = row.key === 'amount'
+                  const registeredDisplay = isAmount
+                    ? `${payment.currency} ${Number(payment.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}`
+                    : (row.registeredValue ?? '—')
                   return (
-                    <div key={key} style={{ fontSize: 13 }}>
-                      <span style={{ opacity: 0.6 }}>{label}: </span>
-                      <strong>{value ?? '—'}</strong>
-                      {typeof confidence === 'number' && (
-                        <span style={{
-                          marginLeft: 6, fontSize: 11,
-                          color: confidence >= 0.7 ? '#2B6459' : confidence > 0 ? '#B08900' : '#A2483A'
-                        }}>
-                          ({Math.round(confidence * 100)}% confianza)
-                        </span>
+                    <tr key={row.key} className={row.mismatch ? 'compare-mismatch' : ''}>
+                      <td className="compare-label">{row.label}</td>
+                      {extraction && (
+                        <td>
+                          {row.iaValue ?? '—'}
+                          {typeof row.confidence === 'number' && (
+                            <span
+                              className="confidence-dot"
+                              style={{ background: row.confidence >= 0.7 ? '#2B6459' : row.confidence > 0 ? '#B08900' : '#A2483A' }}
+                              title={`${Math.round(row.confidence * 100)}% confianza`}
+                            />
+                          )}
+                        </td>
                       )}
-                    </div>
+                      <td><strong>{registeredDisplay}</strong></td>
+                    </tr>
                   )
                 })}
-                {extraction.notes && (
-                  <p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>Nota IA: {extraction.notes}</p>
-                )}
-              </div>
+              </tbody>
+            </table>
+            {extraction?.notes && (
+              <p style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>Nota IA: {extraction.notes}</p>
             )}
-
-            <h4 style={{ marginTop: 20 }}>Datos registrados</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
-              <div><span style={{ opacity: 0.6 }}>Monto: </span><strong>{payment.currency} {Number(payment.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}</strong></div>
-              <div><span style={{ opacity: 0.6 }}>Banco destino: </span><strong>{payment.bank}{payment.account_last4 ? ` (${payment.account_last4})` : ''}</strong></div>
-              <div><span style={{ opacity: 0.6 }}>Referencia: </span><strong>{payment.reference_raw || '—'}</strong></div>
-              {payment.transaction_date && (
-                <div><span style={{ opacity: 0.6 }}>Fecha: </span><strong>{payment.transaction_date}</strong></div>
-              )}
-              {(payment.origin_account_holder || payment.origin_account_number || payment.origin_bank) && (
-                <div>
-                  <span style={{ opacity: 0.6 }}>Cuenta origen: </span>
-                  <strong>
-                    {payment.origin_account_holder || '—'}
-                    {payment.origin_account_number ? ` · ${payment.origin_account_number}` : ''}
-                    {payment.origin_bank ? ` (${payment.origin_bank})` : ''}
-                  </strong>
-                </div>
-              )}
-              {payment.destination_account_holder && (
-                <div><span style={{ opacity: 0.6 }}>Cuenta destino: </span><strong>{payment.destination_account_holder}</strong></div>
-              )}
-            </div>
+            {compareRows.some((r) => r.mismatch) && (
+              <p style={{ fontSize: 12, color: '#B08900', marginTop: 6, fontWeight: 600 }}>
+                ⚠ Hay campos donde la IA detectó algo distinto a lo registrado — revísalos antes de confirmar.
+              </p>
+            )}
           </div>
         </div>
       </div>
     </div>
+  )
+}
+
+function EvidenceThumb({ path, onClick }) {
+  const [url, setUrl] = useState(null)
+
+  useEffect(() => {
+    if (!path) return
+    let cancelled = false
+    supabase.storage.from('evidence').createSignedUrl(path, 300).then(({ data, error }) => {
+      if (!cancelled && !error) setUrl(data?.signedUrl ?? null)
+    })
+    return () => { cancelled = true }
+  }, [path])
+
+  if (!path) return null
+
+  return (
+    <button type="button" onClick={onClick} className="evidence-thumb" aria-label="Ver comprobante">
+      {url ? <img src={url} alt="" /> : <span className="evidence-thumb-placeholder">📄</span>}
+    </button>
   )
 }
 
@@ -231,8 +276,9 @@ export default function AccountantQueue() {
             <div className="group-header">{bankLabel} <span style={{ opacity: 0.5, fontWeight: 400 }}>({items.length})</span></div>
             <div className="payment-list">
               {items.map((p) => (
-                <div key={p.id} className="payment-row" style={{ flexWrap: 'wrap', gap: 12 }}>
-                  <div>
+                <div key={p.id} className="payment-row payment-row-with-thumb" style={{ flexWrap: 'wrap', gap: 12 }}>
+                  <EvidenceThumb path={p.evidence_path} onClick={() => setViewingPayment(p)} />
+                  <div style={{ flex: '1 1 200px' }}>
                     <div className="amount">
                       {p.currency} {Number(p.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
                       {p.customer_waiting && <span style={{ color: '#A2483A', fontSize: 12, marginLeft: 8 }}>● cliente esperando</span>}
@@ -262,7 +308,11 @@ export default function AccountantQueue() {
                       )}
                     </div>
                   </div>
-                  <div className="actions-row">
+                  {/* "Confirmar" es, por lejos, la acción más común — se le da todo el
+                      peso visual arriba; las otras tres son excepciones y viven más
+                      pequeñas debajo, para que la vista no se sienta como 4 opciones
+                      igual de probables cuando en la práctica no lo son. */}
+                  <div className="actions-row actions-row-tiered">
                     <button
                       className="btn btn-primary"
                       disabled={busyId === p.id}
@@ -270,27 +320,29 @@ export default function AccountantQueue() {
                     >
                       Confirmar
                     </button>
-                    <button
-                      className="btn btn-secondary"
-                      disabled={busyId === p.id}
-                      onClick={() => handleUnderReview(p)}
-                    >
-                      En revisión
-                    </button>
-                    <button
-                      className="btn btn-amber"
-                      disabled={busyId === p.id}
-                      onClick={() => handleNotFound(p)}
-                    >
-                      No encontrado
-                    </button>
-                    <button
-                      className="btn btn-rust"
-                      disabled={busyId === p.id}
-                      onClick={() => handleDuplicate(p)}
-                    >
-                      Duplicado
-                    </button>
+                    <div className="actions-secondary">
+                      <button
+                        className="btn btn-secondary"
+                        disabled={busyId === p.id}
+                        onClick={() => handleUnderReview(p)}
+                      >
+                        En revisión
+                      </button>
+                      <button
+                        className="btn btn-amber"
+                        disabled={busyId === p.id}
+                        onClick={() => handleNotFound(p)}
+                      >
+                        No encontrado
+                      </button>
+                      <button
+                        className="btn btn-rust"
+                        disabled={busyId === p.id}
+                        onClick={() => handleDuplicate(p)}
+                      >
+                        Duplicado
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

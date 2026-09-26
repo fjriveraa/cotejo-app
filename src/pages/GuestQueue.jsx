@@ -5,19 +5,32 @@ import { IconInbox } from '../components/icons'
 
 function ViewEvidence({ path }) {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   async function open() {
     setLoading(true)
-    const { data, error } = await supabase.storage.from('guest-evidence').createSignedUrl(path, 300)
+    setError(null)
+    const { data, error: fetchError } = await supabase.storage.from('guest-evidence').createSignedUrl(path, 300)
     setLoading(false)
-    if (!error && data?.signedUrl) window.open(data.signedUrl, '_blank', 'noopener')
+    if (fetchError || !data?.signedUrl) {
+      // Antes fallaba en silencio — el botón no hacía nada visible y parecía
+      // que el archivo no existiera. El archivo puede seguir ahí; solo falló
+      // cargarlo (conexión débil, por ejemplo), así que se avisa y se puede
+      // reintentar con el mismo botón.
+      setError(fetchError?.message || 'No se pudo abrir el comprobante. Intenta de nuevo.')
+      return
+    }
+    window.open(data.signedUrl, '_blank', 'noopener')
   }
 
   if (!path) return null
   return (
-    <button type="button" className="btn btn-secondary" onClick={open} disabled={loading} style={{ fontSize: 13 }}>
-      {loading ? 'Abriendo...' : 'Ver comprobante'}
-    </button>
+    <span>
+      <button type="button" className="btn btn-secondary" onClick={open} disabled={loading} style={{ fontSize: 13 }}>
+        {loading ? 'Abriendo...' : 'Ver comprobante'}
+      </button>
+      {error && <span style={{ marginLeft: 8, fontSize: 12, color: '#B91C1C' }}>{error}</span>}
+    </span>
   )
 }
 

@@ -662,6 +662,102 @@ a {
   flex: 1 1 130px;
 }
 
+/* "Confirmar" arriba, sólido y solo; las excepciones (en revisión, no
+   encontrado, duplicado) más pequeñas debajo — reflejan qué tan seguido
+   se usa cada una en la práctica. */
+.actions-row-tiered {
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  max-width: 240px;
+}
+
+.actions-row-tiered .btn-primary {
+  width: 100%;
+}
+
+.actions-secondary {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.actions-secondary .btn {
+  flex: 1;
+  font-size: 12px;
+  padding: 7px 6px;
+}
+
+.payment-row-with-thumb {
+  align-items: flex-start;
+}
+
+.evidence-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(42, 38, 32, 0.04);
+  overflow: hidden;
+  flex-shrink: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.evidence-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.evidence-thumb-placeholder {
+  font-size: 20px;
+  opacity: 0.4;
+}
+
+/* Tabla comparativa IA vs. registrado, dentro del modal de comprobante. */
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.compare-table th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.5;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.compare-table .compare-label {
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.compare-table .compare-mismatch {
+  background: rgba(185, 129, 47, 0.1);
+}
+
+.confidence-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
 .empty-state {
   text-align: center;
   padding: 48px 24px;
