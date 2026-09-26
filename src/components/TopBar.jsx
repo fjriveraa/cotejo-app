@@ -41,6 +41,9 @@ export default function TopBar() {
 
   const canSeeQueue = membership && QUEUE_ROLES.includes(membership.role)
   const canInvite = membership && OWNER_ROLES.includes(membership.role)
+  // Solo el propietario puede certificar legalmente la empresa — un admin
+  // que solo la configuró no debería ver esta opción como si pudiera usarla.
+  const canVerify = membership && membership.role === 'propietario'
   const verificationStatus = membership?.organizations?.verification_status
   const verificationBadge = VERIFICATION_BADGE[verificationStatus]
 
@@ -137,7 +140,7 @@ export default function TopBar() {
                 {canInvite && <NavLink to="/solicitudes" className="menu-link"><IconInbox /> Solicitudes</NavLink>}
                 {/* Una vez verificada, este paso ya se hizo — no tiene sentido seguir
                     mostrándolo junto a las tareas recurrentes del día a día. */}
-                {canInvite && verificationStatus !== 'verified' && (
+                {canVerify && verificationStatus !== 'verified' && (
                   <NavLink to="/verificar" className="menu-link"><IconShield /> Verificar mi empresa</NavLink>
                 )}
               </div>

@@ -52,7 +52,9 @@ async function runPendingAction(action) {
   if (action.type === 'create_org') {
     const { error } = await supabase.rpc('create_organization_and_owner', {
       p_org_name: action.orgName,
-      p_branch_name: action.branchName || 'Principal'
+      p_branch_name: action.branchName || 'Principal',
+      p_setup_for_other: Boolean(action.setupForOther),
+      p_owner_email: action.setupForOther ? action.ownerEmail : null
     })
     return { error }
   }

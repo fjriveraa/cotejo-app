@@ -16,6 +16,11 @@ export default function Signup() {
   const [oauthLoading, setOauthLoading] = useState(false)
   const [duplicateWarning, setDuplicateWarning] = useState(null)
   const [confirmedDuplicate, setConfirmedDuplicate] = useState(false)
+  // Para el caso "Sistemas/Operaciones da de alta una empresa grande que no
+  // es suya": quien registra queda como admin operativo, no como dueño, y el
+  // rol de propietario se cede de una vez al correo del dueño real.
+  const [setupForOther, setSetupForOther] = useState(false)
+  const [ownerEmail, setOwnerEmail] = useState('')
 
   async function nameIsFreeToUse() {
     if (confirmedDuplicate) return true
@@ -38,11 +43,17 @@ export default function Signup() {
       setError('Ingresa el nombre de tu empresa.')
       return
     }
+    if (setupForOther && !ownerEmail.trim()) {
+      setError('Ingresa el correo del dueño o representante legal.')
+      return
+    }
     if (!(await nameIsFreeToUse())) return
     setLoading(true)
     const { data, error } = await supabase.rpc('create_organization_and_owner', {
       p_org_name: orgName.trim(),
-      p_branch_name: branchName.trim() || 'Principal'
+      p_branch_name: branchName.trim() || 'Principal',
+      p_setup_for_other: setupForOther,
+      p_owner_email: setupForOther ? ownerEmail.trim() : null
     })
     setLoading(false)
     if (error) {
@@ -63,10 +74,20 @@ export default function Signup() {
       await handleSubmitWithSession()
       return
     }
+    if (setupForOther && !ownerEmail.trim()) {
+      setError('Ingresa el correo del dueño o representante legal.')
+      return
+    }
     if (!(await nameIsFreeToUse())) return
     setError(null)
     setOauthLoading(true)
-    writePendingAction({ type: 'create_org', orgName: orgName.trim(), branchName: branchName.trim() })
+    writePendingAction({
+      type: 'create_org',
+      orgName: orgName.trim(),
+      branchName: branchName.trim(),
+      setupForOther,
+      ownerEmail: setupForOther ? ownerEmail.trim() : null
+    })
     const { error } = await signInWithOAuth('google', `${window.location.origin}/`)
     if (error) {
       clearPendingAction()
@@ -94,12 +115,23 @@ export default function Signup() {
       return
     }
 
+    if (setupForOther && !ownerEmail.trim()) {
+      setError('Ingresa el correo del dueño o representante legal.')
+      return
+    }
+
     if (!(await nameIsFreeToUse())) return
 
     setLoading(true)
     // Se guarda antes de crear la cuenta: si el correo requiere confirmación,
     // esta acción se completa sola la primera vez que el dueño inicie sesión.
-    writePendingAction({ type: 'create_org', orgName: orgName.trim(), branchName: branchName.trim() })
+    writePendingAction({
+      type: 'create_org',
+      orgName: orgName.trim(),
+      branchName: branchName.trim(),
+      setupForOther,
+      ownerEmail: setupForOther ? ownerEmail.trim() : null
+    })
 
     const { data, error: signUpError } = await signUpWithPassword(email, password)
     setLoading(false)
@@ -185,6 +217,49 @@ export default function Signup() {
               placeholder="Principal"
             />
           </div>
+          <div className="field">
+            <label>¿Quién eres en esta empresa?</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontWeight: 400, fontSize: 13.5 }}>
+                <input
+                  type="radio"
+                  name="setupFor"
+                  checked={!setupForOther}
+                  onChange={() => setSetupForOther(false)}
+                  style={{ marginTop: 3 }}
+                />
+                Soy el dueño o representante legal de la empresa
+              </label>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontWeight: 400, fontSize: 13.5 }}>
+                <input
+                  type="radio"
+                  name="setupFor"
+                  checked={setupForOther}
+                  onChange={() => setSetupForOther(true)}
+                  style={{ marginTop: 3 }}
+                />
+                Estoy dando de alta la cuenta para otra persona (ej. Sistemas u Operaciones configurando la empresa)
+              </label>
+            </div>
+          </div>
+          {setupForOther && (
+            <div className="field">
+              <label htmlFor="ownerEmail">Correo del dueño o representante legal</label>
+              <input
+                id="ownerEmail"
+                type="email"
+                value={ownerEmail}
+                onChange={(e) => setOwnerEmail(e.target.value)}
+                placeholder="dueño@empresa.com"
+                required={setupForOther}
+              />
+              <p style={{ fontSize: 12.5, opacity: 0.65, marginTop: 4 }}>
+                Vas a quedar como administrador con acceso operativo. Esa persona queda como propietaria de
+                inmediato (o en cuanto entre a Cotejo por primera vez) y es quien va a poder certificar la
+                empresa con sus documentos legales.
+              </p>
+            </div>
+          )}
           {!session && (
             <>
               <div className="field">
