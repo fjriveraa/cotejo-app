@@ -18,7 +18,9 @@ import GuestSubmit from './pages/GuestSubmit'
 import GuestStatus from './pages/GuestStatus'
 import GuestQueue from './pages/GuestQueue'
 import Reports from './pages/Reports'
+import Landing from './pages/Landing'
 import TopBar from './components/TopBar'
+import { IconBuilding, IconBriefcase, IconLink, IconSearch } from './components/icons'
 
 const OWNER_ROLES = ['propietario', 'admin']
 const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
@@ -48,22 +50,32 @@ function ErrorScreen({ message }) {
   if (isNoMembership) {
     return (
       <div className="login-wrap">
-        <div className="card login-card">
-          <h1>Todavía no tienes empresa en Cotejo</h1>
-          <p style={{ marginBottom: 20 }}>Elige una opción para continuar:</p>
-          <Link to="/signup" className="btn btn-primary" style={{ width: '100%', display: 'block', textAlign: 'center', marginBottom: 12, textDecoration: 'none' }}>
-            Crear mi empresa
+        <div className="card login-card" style={{ maxWidth: 440 }}>
+          <h1>¿Cómo vas a usar Cotejo?</h1>
+          <p style={{ marginBottom: 20 }}>Elige la opción que mejor te describe.</p>
+
+          <div className="choice-row">
+            <Link to="/signup" className="choice-card">
+              <IconBuilding width={26} height={26} />
+              <span className="choice-title">Tengo una empresa</span>
+              <span className="choice-subtitle">Varias personas van a usar Cotejo juntas</span>
+            </Link>
+            <Link to="/autonomo" className="choice-card">
+              <IconBriefcase width={26} height={26} />
+              <span className="choice-title">Trabajo por mi cuenta</span>
+              <span className="choice-subtitle">Autónomo o comerciante individual</span>
+            </Link>
+          </div>
+
+          <p style={{ marginTop: 24, marginBottom: 10, fontSize: 13, opacity: 0.65 }}>¿Ya deberías estar en una empresa registrada?</p>
+          <Link to="/unirme" className="menu-link" style={{ border: '1px solid var(--border)', borderRadius: 8, marginBottom: 8 }}>
+            <IconLink /> Unirme con un enlace de invitación
           </Link>
-          <Link to="/unirme" className="btn btn-secondary" style={{ width: '100%', display: 'block', textAlign: 'center', marginBottom: 12, textDecoration: 'none' }}>
-            Unirme a una empresa con un enlace
+          <Link to="/empresas" className="menu-link" style={{ border: '1px solid var(--border)', borderRadius: 8, marginBottom: 20 }}>
+            <IconSearch /> Buscar una empresa registrada
           </Link>
-          <Link to="/empresas" className="btn btn-secondary" style={{ width: '100%', display: 'block', textAlign: 'center', marginBottom: 12, textDecoration: 'none' }}>
-            Buscar una empresa registrada
-          </Link>
-          <Link to="/autonomo" className="btn btn-secondary" style={{ width: '100%', display: 'block', textAlign: 'center', marginBottom: 20, textDecoration: 'none' }}>
-            Trabajar como autónomo / comerciante individual
-          </Link>
-          <button className="btn btn-secondary" style={{ width: '100%' }} onClick={signOut}>Cerrar sesión e intentar de nuevo</button>
+
+          <button className="btn btn-ghost" style={{ width: '100%' }} onClick={signOut}>Cerrar sesión e intentar de nuevo</button>
         </div>
       </div>
     )
@@ -149,12 +161,21 @@ export default function App() {
           igual. Solo Login se cierra automáticamente con sesión. */}
       <Route path="/signup" element={<Signup />} />
       <Route path="/join/:token" element={<Join />} />
+      {/* La raíz es pública: quien no tiene sesión elige primero qué
+          necesita (enviar un comprobante o entrar a su negocio) antes de
+          que se le pida cuenta. Con sesión, sigue al flujo normal. */}
       <Route
         path="/"
         element={
-          <ProtectedLayout>
-            <RoleHome />
-          </ProtectedLayout>
+          session === undefined ? (
+            <LoadingScreen />
+          ) : session === null ? (
+            <Landing />
+          ) : (
+            <ProtectedLayout>
+              <RoleHome />
+            </ProtectedLayout>
+          )
         }
       />
       <Route

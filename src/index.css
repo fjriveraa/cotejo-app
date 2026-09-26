@@ -328,6 +328,120 @@ a {
 .status-rejected { background: rgba(162, 72, 58, 0.15); color: var(--rust); }
 .status-voided { background: rgba(42, 38, 32, 0.1); color: var(--ink); opacity: 0.7; }
 
+.landing-wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 28px;
+}
+
+.landing-brand {
+  text-align: center;
+}
+
+.landing-brand h1 {
+  font-size: 34px;
+  color: var(--teal-strong);
+  margin: 0 0 6px;
+}
+
+.landing-brand p {
+  opacity: 0.65;
+  margin: 0;
+}
+
+.landing-choices {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.landing-primary, .landing-secondary {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-radius: 16px;
+  text-decoration: none;
+}
+
+.landing-primary {
+  padding: 22px;
+  background: var(--teal-strong);
+  color: white;
+  box-shadow: var(--shadow);
+}
+
+.landing-primary .title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.landing-primary .subtitle {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.landing-secondary {
+  padding: 18px 22px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ink);
+}
+
+.landing-secondary .title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--teal-strong);
+}
+
+.landing-secondary .subtitle {
+  font-size: 13px;
+  opacity: 0.65;
+}
+
+/* Dos opciones del mismo peso visual, para que ninguna se sienta la
+   "default" — la persona elige activamente en vez de tomar el atajo. */
+.choice-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.choice-card {
+  flex: 1 1 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--ink);
+  background: white;
+}
+
+.choice-card svg { color: var(--teal-strong); }
+
+.choice-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15.5px;
+}
+
+.choice-subtitle {
+  font-size: 12.5px;
+  opacity: 0.65;
+}
+
 .login-wrap {
   min-height: 100vh;
   display: flex;
@@ -494,7 +608,7 @@ a {
 
 @media (prefers-color-scheme: dark) {
   body { background: var(--paper-dark); color: var(--ink-dark); }
-  .topbar, .card, .payment-row, .menu-drawer { background: var(--card-dark); border-color: var(--border-dark); }
+  .topbar, .card, .payment-row, .menu-drawer, .choice-card, .landing-secondary { background: var(--card-dark); border-color: var(--border-dark); color: var(--ink-dark); }
   .field input, .field select, .field textarea { background: #171410; color: var(--ink-dark); border-color: var(--border-dark); }
   .nav-pill { color: var(--ink-dark); background: rgba(237, 231, 217, 0.06); }
   .menu-link, .menu-toggle, .org-name { color: var(--ink-dark); }
