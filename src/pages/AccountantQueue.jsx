@@ -308,6 +308,14 @@ export default function AccountantQueue() {
                         </span>
                       )}
                     </div>
+                    {/* El monto solo no alcanza para distinguir pagos — si hay varios
+                        comprobantes pendientes por el mismo monto, el nombre de quien
+                        envía es lo que realmente los diferencia de un vistazo. */}
+                    {p.origin_account_holder && (
+                      <div style={{ fontSize: 13.5, fontWeight: 600, marginTop: 2 }}>
+                        {p.origin_account_holder}
+                      </div>
+                    )}
                     <div className="meta" style={{ marginTop: 2 }}>
                       {new Date(p.created_at).toLocaleString('es-HN')} {p.reference_raw ? `· ref: ${p.reference_raw}` : ''}
                     </div>
