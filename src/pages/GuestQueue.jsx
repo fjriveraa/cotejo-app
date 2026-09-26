@@ -159,6 +159,21 @@ export default function GuestQueue() {
                       ⚠ Esta referencia ya se usó en otra solicitud — revisa con cuidado
                     </span>
                   )}
+                  {s.hash_seen_elsewhere && (
+                    <span
+                      style={{
+                        marginLeft: 10,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: '#7C2D12',
+                        background: '#FEE2E2',
+                        padding: '2px 8px',
+                        borderRadius: 6
+                      }}
+                    >
+                      🚨 Este mismo archivo ya fue enviado a otra empresa — posible comprobante reciclado
+                    </span>
+                  )}
                 </div>
                 {s.notes && <div className="meta">Nota del cliente: {s.notes}</div>}
               </div>

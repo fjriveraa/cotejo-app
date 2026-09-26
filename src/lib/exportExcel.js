@@ -84,6 +84,7 @@ export function exportReportToExcel({ organizationName, payments, guestSubmissio
     'Cuenta origen (número)': g.origin_account_number || '',
     'Banco origen': g.origin_bank || '',
     Notas: g.notes || '',
+    'Comprobante visto en otra empresa': g.hash_seen_elsewhere ? 'Sí — posible reciclado' : 'No',
     'Nota de revisión': g.review_notes || '',
     'Enviado el': formatDateTime(g.created_at)
   }))
