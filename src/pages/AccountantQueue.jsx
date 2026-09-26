@@ -12,16 +12,21 @@ const STATUS_LABELS = {
   voided: 'Anulado'
 }
 
+// Orden pensado como se coteja un comprobante en la práctica: primero lo que
+// descarta rápido si no cuadra (monto, fecha), luego a quién le llegó — lo
+// más importante para detectar que el pago fue a la cuenta correcta — y por
+// último quién lo envió, que sirve más para identificar al cliente que para
+// validar el pago en sí.
 const FIELD_LABELS = {
   amount: 'Monto',
+  transaction_date: 'Fecha',
   bank: 'Banco destino',
   account_last4: 'Últimos 4 dígitos',
+  destination_account_holder: 'Cuenta destino (nombre)',
   reference_raw: 'Referencia',
-  transaction_date: 'Fecha',
   origin_bank: 'Banco origen',
   origin_account_holder: 'Cuenta origen (nombre)',
-  origin_account_number: 'Cuenta origen (número)',
-  destination_account_holder: 'Cuenta destino (nombre)'
+  origin_account_number: 'Cuenta origen (número)'
 }
 
 function EvidenceModal({ payment, onClose }) {
