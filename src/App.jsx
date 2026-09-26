@@ -18,6 +18,7 @@ import GuestSubmit from './pages/GuestSubmit'
 import GuestStatus from './pages/GuestStatus'
 import GuestQueue from './pages/GuestQueue'
 import Reports from './pages/Reports'
+import Dashboard from './pages/Dashboard'
 import Landing from './pages/Landing'
 import TopBar from './components/TopBar'
 import { IconBuilding, IconBriefcase, IconLink, IconSearch } from './components/icons'
@@ -36,9 +37,13 @@ function LoadingScreen() {
 function RoleHome() {
   const { membership } = useAuth()
   if (!membership) return <LoadingScreen />
+  // Un empleado hace una sola cosa en Cotejo (registrar pagos), así que va
+  // directo a esa pantalla. Los roles que navegan entre varias áreas (cola,
+  // comprobantes de invitados, reportes) ven primero un resumen del día en
+  // vez de aterrizar directo en una bandeja de pendientes sin contexto.
   if (membership.role === 'empleado') return <Navigate to="/registrar" replace />
   if (['contador', 'propietario', 'supervisor', 'admin', 'auditor'].includes(membership.role)) {
-    return <Navigate to="/cola" replace />
+    return <Dashboard />
   }
   return <Navigate to="/registrar" replace />
 }

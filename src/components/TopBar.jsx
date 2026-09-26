@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import {
   IconMenu, IconClose, IconDoc, IconCheckCircle, IconInbox, IconChart,
-  IconUsers, IconMail, IconShield, IconIdCard, IconLink, IconSearch, IconBriefcase
+  IconUsers, IconMail, IconShield, IconIdCard, IconLink, IconSearch, IconLogout
 } from './icons'
 
 const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
@@ -85,7 +85,7 @@ export default function TopBar() {
       </div>
 
       <nav className="topbar-primary">
-        <NavLink to="/registrar" className={({ isActive }) => `nav-pill${isActive ? ' active' : ''}`}>
+        <NavLink to="/registrar" className={({ isActive }) => `nav-pill nav-pill-primary${isActive ? ' active' : ''}`}>
           <IconDoc /> Registrar pago
         </NavLink>
         {canSeeQueue && (
@@ -104,6 +104,19 @@ export default function TopBar() {
         <>
           <button type="button" className="menu-overlay" aria-label="Cerrar menú" onClick={() => setMenuOpen(false)} />
           <div className="menu-drawer">
+            <div className="menu-account-card">
+              <div style={{ fontWeight: 600, fontSize: 13.5 }}>{membership?.organizations?.name}</div>
+              <div style={{ fontSize: 12.5, opacity: 0.65, marginTop: 2 }}>{user?.email}</div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
+                {membership?.branch_name && (
+                  <span style={{ fontSize: 12, opacity: 0.6 }}>{membership.branch_name}</span>
+                )}
+                {verificationBadge && (
+                  <span style={{ fontSize: 12, fontWeight: 600, color: verificationBadge.color }}>{verificationBadge.label}</span>
+                )}
+              </div>
+            </div>
+
             {canSeeQueue && (
               <div className="menu-section">
                 <div className="menu-section-title">Empresa</div>
@@ -111,7 +124,11 @@ export default function TopBar() {
                 {canInvite && <NavLink to="/equipo" className="menu-link"><IconUsers /> Mi equipo</NavLink>}
                 {canInvite && <NavLink to="/invitar" className="menu-link"><IconMail /> Invitar equipo</NavLink>}
                 {canInvite && <NavLink to="/solicitudes" className="menu-link"><IconInbox /> Solicitudes</NavLink>}
-                {canInvite && <NavLink to="/verificar" className="menu-link"><IconShield /> Verificar mi empresa</NavLink>}
+                {/* Una vez verificada, este paso ya se hizo — no tiene sentido seguir
+                    mostrándolo junto a las tareas recurrentes del día a día. */}
+                {canInvite && verificationStatus !== 'verified' && (
+                  <NavLink to="/verificar" className="menu-link"><IconShield /> Verificar mi empresa</NavLink>
+                )}
               </div>
             )}
 
@@ -120,7 +137,6 @@ export default function TopBar() {
               <NavLink to="/mi-identificacion" className="menu-link"><IconIdCard /> Mi identificación</NavLink>
               <NavLink to="/unirme" className="menu-link"><IconLink /> Unirme a otra empresa</NavLink>
               <NavLink to="/empresas" className="menu-link"><IconSearch /> Buscar empresas</NavLink>
-              <NavLink to="/autonomo" className="menu-link"><IconBriefcase /> Trabajar como autónomo</NavLink>
             </div>
 
             {isPlatformAdmin && (
@@ -129,6 +145,12 @@ export default function TopBar() {
                 <NavLink to="/admin/verificaciones" className="menu-link"><IconShield /> Verificaciones</NavLink>
               </div>
             )}
+
+            <div className="menu-section">
+              <button type="button" className="menu-link menu-link-danger" onClick={signOut}>
+                <IconLogout /> Cerrar sesión
+              </button>
+            </div>
           </div>
         </>
       )}
@@ -152,15 +174,32 @@ export default function TopBar() {
           )
         )}
         {membership && <span className={`badge badge-${membership.role}`}>{membership.role}</span>}
-        {verificationBadge && (
-          <span style={{ fontSize: 12, fontWeight: 600, color: verificationBadge.color }}>{verificationBadge.label}</span>
-        )}
-        {membership?.branch_name && (
-          <span style={{ opacity: 0.55, fontSize: 13 }}>· {membership.branch_name}</span>
-        )}
-        <span style={{ opacity: 0.55, fontSize: 13 }}>{user?.email}</span>
-        <button className="btn btn-ghost" onClick={signOut}>Salir</button>
       </div>
+
+      <nav className="bottom-tabbar">
+        <NavLink to="/registrar" className={({ isActive }) => `tabbar-item tabbar-item-primary${isActive ? ' active' : ''}`}>
+          <IconDoc width={21} height={21} />
+          <span>Registrar</span>
+        </NavLink>
+        {canSeeQueue && (
+          <NavLink to="/cola" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
+            <span className="tabbar-icon-wrap">
+              <IconCheckCircle width={21} height={21} />
+              <CountBadge count={pendingPayments} />
+            </span>
+            <span>Cola</span>
+          </NavLink>
+        )}
+        {canSeeQueue && (
+          <NavLink to="/comprobantes-invitados" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
+            <span className="tabbar-icon-wrap">
+              <IconInbox width={21} height={21} />
+              <CountBadge count={pendingGuests} />
+            </span>
+            <span>Invitados</span>
+          </NavLink>
+        )}
+      </nav>
     </header>
   )
 }

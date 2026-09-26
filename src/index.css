@@ -127,6 +127,17 @@ a {
 
 .nav-pill.active svg { opacity: 1; }
 
+/* "Registrar pago" es una acción de crear, no de revisar como las otras
+   dos — se le da peso visual sólido para que sea la primera que salta a
+   la vista, en vez de verse igual que una cola de trabajo pendiente. */
+.nav-pill.nav-pill-primary {
+  background: var(--teal-strong);
+  color: white;
+  border-color: transparent;
+}
+
+.nav-pill.nav-pill-primary svg { opacity: 1; }
+
 .nav-count {
   display: inline-flex;
   align-items: center;
@@ -210,6 +221,25 @@ a {
 
 .menu-link.active svg { opacity: 1; }
 
+.menu-account-card {
+  padding: 6px 10px 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Cerrar sesión es una acción rara y de alta consecuencia — vive al fondo
+   del menú de cuenta, nunca en la barra que se ve todo el tiempo. */
+.menu-link-danger {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  color: var(--rust);
+}
+
+.menu-link-danger:hover { background: rgba(162, 72, 58, 0.08); }
+.menu-link-danger svg { opacity: 0.8; color: var(--rust); }
+
 .topbar .user-info {
   display: flex;
   align-items: center;
@@ -233,6 +263,110 @@ a {
   border: 1px solid var(--border);
   background: white;
   color: var(--teal-strong);
+}
+
+/* Navegación inferior fija: en móvil, la parte alta de la pantalla es la
+   más difícil de alcanzar con el pulgar — por eso la navegación de uso
+   diario vive abajo, como en la mayoría de apps de uso frecuente. Oculta
+   por defecto; se activa solo en el breakpoint móvil (ver media query). */
+.bottom-tabbar {
+  display: none;
+}
+
+.tabbar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px 4px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--ink);
+  opacity: 0.6;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tabbar-item.active { opacity: 1; color: var(--teal-strong); }
+
+.tabbar-item-primary { opacity: 1; color: var(--teal-strong); }
+
+.tabbar-icon-wrap { position: relative; display: inline-flex; }
+
+.tabbar-icon-wrap .nav-count {
+  position: absolute;
+  top: -6px;
+  right: -9px;
+}
+
+/* Dashboard de inicio: un vistazo antes de entrar a trabajar. */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-tile {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 12px;
+  text-align: center;
+}
+
+.stat-tile-accent {
+  background: rgba(43, 100, 89, 0.08);
+  border-color: rgba(43, 100, 89, 0.2);
+}
+
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--teal-strong);
+}
+
+.stat-label {
+  font-size: 12px;
+  opacity: 0.65;
+  margin-top: 4px;
+}
+
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.quick-action {
+  position: relative;
+  flex: 1 1 200px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.quick-action .nav-count {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.quick-action-primary {
+  background: var(--teal-strong);
+  color: white;
+  border-color: transparent;
 }
 
 .badge {
@@ -564,6 +698,30 @@ a {
   .menu-toggle {
     display: inline-flex;
   }
+
+  /* Debajo de este ancho, la navegación de uso diario se muda de la barra
+     de pills (arriba, difícil de alcanzar con el pulgar) a la barra fija
+     de abajo — no se muestran las dos a la vez. */
+  .topbar-primary {
+    display: none;
+  }
+
+  .bottom-tabbar {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    gap: 4px;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    z-index: 45;
+  }
+
+  .app-shell {
+    padding-bottom: 60px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -610,14 +768,38 @@ a {
   .actions-row .btn {
     flex: 1 1 calc(50% - 4px);
   }
+
+  .stat-grid {
+    gap: 8px;
+  }
+
+  .stat-tile {
+    padding: 12px 8px;
+  }
+
+  .stat-value {
+    font-size: 21px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+  }
+
+  .quick-action {
+    flex: 1 1 100%;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
   body { background: var(--paper-dark); color: var(--ink-dark); }
-  .topbar, .card, .payment-row, .menu-drawer, .choice-card, .landing-secondary { background: var(--card-dark); border-color: var(--border-dark); color: var(--ink-dark); }
+  .topbar, .card, .payment-row, .menu-drawer, .choice-card, .landing-secondary,
+  .stat-tile, .quick-action, .bottom-tabbar { background: var(--card-dark); border-color: var(--border-dark); color: var(--ink-dark); }
   .field input, .field select, .field textarea { background: #171410; color: var(--ink-dark); border-color: var(--border-dark); }
   .nav-pill { color: var(--ink-dark); background: rgba(237, 231, 217, 0.06); }
-  .menu-link, .menu-toggle, .org-name { color: var(--ink-dark); }
+  .menu-link, .menu-toggle, .org-name, .tabbar-item { color: var(--ink-dark); }
   .org-select { background: #171410; color: var(--ink-dark); border-color: var(--border-dark); }
   .menu-link:hover { background: rgba(237, 231, 217, 0.06); }
+  .menu-account-card { border-color: var(--border-dark); }
+  .nav-pill.nav-pill-primary, .quick-action-primary, .tabbar-item-primary { color: white; }
+  .nav-pill.nav-pill-primary, .quick-action-primary { background: var(--teal-strong); }
 }
