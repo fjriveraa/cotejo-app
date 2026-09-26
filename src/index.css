@@ -82,8 +82,11 @@ a {
   color: var(--teal-strong);
 }
 
+/* Visible en cualquier tamaño de pantalla: el cajón que abre contiene
+   Reportes, Mi equipo, Cerrar sesión y más — nada de eso puede depender
+   de estar en un celular para ser alcanzable. */
 .menu-toggle {
-  display: none;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   background: transparent;
@@ -791,10 +794,6 @@ a {
 }
 
 @media (max-width: 820px) {
-  .menu-toggle {
-    display: inline-flex;
-  }
-
   /* Debajo de este ancho, la navegación de uso diario se muda de la barra
      de pills (arriba, difícil de alcanzar con el pulgar) a la barra fija
      de abajo — no se muestran las dos a la vez. */
