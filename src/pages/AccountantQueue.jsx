@@ -252,6 +252,58 @@ function DuplicateModal({ payment, candidates, onConfirm, onClose, busy }) {
   )
 }
 
+// Revertir una confirmación no debería ser un botón que la borra sin dejar
+// rastro — por eso pide un motivo obligatorio, que queda en la bitácora de
+// auditoría junto con quién lo hizo (revert_confirmation en la base de
+// datos ya lo exige, esto solo evita el viaje redondo de un error trivial).
+function RevertConfirmationModal({ payment, onConfirm, onClose, busy }) {
+  const [reason, setReason] = useState('')
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="card"
+        style={{ maxWidth: 420, width: '100%', background: 'white' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <h3 style={{ margin: 0 }}>Revertir confirmación</h3>
+          <button className="btn btn-secondary" onClick={onClose}>Cerrar</button>
+        </div>
+        <p style={{ fontSize: 13, opacity: 0.75, marginTop: 0 }}>
+          {payment.currency} {Number(payment.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+          {payment.origin_account_holder ? ` — ${payment.origin_account_holder}` : ''} vuelve a quedar pendiente.
+          Esto queda registrado en la bitácora con el motivo que escribas.
+        </p>
+        <div className="field">
+          <label htmlFor="revertReason">Motivo (obligatorio)</label>
+          <textarea
+            id="revertReason"
+            rows={3}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="ej. confirmé el pago equivocado por error"
+          />
+        </div>
+        <button
+          className="btn btn-amber"
+          style={{ width: '100%' }}
+          disabled={!reason.trim() || busy}
+          onClick={() => onConfirm(reason.trim())}
+        >
+          {busy ? 'Revirtiendo...' : 'Revertir'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function EvidenceThumb({ path, onClick }) {
   const [url, setUrl] = useState(null)
 
@@ -281,11 +333,34 @@ export default function AccountantQueue() {
   const [busyId, setBusyId] = useState(null)
   const [viewingPayment, setViewingPayment] = useState(null)
   const [duplicatePayment, setDuplicatePayment] = useState(null)
+  const [confirmedToday, setConfirmedToday] = useState([])
+  const [showConfirmed, setShowConfirmed] = useState(false)
+  const [revertingPayment, setRevertingPayment] = useState(null)
 
   useEffect(() => {
     if (!membership) return
     loadQueue()
+    loadConfirmedToday()
   }, [membership])
+
+  // Honduras no tiene horario de verano — el desfase con UTC es siempre -6,
+  // así que se puede calcular el inicio del día local sin librerías de
+  // zona horaria.
+  function startOfTodayHonduras() {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Tegucigalpa', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date())
+    const get = (type) => parts.find((p) => p.type === type)?.value
+    return `${get('year')}-${get('month')}-${get('day')}T00:00:00-06:00`
+  }
+
+  async function loadConfirmedToday() {
+    const { data, error } = await supabase.rpc('list_confirmed_today', {
+      p_organization_id: membership.organization_id,
+      p_since: startOfTodayHonduras()
+    })
+    if (!error) setConfirmedToday(data || [])
+  }
 
   async function loadQueue() {
     setLoading(true)
@@ -352,7 +427,7 @@ export default function AccountantQueue() {
         ...extraParams
       })
       if (error) throw error
-      await loadQueue()
+      await Promise.all([loadQueue(), loadConfirmedToday()])
     } catch (err) {
       console.error(err)
       setError(err.message || 'No se pudo completar la acción.')
@@ -383,6 +458,12 @@ export default function AccountantQueue() {
     setDuplicatePayment(null)
   }
 
+  async function handleRevertConfirmation(reason) {
+    if (!revertingPayment) return
+    await callRpc('revert_confirmation', revertingPayment, { p_reason: reason })
+    setRevertingPayment(null)
+  }
+
   if (loading) {
     return <div className="container"><p style={{ opacity: 0.6 }}>Cargando cola...</p></div>
   }
@@ -391,6 +472,47 @@ export default function AccountantQueue() {
     <div className="container">
       <h2 style={{ marginTop: 0 }}>Cola de confirmación</h2>
       {error && <p className="error-text">{error}</p>}
+
+      {confirmedToday.length > 0 && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <button
+            type="button"
+            onClick={() => setShowConfirmed((v) => !v)}
+            style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%',
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit', color: 'inherit'
+            }}
+          >
+            <strong style={{ fontSize: 14 }}>Confirmados hoy ({confirmedToday.length})</strong>
+            <span style={{ fontSize: 12, opacity: 0.6 }}>{showConfirmed ? 'Ocultar ▲' : 'Ver ▼'}</span>
+          </button>
+          {showConfirmed && (
+            <div className="payment-list" style={{ marginTop: 12 }}>
+              {confirmedToday.map((c) => (
+                <div key={c.id} className="payment-row" style={{ flexWrap: 'wrap', gap: 10 }}>
+                  <div>
+                    <div className="amount" style={{ fontSize: 13.5 }}>
+                      {c.currency} {Number(c.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+                      {c.origin_account_holder ? ` — ${c.origin_account_holder}` : ''}
+                    </div>
+                    <div className="meta">
+                      Confirmado por {c.confirmed_by_email} a las {new Date(c.verified_at).toLocaleTimeString('es-HN')}
+                      {c.reference_raw ? ` · ref: ${c.reference_raw}` : ''}
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-secondary"
+                    disabled={busyId === c.id}
+                    onClick={() => setRevertingPayment(c)}
+                  >
+                    Deshacer
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {payments.length === 0 ? (
         <div className="empty-state-friendly">
@@ -533,6 +655,15 @@ export default function AccountantQueue() {
           busy={busyId === duplicatePayment.id}
           onConfirm={handleConfirmDuplicate}
           onClose={() => setDuplicatePayment(null)}
+        />
+      )}
+
+      {revertingPayment && (
+        <RevertConfirmationModal
+          payment={revertingPayment}
+          busy={busyId === revertingPayment.id}
+          onConfirm={handleRevertConfirmation}
+          onClose={() => setRevertingPayment(null)}
         />
       )}
     </div>
