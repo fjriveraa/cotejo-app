@@ -90,6 +90,32 @@ export default function AdminVerifications() {
                   </div>
                 )}
                 {v.notes && <div className="meta">Notas: {v.notes}</div>}
+                {(v.rtn_duplicate_org_name || v.doc_duplicate_org_name) && (
+                  <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {v.rtn_duplicate_org_name && (
+                      <span
+                        style={{
+                          fontSize: 12, fontWeight: 700, color: '#92400E', background: '#FEF3C7',
+                          padding: '4px 10px', borderRadius: 6, display: 'inline-block', width: 'fit-content'
+                        }}
+                      >
+                        ⚠ Este mismo RTN ya está en {v.rtn_duplicate_org_name} — confirma si es una sucursal
+                        legítima o alguien más reclamándolo
+                      </span>
+                    )}
+                    {v.doc_duplicate_org_name && (
+                      <span
+                        style={{
+                          fontSize: 12, fontWeight: 700, color: '#7C2D12', background: '#FEE2E2',
+                          padding: '4px 10px', borderRadius: 6, display: 'inline-block', width: 'fit-content'
+                        }}
+                      >
+                        🚨 Documento {v.doc_duplicate_kind === 'exacto' ? 'idéntico' : 'muy parecido'} a uno ya
+                        usado por {v.doc_duplicate_org_name} — posible suplantación, revisa con cuidado
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

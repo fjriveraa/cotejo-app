@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { hashFile, computePerceptualHash } from '../lib/fileHash'
 
 const STATUS_LABELS = {
   unverified: { label: 'Sin verificar', color: '#6B7280' },
@@ -46,10 +47,26 @@ export default function Verify() {
       let legalDocPath = null
       let idDocPath = null
       let socialEvidencePath = null
+      let legalDocHash = null
+      let idDocHash = null
+      let legalDocPhash = null
+      let idDocPhash = null
 
       if (method === 'documentos_legales') {
-        legalDocPath = await uploadFile(legalDocFile, membership.organization_id, 'escritura')
-        idDocPath = await uploadFile(idDocFile, membership.organization_id, 'identificacion')
+        if (legalDocFile) {
+          ;[legalDocPath, legalDocHash, legalDocPhash] = await Promise.all([
+            uploadFile(legalDocFile, membership.organization_id, 'escritura'),
+            hashFile(legalDocFile),
+            computePerceptualHash(legalDocFile)
+          ])
+        }
+        if (idDocFile) {
+          ;[idDocPath, idDocHash, idDocPhash] = await Promise.all([
+            uploadFile(idDocFile, membership.organization_id, 'identificacion'),
+            hashFile(idDocFile),
+            computePerceptualHash(idDocFile)
+          ])
+        }
       } else {
         socialEvidencePath = await uploadFile(socialEvidenceFile, membership.organization_id, 'redes')
       }
@@ -62,7 +79,11 @@ export default function Verify() {
         p_id_doc_path: idDocPath,
         p_social_url: method === 'redes_sociales' ? socialUrl.trim() : null,
         p_social_evidence_path: socialEvidencePath,
-        p_notes: notes.trim() || null
+        p_notes: notes.trim() || null,
+        p_legal_doc_hash: legalDocHash,
+        p_id_doc_hash: idDocHash,
+        p_legal_doc_phash: legalDocPhash,
+        p_id_doc_phash: idDocPhash
       })
 
       if (rpcError) throw rpcError
