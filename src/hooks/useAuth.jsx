@@ -101,6 +101,21 @@ export function AuthProvider({ children }) {
     return () => { cancelled = true }
   }, [session])
 
+  // Si a este correo lo invitaron por correo a alguna empresa (en vez de por
+  // enlace genérico) mientras no tenía cuenta o no había iniciado sesión, se
+  // activa solo aquí, una vez por sesión — sin que quien invitó tenga que
+  // avisarle nada más.
+  useEffect(() => {
+    if (!session?.user) return
+    let cancelled = false
+    supabase.rpc('claim_pending_email_invites').then(({ data, error }) => {
+      if (cancelled || error) return
+      if (data > 0) refreshMemberships()
+    })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id])
+
   useEffect(() => {
     let cancelled = false
 
