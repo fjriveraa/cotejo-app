@@ -133,6 +133,31 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
+    // Esta llamada cuesta dinero real (API de Anthropic) en un endpoint
+    // público sin cuenta, así que es el punto más importante donde frenar
+    // una ráfaga de abuso. El umbral es generoso — nunca debería tocar a un
+    // cliente real leyendo varios comprobantes propios — y si algo falla
+    // aquí, se deja pasar la solicitud (nunca se bloquea el pago por un
+    // problema del limitador).
+    const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim()
+    if (ip) {
+      const since = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+      const { count } = await adminClient
+        .from("guest_rate_events")
+        .select("id", { count: "exact", head: true })
+        .eq("scope", "analyze")
+        .eq("ip", ip)
+        .gte("created_at", since)
+
+      if ((count || 0) >= 8) {
+        return new Response(JSON.stringify({ extraction: null, rate_limited: true }), {
+          headers: { ...corsHeaders, "content-type": "application/json" }
+        })
+      }
+
+      await adminClient.from("guest_rate_events").insert({ scope: "analyze", ip, organization_id })
+    }
+
     const { data: org } = await adminClient
       .from("organizations")
       .select("id")

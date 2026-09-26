@@ -139,6 +139,9 @@ export default function GuestSubmit() {
         applyExtraction(fnData.extraction)
         setAiStatus('done')
         setAiMessage('Datos detectados automáticamente. Revísalos antes de enviar.')
+      } else if (fnData?.rate_limited) {
+        setAiStatus('skipped')
+        setAiMessage('Por ahora no podemos leer el comprobante automáticamente. Completa los datos a mano — tu comprobante ya quedó guardado y puedes enviarlo igual.')
       } else {
         setAiStatus('skipped')
         setAiMessage('No se pudieron detectar datos automáticamente. Completa los campos a mano.')
