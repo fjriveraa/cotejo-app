@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { IconInbox } from '../components/icons'
 
 function ViewEvidence({ path }) {
   const [loading, setLoading] = useState(false)
@@ -127,7 +128,11 @@ export default function GuestQueue() {
       {error && <p className="error-text">{error}</p>}
 
       {items.length === 0 ? (
-        <p className="empty-state">No hay comprobantes de invitados pendientes.</p>
+        <div className="empty-state-friendly">
+          <IconInbox width={36} height={36} />
+          <div className="title">Bandeja al día</div>
+          <div className="subtitle">No hay comprobantes de invitados pendientes de revisar.</div>
+        </div>
       ) : (
         <div className="payment-list">
           {items.map((s) => (

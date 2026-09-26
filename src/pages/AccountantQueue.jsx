@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { IconCheckCircle } from '../components/icons'
 
 const FIELD_LABELS = {
   amount: 'Monto',
@@ -219,7 +220,11 @@ export default function AccountantQueue() {
       {error && <p className="error-text">{error}</p>}
 
       {payments.length === 0 ? (
-        <p className="empty-state">No hay pagos pendientes de revisión.</p>
+        <div className="empty-state-friendly">
+          <IconCheckCircle width={36} height={36} />
+          <div className="title">¡Todo al día!</div>
+          <div className="subtitle">No hay pagos pendientes de revisión en este momento.</div>
+        </div>
       ) : (
         Object.entries(grouped).map(([bankLabel, items]) => (
           <div key={bankLabel}>
