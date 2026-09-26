@@ -17,6 +17,7 @@ import AdminVerifications from './pages/AdminVerifications'
 import GuestSubmit from './pages/GuestSubmit'
 import GuestStatus from './pages/GuestStatus'
 import GuestQueue from './pages/GuestQueue'
+import Reports from './pages/Reports'
 import TopBar from './components/TopBar'
 
 const OWNER_ROLES = ['propietario', 'admin']
@@ -263,6 +264,16 @@ export default function App() {
           <ProtectedLayout>
             <RequireQueueAccess>
               <GuestQueue />
+            </RequireQueueAccess>
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/reportes"
+        element={
+          <ProtectedLayout>
+            <RequireQueueAccess>
+              <Reports />
             </RequireQueueAccess>
           </ProtectedLayout>
         }
