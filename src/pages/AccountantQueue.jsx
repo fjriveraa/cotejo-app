@@ -235,6 +235,27 @@ export default function AccountantQueue() {
     return groups
   }, [payments])
 
+  // La referencia es lo que la IA puede comparar mejor para detectar que el
+  // mismo comprobante entró dos veces (o dos personas subieron el mismo pago
+  // por error) — si dos pagos pendientes del mismo banco comparten
+  // referencia, es señal fuerte de duplicado y merece una alerta visible,
+  // no que el contador tenga que notarlo leyendo una por una.
+  const duplicateRefCounts = useMemo(() => {
+    const counts = {}
+    for (const p of payments) {
+      if (!p.reference_raw) continue
+      const key = `${p.bank}::${p.reference_raw.trim().toLowerCase()}`
+      counts[key] = (counts[key] || 0) + 1
+    }
+    return counts
+  }, [payments])
+
+  function isDuplicateRef(p) {
+    if (!p.reference_raw) return false
+    const key = `${p.bank}::${p.reference_raw.trim().toLowerCase()}`
+    return duplicateRefCounts[key] > 1
+  }
+
   async function callRpc(fnName, payment, extraParams = {}) {
     setBusyId(payment.id)
     setError(null)
@@ -293,7 +314,20 @@ export default function AccountantQueue() {
                 <div key={p.id} className="payment-row payment-row-with-thumb" style={{ flexWrap: 'wrap', gap: 12 }}>
                   <EvidenceThumb path={p.evidence_path} onClick={() => setViewingPayment(p)} />
                   <div style={{ flex: '1 1 200px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    {/* Lo primero que hace falta para cotejar es a qué día ir en la app
+                        del banco — no la hora en que esto se registró en Cotejo (eso va
+                        abajo, en gris). Sin fecha detectada se avisa en vez de callar. */}
+                    <div
+                      style={{
+                        fontSize: 13, fontWeight: 700, letterSpacing: 0.2,
+                        color: p.transaction_date ? '#2B6459' : '#B08900'
+                      }}
+                    >
+                      {p.transaction_date
+                        ? new Date(p.transaction_date).toLocaleDateString('es-HN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+                        : '⚠ Fecha no detectada'}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
                       <div className="amount">
                         {p.currency} {Number(p.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
                       </div>
@@ -317,8 +351,14 @@ export default function AccountantQueue() {
                       </div>
                     )}
                     <div className="meta" style={{ marginTop: 2 }}>
-                      {new Date(p.created_at).toLocaleString('es-HN')} {p.reference_raw ? `· ref: ${p.reference_raw}` : ''}
+                      Registrado {new Date(p.created_at).toLocaleString('es-HN')}
+                      {p.reference_raw && ` · ref: ${p.reference_raw}`}
                     </div>
+                    {isDuplicateRef(p) && (
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#A2483A', marginTop: 3 }}>
+                        ⚠ Misma referencia que otro pago pendiente — revisa si es el mismo comprobante repetido
+                      </div>
+                    )}
                     {p.notes && <div className="meta" style={{ marginTop: 2 }}>{p.notes}</div>}
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
                       <span className={`status-pill status-${p.verification_status}`}>
