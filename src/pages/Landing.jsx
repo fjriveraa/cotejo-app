@@ -20,6 +20,10 @@ export default function Landing() {
           <span className="subtitle">Inicia sesión o crea tu cuenta en Cotejo</span>
         </Link>
       </div>
+
+      <p className="landing-login-hint">
+        ¿Ya tienes cuenta? <Link to="/login">Inicia sesión aquí</Link>
+      </p>
     </div>
   )
 }
