@@ -14,6 +14,7 @@ import Autonomo from './pages/Autonomo'
 import Verify from './pages/Verify'
 import MyIdentification from './pages/MyIdentification'
 import AdminVerifications from './pages/AdminVerifications'
+import ReceivingAccounts from './pages/ReceivingAccounts'
 import GuestSubmit from './pages/GuestSubmit'
 import GuestStatus from './pages/GuestStatus'
 import GuestQueue from './pages/GuestQueue'
@@ -233,6 +234,16 @@ export default function App() {
           <RequireSessionLayout>
             <Directory />
           </RequireSessionLayout>
+        }
+      />
+      <Route
+        path="/cuentas"
+        element={
+          <ProtectedLayout>
+            <RequireOwner>
+              <ReceivingAccounts />
+            </RequireOwner>
+          </ProtectedLayout>
         }
       />
       <Route

@@ -4,7 +4,8 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import {
   IconMenu, IconClose, IconDoc, IconCheckCircle, IconInbox, IconChart,
-  IconUsers, IconMail, IconShield, IconIdCard, IconLink, IconSearch, IconLogout
+  IconUsers, IconMail, IconShield, IconIdCard, IconLink, IconSearch, IconLogout,
+  IconBuilding
 } from './icons'
 
 const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
@@ -135,6 +136,7 @@ export default function TopBar() {
               <div className="menu-section">
                 <div className="menu-section-title">Empresa</div>
                 <NavLink to="/reportes" className="menu-link"><IconChart /> Reportes</NavLink>
+                {canInvite && <NavLink to="/cuentas" className="menu-link"><IconBuilding /> Cuentas receptoras</NavLink>}
                 {canInvite && <NavLink to="/equipo" className="menu-link"><IconUsers /> Mi equipo</NavLink>}
                 {canInvite && <NavLink to="/invitar" className="menu-link"><IconMail /> Invitar equipo</NavLink>}
                 {canInvite && <NavLink to="/solicitudes" className="menu-link"><IconInbox /> Solicitudes</NavLink>}

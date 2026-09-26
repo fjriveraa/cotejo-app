@@ -336,6 +336,11 @@ export default function AccountantQueue() {
   const [confirmedToday, setConfirmedToday] = useState([])
   const [showConfirmed, setShowConfirmed] = useState(false)
   const [revertingPayment, setRevertingPayment] = useState(null)
+  // Si la empresa nunca configuró sus cuentas receptoras, todos los pagos
+  // aparecerían como "cuenta desconocida" — una alerta que no distingue
+  // nada. Solo tiene sentido mostrarla si existe al menos una cuenta
+  // conocida contra la cual comparar.
+  const [hasKnownAccounts, setHasKnownAccounts] = useState(false)
   // Cada contador cotejea distinto: unos priorizan al cliente que está
   // esperando respuesta, otros van banco por banco desde el comprobante más
   // viejo. No hay un único orden correcto, así que se deja elegir y se
@@ -360,7 +365,17 @@ export default function AccountantQueue() {
     if (!membership) return
     loadQueue()
     loadConfirmedToday()
+    loadHasKnownAccounts()
   }, [membership])
+
+  async function loadHasKnownAccounts() {
+    const { count, error } = await supabase
+      .from('receiving_accounts')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', membership.organization_id)
+      .eq('active', true)
+    if (!error) setHasKnownAccounts((count || 0) > 0)
+  }
 
   // Honduras no tiene horario de verano — el desfase con UTC es siempre -6,
   // así que se puede calcular el inicio del día local sin librerías de
@@ -389,7 +404,7 @@ export default function AccountantQueue() {
       .select(`
         id, amount, currency, reference_raw, notes, bank, account_last4,
         verification_status, processing_status, customer_waiting, version, created_at,
-        evidence_path, extraction, transaction_date, origin_bank,
+        evidence_path, extraction, transaction_date, origin_bank, receiving_account_id,
         origin_account_holder, origin_account_number, destination_account_holder
       `)
       .eq('organization_id', membership.organization_id)
@@ -641,6 +656,14 @@ export default function AccountantQueue() {
                     {isDuplicateRef(p) && (
                       <div style={{ fontSize: 12, fontWeight: 700, color: '#A2483A', marginTop: 3 }}>
                         ⚠ Misma referencia que otro pago pendiente — revisa si es el mismo comprobante repetido
+                      </div>
+                    )}
+                    {hasKnownAccounts && !p.receiving_account_id && (
+                      <div
+                        style={{ fontSize: 12, fontWeight: 700, color: '#A2483A', marginTop: 3 }}
+                        title="El banco destino no coincide con ninguna de tus cuentas receptoras registradas — puede ser una cuenta nueva sin agregar, o el cliente pagó a la cuenta equivocada"
+                      >
+                        ⚠ Cuenta destino desconocida
                       </div>
                     )}
                     {p.notes && <div className="meta" style={{ marginTop: 2 }}>{p.notes}</div>}
