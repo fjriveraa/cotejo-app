@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { isPlausibleTransactionDate } from '../lib/dateSanity'
 
 const emptyForm = {
   submitterName: '',
@@ -84,6 +85,7 @@ export default function GuestSubmit() {
   const [perceptualHash, setPerceptualHash] = useState(null)
   const [aiStatus, setAiStatus] = useState('idle') // idle | uploading | analyzing | done | error | skipped
   const [aiMessage, setAiMessage] = useState(null)
+  const [dateWarning, setDateWarning] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
@@ -126,10 +128,17 @@ export default function GuestSubmit() {
     setPerceptualHash(null)
     setAiStatus('idle')
     setAiMessage(null)
+    setDateWarning(null)
   }
 
   function applyExtraction(data) {
     if (!data) return
+    // Si la fecha que detectó la IA no es creíble (año equivocado, futura,
+    // etc.), mejor dejar el campo vacío que autocompletar algo mal.
+    if (data.transaction_date && !isPlausibleTransactionDate(data.transaction_date)) {
+      setDateWarning(`La IA detectó ${data.transaction_date} como fecha, pero no parece correcta — revísala y corrígela a mano.`)
+      data = { ...data, transaction_date: null }
+    }
     setForm((prev) => {
       const next = { ...prev }
       if (data.amount && !prev.amount) next.amount = String(data.amount)
@@ -344,7 +353,15 @@ export default function GuestSubmit() {
               </div>
               <div className="field">
                 <label htmlFor="transactionDate">Fecha de la transferencia (opcional)</label>
-                <input id="transactionDate" type="date" value={form.transactionDate} onChange={(e) => updateField('transactionDate', e.target.value)} />
+                <input
+                  id="transactionDate"
+                  type="date"
+                  value={form.transactionDate}
+                  onChange={(e) => { updateField('transactionDate', e.target.value); setDateWarning(null) }}
+                />
+                {dateWarning && (
+                  <p style={{ color: '#B08900', fontSize: 12.5, marginTop: 4 }}>⚠ {dateWarning}</p>
+                )}
               </div>
               <div className="field">
                 <label htmlFor="submitterName">Tu nombre</label>

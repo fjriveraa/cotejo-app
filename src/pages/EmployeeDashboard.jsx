@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { bankNamesForCountry, DEFAULT_COUNTRY } from '../lib/banks'
+import { isPlausibleTransactionDate } from '../lib/dateSanity'
 
 const OTHER = '__other__'
 
@@ -31,6 +32,7 @@ export default function EmployeeDashboard() {
   const [extraction, setExtraction] = useState(null)
   const [aiStatus, setAiStatus] = useState('idle') // idle | uploading | analyzing | done | error | skipped
   const [aiMessage, setAiMessage] = useState(null)
+  const [dateWarning, setDateWarning] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
@@ -75,6 +77,7 @@ export default function EmployeeDashboard() {
     setExtraction(null)
     setAiStatus('idle')
     setAiMessage(null)
+    setDateWarning(null)
   }
 
   function normalize(str) {
@@ -87,6 +90,14 @@ export default function EmployeeDashboard() {
 
   function applyExtraction(data) {
     if (!data) return
+    // Si la fecha que detectó la IA no es creíble (año equivocado, futura,
+    // etc.), mejor dejar el campo vacío que autocompletar algo mal — así
+    // quien registra nota que falta y la escribe a mano, en vez de confiar
+    // sin querer en un dato erróneo que además se usa para ordenar la cola.
+    if (data.transaction_date && !isPlausibleTransactionDate(data.transaction_date)) {
+      setDateWarning(`La IA detectó ${data.transaction_date} como fecha, pero no parece correcta — revísala y corrígela a mano.`)
+      data = { ...data, transaction_date: null }
+    }
     setForm((prev) => {
       const next = { ...prev }
       if (data.amount && !prev.amount) next.amount = String(data.amount)
@@ -312,8 +323,11 @@ export default function EmployeeDashboard() {
               id="transaction_date"
               type="date"
               value={form.transaction_date}
-              onChange={(e) => updateField('transaction_date', e.target.value)}
+              onChange={(e) => { updateField('transaction_date', e.target.value); setDateWarning(null) }}
             />
+            {dateWarning && (
+              <p style={{ color: '#B08900', fontSize: 12.5, marginTop: 4 }}>⚠ {dateWarning}</p>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>

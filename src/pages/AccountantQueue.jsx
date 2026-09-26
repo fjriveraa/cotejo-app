@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { IconCheckCircle } from '../components/icons'
+import { isPlausibleTransactionDate } from '../lib/dateSanity'
 
 const STATUS_LABELS = {
   pending: 'Pendiente',
@@ -320,12 +321,17 @@ export default function AccountantQueue() {
                     <div
                       style={{
                         fontSize: 13, fontWeight: 700, letterSpacing: 0.2,
-                        color: p.transaction_date ? '#2B6459' : '#B08900'
+                        color: p.transaction_date && isPlausibleTransactionDate(p.transaction_date) ? '#2B6459' : '#B08900'
                       }}
                     >
-                      {p.transaction_date
-                        ? new Date(p.transaction_date).toLocaleDateString('es-HN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
-                        : '⚠ Fecha no detectada'}
+                      {!p.transaction_date && '⚠ Fecha no detectada'}
+                      {p.transaction_date && !isPlausibleTransactionDate(p.transaction_date) && (
+                        <span title="La IA detectó esta fecha pero no parece correcta (año/rango implausible) — verifícala contra el comprobante">
+                          ⚠ Fecha dudosa: {new Date(p.transaction_date).toLocaleDateString('es-HN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                      )}
+                      {p.transaction_date && isPlausibleTransactionDate(p.transaction_date) &&
+                        new Date(p.transaction_date).toLocaleDateString('es-HN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
                       <div className="amount">
