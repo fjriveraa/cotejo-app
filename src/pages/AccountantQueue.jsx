@@ -168,6 +168,90 @@ function EvidenceModal({ payment, onClose }) {
   )
 }
 
+// Antes, "Duplicado" pedía pegar a mano el UUID del pago original con un
+// prompt() del navegador — sin mostrar nombre, monto ni fecha de a qué
+// registro te iba a vincular. Un error de copiar/pegar anulaba en silencio
+// el pago equivocado. Este modal muestra los candidatos con sus datos
+// reales para elegir con un clic, preseleccionando el que ya detectamos por
+// referencia repetida cuando existe.
+function DuplicateModal({ payment, candidates, onConfirm, onClose, busy }) {
+  const preselected = candidates.find((c) => c.sameReference)?.id || candidates[0]?.id || ''
+  const [selectedId, setSelectedId] = useState(preselected)
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="card"
+        style={{ maxWidth: 480, width: '100%', maxHeight: '85vh', overflow: 'auto', background: 'white' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <h3 style={{ margin: 0 }}>Marcar como duplicado</h3>
+          <button className="btn btn-secondary" onClick={onClose}>Cerrar</button>
+        </div>
+        <p style={{ fontSize: 13, opacity: 0.75, marginTop: 0 }}>
+          Este pago ({payment.currency} {Number(payment.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+          {payment.origin_account_holder ? ` — ${payment.origin_account_holder}` : ''}) va a quedar anulado como
+          copia de cuál de estos:
+        </p>
+
+        {candidates.length === 0 ? (
+          <p className="empty-state">No hay otros pagos pendientes de este banco para comparar.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+            {candidates.map((c) => (
+              <label
+                key={c.id}
+                style={{
+                  display: 'flex', gap: 8, alignItems: 'flex-start', border: '1px solid #e5e0d8',
+                  borderRadius: 8, padding: 10, cursor: 'pointer',
+                  background: selectedId === c.id ? 'rgba(43, 100, 89, 0.08)' : 'transparent'
+                }}
+              >
+                <input
+                  type="radio"
+                  name="duplicateCandidate"
+                  checked={selectedId === c.id}
+                  onChange={() => setSelectedId(c.id)}
+                  style={{ marginTop: 3 }}
+                />
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 13.5 }}>
+                    {c.currency} {Number(c.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+                    {c.origin_account_holder ? ` — ${c.origin_account_holder}` : ''}
+                    {c.sameReference && (
+                      <span style={{ color: '#A2483A', fontWeight: 700, marginLeft: 6 }}>· misma referencia</span>
+                    )}
+                  </div>
+                  <div className="meta">
+                    {c.transaction_date ? new Date(c.transaction_date).toLocaleDateString('es-HN') : 'sin fecha'}
+                    {c.reference_raw ? ` · ref: ${c.reference_raw}` : ''}
+                  </div>
+                </div>
+              </label>
+            ))}
+          </div>
+        )}
+
+        <button
+          className="btn btn-rust"
+          style={{ width: '100%' }}
+          disabled={!selectedId || busy}
+          onClick={() => onConfirm(selectedId)}
+        >
+          {busy ? 'Anulando...' : 'Confirmar duplicado'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function EvidenceThumb({ path, onClick }) {
   const [url, setUrl] = useState(null)
 
@@ -196,6 +280,7 @@ export default function AccountantQueue() {
   const [error, setError] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const [viewingPayment, setViewingPayment] = useState(null)
+  const [duplicatePayment, setDuplicatePayment] = useState(null)
 
   useEffect(() => {
     if (!membership) return
@@ -285,10 +370,17 @@ export default function AccountantQueue() {
     callRpc('mark_not_found', p, { p_reason: reason })
   }
 
-  function handleDuplicate(p) {
-    const originalId = window.prompt('Pega el ID del pago original del que este es duplicado:')
-    if (!originalId) return
-    callRpc('void_as_duplicate', p, { p_original_payment_id: originalId.trim() })
+  function duplicateCandidatesFor(p) {
+    return payments
+      .filter((other) => other.id !== p.id && other.bank === p.bank)
+      .map((other) => ({ ...other, sameReference: isDuplicateRef(p) && isDuplicateRef(other) }))
+      .sort((a, b) => (a.sameReference === b.sameReference ? 0 : a.sameReference ? -1 : 1))
+  }
+
+  async function handleConfirmDuplicate(originalId) {
+    if (!duplicatePayment) return
+    await callRpc('void_as_duplicate', duplicatePayment, { p_original_payment_id: originalId })
+    setDuplicatePayment(null)
   }
 
   if (loading) {
@@ -417,7 +509,7 @@ export default function AccountantQueue() {
                       <button
                         className="btn btn-rust"
                         disabled={busyId === p.id}
-                        onClick={() => handleDuplicate(p)}
+                        onClick={() => setDuplicatePayment(p)}
                       >
                         Duplicado
                       </button>
@@ -432,6 +524,16 @@ export default function AccountantQueue() {
 
       {viewingPayment && (
         <EvidenceModal payment={viewingPayment} onClose={() => setViewingPayment(null)} />
+      )}
+
+      {duplicatePayment && (
+        <DuplicateModal
+          payment={duplicatePayment}
+          candidates={duplicateCandidatesFor(duplicatePayment)}
+          busy={busyId === duplicatePayment.id}
+          onConfirm={handleConfirmDuplicate}
+          onClose={() => setDuplicatePayment(null)}
+        />
       )}
     </div>
   )
