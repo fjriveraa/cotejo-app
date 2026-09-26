@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import {
@@ -24,6 +24,17 @@ function CountBadge({ count }) {
 export default function TopBar() {
   const { membership, memberships, switchOrg, signOut, user, isPlatformAdmin } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
+
+  // Cambiar de empresa no navega a ningún lado por sí solo — si la persona
+  // estaba en una pantalla que no depende de la empresa (como "Buscar
+  // empresas"), no se ve ningún cambio y parece que el selector no hizo
+  // nada. Por eso, al cambiar, la llevamos directo al inicio de la empresa
+  // recién elegida, para que el cambio se sienta confirmado.
+  function handleSwitchOrg(orgId) {
+    switchOrg(orgId)
+    navigate('/')
+  }
   const [menuOpen, setMenuOpen] = useState(false)
   const [pendingPayments, setPendingPayments] = useState(0)
   const [pendingGuests, setPendingGuests] = useState(0)
@@ -160,7 +171,7 @@ export default function TopBar() {
           memberships.length > 1 ? (
             <select
               value={membership?.organization_id || ''}
-              onChange={(e) => switchOrg(e.target.value)}
+              onChange={(e) => handleSwitchOrg(e.target.value)}
               className="org-select"
             >
               {memberships.map((m) => (
