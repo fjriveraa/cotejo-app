@@ -672,7 +672,7 @@ a {
   flex-direction: column;
   align-items: stretch;
   width: 100%;
-  max-width: 240px;
+  max-width: 320px;
 }
 
 .actions-row-tiered .btn-primary {
@@ -681,14 +681,20 @@ a {
 
 .actions-secondary {
   display: flex;
+  align-items: stretch;
   gap: 6px;
   margin-top: 6px;
 }
 
 .actions-secondary .btn {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   font-size: 12px;
-  padding: 7px 6px;
+  padding: 7px 8px;
+  min-height: 34px;
 }
 
 .payment-row-with-thumb {
