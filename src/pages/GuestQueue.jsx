@@ -21,6 +21,50 @@ function ViewEvidence({ path }) {
   )
 }
 
+const FORENSICS_LABELS = {
+  posible_ia: { text: '🚨 Posible imagen generada por IA', color: '#7C2D12', bg: '#FEE2E2' },
+  revisar: { text: '⚠ Revisar — señales de manipulación', color: '#92400E', bg: '#FEF3C7' },
+  limpio: { text: '✓ Sin señales de manipulación', color: '#2B6459', bg: '#E6F4F1' },
+  sin_datos: { text: 'Sin resultado claro', color: '#6B7280', bg: '#F3F4F6' }
+}
+
+function ForensicsCheck({ submissionId, existingScore, existingLabel, onChecked }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  async function run() {
+    setLoading(true)
+    setError(null)
+    const { data, error: fnError } = await supabase.functions.invoke('analyze-image-forensics', {
+      body: { submission_id: submissionId }
+    })
+    setLoading(false)
+    if (fnError || data?.error) {
+      setError(data?.error || fnError?.message || 'No se pudo analizar el comprobante.')
+      return
+    }
+    onChecked?.(data)
+  }
+
+  if (existingLabel && FORENSICS_LABELS[existingLabel]) {
+    const info = FORENSICS_LABELS[existingLabel]
+    return (
+      <span style={{ fontSize: 12, fontWeight: 700, color: info.color, background: info.bg, padding: '2px 8px', borderRadius: 6 }}>
+        {info.text}{typeof existingScore === 'number' ? ` (${Math.round(existingScore * 100)}%)` : ''}
+      </span>
+    )
+  }
+
+  return (
+    <span>
+      <button type="button" className="btn btn-secondary" onClick={run} disabled={loading} style={{ fontSize: 12, padding: '4px 10px' }}>
+        {loading ? 'Analizando...' : '🔍 Analizar con forensia'}
+      </button>
+      {error && <span style={{ marginLeft: 8, fontSize: 12, color: '#B91C1C' }}>{error}</span>}
+    </span>
+  )
+}
+
 function LinkRow({ label, hint, link }) {
   const [copied, setCopied] = useState(false)
   function copyLink() {
@@ -74,6 +118,17 @@ export default function GuestQueue() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [busyId, setBusyId] = useState(null)
+  const forensicsEnabled = Boolean(membership?.organizations?.forensics_addon_enabled)
+
+  function applyForensicsResult(submissionId, result) {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.submission_id === submissionId
+          ? { ...item, forensics_score: result.forensics_score, forensics_label: result.forensics_label }
+          : item
+      )
+    )
+  }
 
   useEffect(() => {
     if (!membership) return
@@ -174,7 +229,32 @@ export default function GuestQueue() {
                       🚨 Este mismo archivo ya fue enviado a otra empresa — posible comprobante reciclado
                     </span>
                   )}
+                  {!s.hash_seen_elsewhere && s.similar_hash_elsewhere && (
+                    <span
+                      style={{
+                        marginLeft: 10,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#92400E',
+                        background: '#FEF3C7',
+                        padding: '2px 8px',
+                        borderRadius: 6
+                      }}
+                    >
+                      ⚠ Comprobante muy parecido a uno enviado a otra empresa — verificar con calma
+                    </span>
+                  )}
                 </div>
+                {forensicsEnabled && (
+                  <div style={{ marginTop: 6 }}>
+                    <ForensicsCheck
+                      submissionId={s.submission_id}
+                      existingScore={s.forensics_score}
+                      existingLabel={s.forensics_label}
+                      onChecked={(result) => applyForensicsResult(s.submission_id, result)}
+                    />
+                  </div>
+                )}
                 {s.notes && <div className="meta">Nota del cliente: {s.notes}</div>}
               </div>
               <div className="actions-row">

@@ -21,6 +21,46 @@ async function hashFile(file) {
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
+// Hash perceptual (dHash de 64 bits): a diferencia del hash exacto de
+// arriba, este detecta imágenes visualmente muy parecidas aunque el
+// archivo haya sido recortado, recomprimido o le hayan puesto un filtro —
+// se calcula aquí mismo en el navegador, sin costo ni llamada a ningún
+// servicio externo. Si algo falla (formato no soportado, etc.) se
+// devuelve null y simplemente esa señal no aplica para este envío.
+async function computePerceptualHash(file) {
+  if (!file.type.startsWith('image/')) return null
+  try {
+    const bitmap = await createImageBitmap(file)
+    const canvas = document.createElement('canvas')
+    canvas.width = 9
+    canvas.height = 8
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(bitmap, 0, 0, 9, 8)
+    const { data } = ctx.getImageData(0, 0, 9, 8)
+    const gray = []
+    for (let i = 0; i < data.length; i += 4) {
+      gray.push((data[i] + data[i + 1] + data[i + 2]) / 3)
+    }
+    let hash = 0n
+    let bit = 0n
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        const left = gray[y * 9 + x]
+        const right = gray[y * 9 + x + 1]
+        if (left > right) hash |= (1n << bit)
+        bit += 1n
+      }
+    }
+    const TWO63 = 1n << 63n
+    const TWO64 = 1n << 64n
+    const signed = hash >= TWO63 ? hash - TWO64 : hash
+    return signed.toString()
+  } catch (err) {
+    console.error('No se pudo calcular el hash perceptual:', err)
+    return null
+  }
+}
+
 export default function GuestSubmit() {
   const navigate = useNavigate()
   const { organizationId } = useParams() // presente solo si llegó por un enlace directo de una empresa
@@ -41,6 +81,7 @@ export default function GuestSubmit() {
   const [file, setFile] = useState(null)
   const [evidencePath, setEvidencePath] = useState(null)
   const [fileHash, setFileHash] = useState(null)
+  const [perceptualHash, setPerceptualHash] = useState(null)
   const [aiStatus, setAiStatus] = useState('idle') // idle | uploading | analyzing | done | error | skipped
   const [aiMessage, setAiMessage] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -82,6 +123,7 @@ export default function GuestSubmit() {
     setFile(null)
     setEvidencePath(null)
     setFileHash(null)
+    setPerceptualHash(null)
     setAiStatus('idle')
     setAiMessage(null)
   }
@@ -118,6 +160,8 @@ export default function GuestSubmit() {
       setAiMessage('Subiendo comprobante...')
       const hash = await hashFile(selected)
       setFileHash(hash)
+      const phash = await computePerceptualHash(selected)
+      setPerceptualHash(phash)
       const ext = selected.name.split('.').pop()
       const path = `${selectedOrg.organization_id}/${crypto.randomUUID()}.${ext}`
       const { error: uploadError } = await supabase.storage.from('guest-evidence').upload(path, selected)
@@ -178,7 +222,8 @@ export default function GuestSubmit() {
         p_notes: form.notes.trim() || null,
         p_evidence_path: evidencePath,
         p_file_hash: fileHash,
-        p_is_in_person: isInPerson
+        p_is_in_person: isInPerson,
+        p_perceptual_hash: perceptualHash
       })
 
       if (rpcError) throw rpcError

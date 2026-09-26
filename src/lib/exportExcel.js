@@ -15,6 +15,13 @@ const GUEST_STATUS_LABELS = {
   not_confirmed: 'No se pudo confirmar'
 }
 
+const FORENSICS_LABELS_XLS = {
+  posible_ia: 'Posible imagen generada por IA',
+  revisar: 'Revisar — señales de manipulación',
+  limpio: 'Sin señales de manipulación',
+  sin_datos: 'Sin resultado claro'
+}
+
 function autoWidth(rows) {
   if (rows.length === 0) return []
   const keys = Object.keys(rows[0])
@@ -84,7 +91,8 @@ export function exportReportToExcel({ organizationName, payments, guestSubmissio
     'Cuenta origen (número)': g.origin_account_number || '',
     'Banco origen': g.origin_bank || '',
     Notas: g.notes || '',
-    'Comprobante visto en otra empresa': g.hash_seen_elsewhere ? 'Sí — posible reciclado' : 'No',
+    'Comprobante visto en otra empresa': g.hash_seen_elsewhere ? 'Sí — posible reciclado' : g.similar_hash_elsewhere ? 'Parecido a uno de otra empresa' : 'No',
+    'Forensia IA': g.forensics_label ? FORENSICS_LABELS_XLS[g.forensics_label] || g.forensics_label : '',
     'Nota de revisión': g.review_notes || '',
     'Enviado el': formatDateTime(g.created_at)
   }))
