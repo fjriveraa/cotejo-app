@@ -3,6 +3,15 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { IconCheckCircle } from '../components/icons'
 
+const STATUS_LABELS = {
+  pending: 'Pendiente',
+  under_review: 'En revisión',
+  confirmed_manual: 'Confirmado',
+  not_found: 'No encontrado',
+  rejected: 'Rechazado',
+  voided: 'Anulado'
+}
+
 const FIELD_LABELS = {
   amount: 'Monto',
   bank: 'Banco destino',
@@ -279,17 +288,28 @@ export default function AccountantQueue() {
                 <div key={p.id} className="payment-row payment-row-with-thumb" style={{ flexWrap: 'wrap', gap: 12 }}>
                   <EvidenceThumb path={p.evidence_path} onClick={() => setViewingPayment(p)} />
                   <div style={{ flex: '1 1 200px' }}>
-                    <div className="amount">
-                      {p.currency} {Number(p.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
-                      {p.customer_waiting && <span style={{ color: '#A2483A', fontSize: 12, marginLeft: 8 }}>● cliente esperando</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <div className="amount">
+                        {p.currency} {Number(p.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+                      </div>
+                      {p.customer_waiting && (
+                        <span
+                          style={{
+                            fontSize: 11, fontWeight: 700, color: '#A2483A', background: 'rgba(162, 72, 58, 0.12)',
+                            padding: '2px 8px', borderRadius: 999, whiteSpace: 'nowrap'
+                          }}
+                        >
+                          ● cliente esperando
+                        </span>
+                      )}
                     </div>
-                    <div className="meta">
+                    <div className="meta" style={{ marginTop: 2 }}>
                       {new Date(p.created_at).toLocaleString('es-HN')} {p.reference_raw ? `· ref: ${p.reference_raw}` : ''}
                     </div>
                     {p.notes && <div className="meta" style={{ marginTop: 2 }}>{p.notes}</div>}
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
                       <span className={`status-pill status-${p.verification_status}`}>
-                        {p.verification_status}
+                        {STATUS_LABELS[p.verification_status] || p.verification_status}
                       </span>
                       {p.extraction && (
                         <span style={{ fontSize: 11, opacity: 0.6 }}>✓ leído por IA</span>

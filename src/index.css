@@ -693,14 +693,16 @@ a {
 
 .payment-row-with-thumb {
   align-items: flex-start;
+  gap: 14px;
 }
 
 .evidence-thumb {
-  width: 52px;
-  height: 52px;
+  width: 58px;
+  height: 58px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: rgba(42, 38, 32, 0.04);
+  box-shadow: 0 1px 3px rgba(42, 38, 32, 0.08);
   overflow: hidden;
   flex-shrink: 0;
   padding: 0;
