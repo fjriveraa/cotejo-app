@@ -672,7 +672,10 @@ a {
   flex-direction: column;
   align-items: stretch;
   width: 100%;
-  max-width: 320px;
+  /* Ancho fluido en vez de un número fijo: en pantallas angostas (Galaxy S,
+     360px) ocupa casi todo el disponible, y en pantallas anchas (iPhone Pro
+     Max, 430px+) crece un poco más en vez de quedarse chico sin razón. */
+  max-width: min(100%, 22rem);
 }
 
 .actions-row-tiered .btn-primary {
@@ -692,7 +695,10 @@ a {
   align-items: center;
   justify-content: center;
   text-align: center;
-  font-size: 12px;
+  /* clamp() en vez de un tamaño fijo: el texto se achica un poco en
+     pantallas angostas (para no envolver) y crece un poco en pantallas
+     anchas, sin necesitar más puntos de quiebre. */
+  font-size: clamp(11px, 3vw, 13px);
   padding: 7px 8px;
   min-height: 34px;
 }
