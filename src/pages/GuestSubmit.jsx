@@ -39,6 +39,10 @@ export default function GuestSubmit() {
   const [loadingDirectOrg, setLoadingDirectOrg] = useState(isDirectLink)
   const [form, setForm] = useState(emptyForm)
   const [file, setFile] = useState(null)
+  const [evidencePath, setEvidencePath] = useState(null)
+  const [fileHash, setFileHash] = useState(null)
+  const [aiStatus, setAiStatus] = useState('idle') // idle | uploading | analyzing | done | error | skipped
+  const [aiMessage, setAiMessage] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
@@ -74,6 +78,78 @@ export default function GuestSubmit() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
+  function resetEvidence() {
+    setFile(null)
+    setEvidencePath(null)
+    setFileHash(null)
+    setAiStatus('idle')
+    setAiMessage(null)
+  }
+
+  function applyExtraction(data) {
+    if (!data) return
+    setForm((prev) => {
+      const next = { ...prev }
+      if (data.amount && !prev.amount) next.amount = String(data.amount)
+      if (data.currency && (data.currency === 'HNL' || data.currency === 'USD')) next.currency = data.currency
+      if (data.reference_raw && !prev.referenceRaw) next.referenceRaw = data.reference_raw
+      if (data.transaction_date && !prev.transactionDate) next.transactionDate = data.transaction_date
+      if (data.origin_bank && !prev.originBank) next.originBank = data.origin_bank
+      if (data.origin_account_holder && !prev.originAccountHolder) next.originAccountHolder = data.origin_account_holder
+      if (data.origin_account_number && !prev.originAccountNumber) next.originAccountNumber = data.origin_account_number
+      return next
+    })
+  }
+
+  async function handleFileChange(e) {
+    const selected = e.target.files?.[0] ?? null
+    resetEvidence()
+    if (!selected || !selectedOrg) return
+    setFile(selected)
+
+    if (!selected.type.startsWith('image/')) {
+      // PDFs u otros formatos: se suben pero no se leen automáticamente.
+      setAiStatus('skipped')
+      setAiMessage('Este archivo no se puede leer automáticamente. Completa los datos a mano.')
+    }
+
+    try {
+      setAiStatus('uploading')
+      setAiMessage('Subiendo comprobante...')
+      const hash = await hashFile(selected)
+      setFileHash(hash)
+      const ext = selected.name.split('.').pop()
+      const path = `${selectedOrg.organization_id}/${crypto.randomUUID()}.${ext}`
+      const { error: uploadError } = await supabase.storage.from('guest-evidence').upload(path, selected)
+      if (uploadError) throw uploadError
+      setEvidencePath(path)
+
+      if (!selected.type.startsWith('image/')) {
+        return
+      }
+
+      setAiStatus('analyzing')
+      setAiMessage('Leyendo comprobante con IA...')
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('analyze-guest-evidence', {
+        body: { path, organization_id: selectedOrg.organization_id }
+      })
+
+      if (fnError) throw fnError
+      if (fnData?.extraction) {
+        applyExtraction(fnData.extraction)
+        setAiStatus('done')
+        setAiMessage('Datos detectados automáticamente. Revísalos antes de enviar.')
+      } else {
+        setAiStatus('skipped')
+        setAiMessage('No se pudieron detectar datos automáticamente. Completa los campos a mano.')
+      }
+    } catch (err) {
+      console.error('Error analizando comprobante:', err)
+      setAiStatus('error')
+      setAiMessage('No se pudo leer el comprobante con IA. Completa los datos a mano; el archivo ya quedó guardado.')
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
@@ -85,17 +161,6 @@ export default function GuestSubmit() {
 
     setSubmitting(true)
     try {
-      let evidencePath = null
-      let fileHash = null
-      if (file) {
-        fileHash = await hashFile(file)
-        const ext = file.name.split('.').pop()
-        const path = `${selectedOrg.organization_id}/${crypto.randomUUID()}.${ext}`
-        const { error: uploadError } = await supabase.storage.from('guest-evidence').upload(path, file)
-        if (uploadError) throw uploadError
-        evidencePath = path
-      }
-
       const { data, error: rpcError } = await supabase.rpc('submit_guest_payment', {
         p_organization_id: selectedOrg.organization_id,
         p_submitter_name: form.submitterName.trim() || null,
@@ -198,7 +263,21 @@ export default function GuestSubmit() {
             <form onSubmit={handleSubmit}>
               <div className="field">
                 <label htmlFor="file">Foto o captura de tu comprobante</label>
-                <input id="file" type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                <input id="file" type="file" accept="image/*,application/pdf" onChange={handleFileChange} />
+                {aiMessage && (
+                  <p
+                    style={{
+                      fontSize: 13,
+                      marginTop: 6,
+                      color: aiStatus === 'error' ? '#A2483A' : aiStatus === 'done' ? '#2B6459' : 'inherit',
+                      opacity: aiStatus === 'uploading' || aiStatus === 'analyzing' ? 0.7 : 1
+                    }}
+                  >
+                    {(aiStatus === 'uploading' || aiStatus === 'analyzing') && '⏳ '}
+                    {aiStatus === 'done' && '✓ '}
+                    {aiMessage}
+                  </p>
+                )}
               </div>
               <div className="field">
                 <label htmlFor="amount">Monto</label>
@@ -232,7 +311,12 @@ export default function GuestSubmit() {
                 <textarea id="notes" rows={2} value={form.notes} onChange={(e) => updateField('notes', e.target.value)} />
               </div>
               {error && <p className="error-text">{error}</p>}
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={submitting}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+                disabled={submitting || aiStatus === 'uploading' || aiStatus === 'analyzing'}
+              >
                 {submitting ? 'Enviando...' : 'Enviar comprobante'}
               </button>
             </form>
