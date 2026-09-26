@@ -336,6 +336,25 @@ export default function AccountantQueue() {
   const [confirmedToday, setConfirmedToday] = useState([])
   const [showConfirmed, setShowConfirmed] = useState(false)
   const [revertingPayment, setRevertingPayment] = useState(null)
+  // Cada contador cotejea distinto: unos priorizan al cliente que está
+  // esperando respuesta, otros van banco por banco desde el comprobante más
+  // viejo. No hay un único orden correcto, así que se deja elegir y se
+  // recuerda la preferencia entre sesiones.
+  const [sortBy, setSortBy] = useState(() => {
+    try {
+      return localStorage.getItem('cotejo:queueSortBy') || 'customer_waiting'
+    } catch {
+      return 'customer_waiting'
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cotejo:queueSortBy', sortBy)
+    } catch {
+      // almacenamiento no disponible (modo privado, etc.) — no es crítico
+    }
+  }, [sortBy])
 
   useEffect(() => {
     if (!membership) return
@@ -376,7 +395,7 @@ export default function AccountantQueue() {
       .eq('organization_id', membership.organization_id)
       .in('verification_status', ['pending', 'under_review'])
       .order('customer_waiting', { ascending: false })
-      .order('created_at', { ascending: true })
+      .order('transaction_date', { ascending: true, nullsFirst: false })
 
     if (error) {
       setError(error.message)
@@ -386,6 +405,33 @@ export default function AccountantQueue() {
     setLoading(false)
   }
 
+  // Fecha del banco confiable primero, sin fecha (o fecha dudosa) al final —
+  // un pago sin fecha no debería enterrarse ni tampoco saltar al frente por
+  // "vacío"; se trata como el caso menos informativo, no como el más urgente.
+  function compareByTransactionDate(a, b) {
+    const aOk = a.transaction_date && isPlausibleTransactionDate(a.transaction_date)
+    const bOk = b.transaction_date && isPlausibleTransactionDate(b.transaction_date)
+    if (aOk && bOk) return new Date(a.transaction_date) - new Date(b.transaction_date)
+    if (aOk) return -1
+    if (bOk) return 1
+    return new Date(a.created_at) - new Date(b.created_at)
+  }
+
+  function sortPayments(list) {
+    const arr = [...list]
+    if (sortBy === 'customer_waiting') {
+      arr.sort((a, b) => {
+        if (a.customer_waiting !== b.customer_waiting) return a.customer_waiting ? -1 : 1
+        return compareByTransactionDate(a, b)
+      })
+    } else if (sortBy === 'transaction_date') {
+      arr.sort(compareByTransactionDate)
+    } else if (sortBy === 'amount') {
+      arr.sort((a, b) => Number(b.amount) - Number(a.amount))
+    }
+    return arr
+  }
+
   const grouped = useMemo(() => {
     const groups = {}
     for (const p of payments) {
@@ -393,8 +439,12 @@ export default function AccountantQueue() {
       if (!groups[key]) groups[key] = []
       groups[key].push(p)
     }
+    for (const key of Object.keys(groups)) {
+      groups[key] = sortPayments(groups[key])
+    }
     return groups
-  }, [payments])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payments, sortBy])
 
   // La referencia es lo que la IA puede comparar mejor para detectar que el
   // mismo comprobante entró dos veces (o dos personas subieron el mismo pago
@@ -470,7 +520,21 @@ export default function AccountantQueue() {
 
   return (
     <div className="container">
-      <h2 style={{ marginTop: 0 }}>Cola de confirmación</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+        <h2 style={{ marginTop: 0, marginBottom: 0 }}>Cola de confirmación</h2>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}>
+          <span style={{ opacity: 0.6 }}>Ordenar por</span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            style={{ fontSize: 12.5, padding: '4px 6px', borderRadius: 6, border: '1px solid #e5e0d8' }}
+          >
+            <option value="customer_waiting">Cliente esperando primero</option>
+            <option value="transaction_date">Fecha del banco (más antigua primero)</option>
+            <option value="amount">Monto (mayor primero)</option>
+          </select>
+        </label>
+      </div>
       {error && <p className="error-text">{error}</p>}
 
       {confirmedToday.length > 0 && (
