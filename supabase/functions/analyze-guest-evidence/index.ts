@@ -38,7 +38,14 @@ Bancos conocidos de Guatemala (GT) y sus rasgos visuales típicos:
 - CHN: texto "CHN" o "Crédito Hipotecario Nacional"
 - Interbanco: texto "Interbanco"`
 
-const EXTRACTION_PROMPT = `Eres un asistente que lee comprobantes de pago centroamericanos (transferencias bancarias, capturas de apps bancarias, transferencias interbancarias, depósitos) que un cliente está enviando como prueba de pago a un comercio, principalmente de Honduras y Guatemala.
+// El prompt se arma en cada solicitud con la fecha de HOY en hora de
+// Honduras, para que la IA nunca tenga que adivinar el año -- sin esto,
+// un comprobante que solo trae día y mes (ej. "25 septiembre") terminaba
+// con un año viejo de su entrenamiento en vez del año real.
+function buildExtractionPrompt(todayLabel: string, todayISO: string) {
+  return `Eres un asistente que lee comprobantes de pago centroamericanos (transferencias bancarias, capturas de apps bancarias, transferencias interbancarias, depósitos) que un cliente está enviando como prueba de pago a un comercio, principalmente de Honduras y Guatemala.
+
+Hoy es ${todayLabel} (${todayISO}, hora de Honduras). Esta fecha es tu referencia real de "ahora" -- no la de tu entrenamiento. Úsala para cualquier fecha que necesites inferir o para dudar de una fecha que creas leer pero que no cuadre con este momento.
 
 ${BANK_CATALOG}
 
@@ -71,8 +78,25 @@ Reglas:
 - "origin_account_holder" es el nombre completo de la persona o empresa titular de la cuenta ORIGEN (quien envía), tal como aparece en "Cuenta origen".
 - "origin_account_number" es el número de cuenta completo de origen, tal como aparece (no solo los últimos 4 dígitos).
 - "reference_raw" es el número de referencia, autorización, folio o "N° comprobante" de la transacción, tal como aparece.
-- "transaction_date" es la fecha de la transacción en formato YYYY-MM-DD. Si el comprobante solo trae día y mes (ej. "23 septiembre") sin año, asume el año actual.
-- "notes" puede incluir cualquier detalle relevante que notes pero no encaje en los campos anteriores (ej. "captura borrosa").`
+- "transaction_date" es la fecha de la transacción en formato YYYY-MM-DD. Si el comprobante muestra el año completo, léelo con cuidado y verifica que sea razonable comparado con la fecha de hoy (${todayISO}) antes de darlo por bueno. Si el comprobante solo trae día y mes sin año (ej. "23 septiembre"), usa el año de hoy (${todayISO.slice(0, 4)}), salvo que el contexto indique claramente otra cosa. Si no estás segura del año, es mejor devolver transaction_date en null con confidence baja que adivinar.
+- "notes" puede incluir cualquier detalle relevante que notes pero no encaje en los campos anteriores (ej. "captura borrosa", "fecha dudosa").`
+}
+
+function todayInHonduras() {
+  const isoParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Tegucigalpa",
+    year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(new Date())
+  const get = (type) => isoParts.find((p) => p.type === type)?.value
+  const todayISO = `${get("year")}-${get("month")}-${get("day")}`
+
+  const label = new Intl.DateTimeFormat("es-HN", {
+    timeZone: "America/Tegucigalpa",
+    day: "numeric", month: "long", year: "numeric"
+  }).format(new Date())
+
+  return { todayISO, todayLabel: label }
+}
 
 function mimeFromPath(path) {
   const ext = path.split(".").pop()?.toLowerCase()
@@ -193,6 +217,9 @@ Deno.serve(async (req) => {
     const arrayBuffer = await fileData.arrayBuffer()
     const base64 = arrayBufferToBase64(arrayBuffer)
 
+    const { todayISO, todayLabel } = todayInHonduras()
+    const extractionPrompt = buildExtractionPrompt(todayLabel, todayISO)
+
     const aiResp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -208,7 +235,7 @@ Deno.serve(async (req) => {
             role: "user",
             content: [
               { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-              { type: "text", text: EXTRACTION_PROMPT }
+              { type: "text", text: extractionPrompt }
             ]
           }
         ]
