@@ -52,7 +52,15 @@ export default function EmployeeDashboard() {
       .eq('active', true)
       .order('bank')
 
-    if (!error) setAccounts(data || [])
+    if (!error) {
+      const list = data || []
+      setAccounts(list)
+      // Con una sola cuenta receptora no hay nada que elegir -- se asigna sola
+      // y no se le pregunta nada a quien registra el pago.
+      if (list.length === 1) {
+        setForm((prev) => (prev.receiving_account_id ? prev : { ...prev, receiving_account_id: list[0].id }))
+      }
+    }
   }
 
   async function loadRecent() {
@@ -276,22 +284,44 @@ export default function EmployeeDashboard() {
             />
           </div>
 
-          <div className="field">
-            <label htmlFor="receiving_account_id">¿Dónde debe revisarse?</label>
-            <select
-              id="receiving_account_id"
-              value={form.receiving_account_id}
-              onChange={(e) => updateField('receiving_account_id', e.target.value)}
-            >
-              <option value="">Selecciona una cuenta</option>
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.bank} · {acc.alias} ({acc.last4})
-                </option>
-              ))}
-              <option value={OTHER}>Otro banco / no estoy seguro</option>
-            </select>
-          </div>
+          {accounts.length === 1 && !needsManualBank && (
+            <div className="field">
+              <label>Cuenta receptora</label>
+              <p style={{ fontSize: 13, opacity: 0.7, margin: 0 }}>
+                Se registrará en <strong>{accounts[0].bank} · {accounts[0].alias} ({accounts[0].last4})</strong>, tu única
+                cuenta configurada.{' '}
+                <button
+                  type="button"
+                  onClick={() => updateField('receiving_account_id', OTHER)}
+                  style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}
+                >
+                  No es correcto
+                </button>
+              </p>
+            </div>
+          )}
+
+          {accounts.length >= 2 && (
+            <div className="field">
+              <label htmlFor="receiving_account_id">¿A cuál de tus cuentas cayó este pago?</label>
+              <p style={{ fontSize: 12, opacity: 0.6, marginTop: -4, marginBottom: 6 }}>
+                No es el banco del cliente -- es la cuenta TUYA donde debió llegar el dinero.
+              </p>
+              <select
+                id="receiving_account_id"
+                value={form.receiving_account_id}
+                onChange={(e) => updateField('receiving_account_id', e.target.value)}
+              >
+                <option value="">Selecciona una cuenta</option>
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.bank} · {acc.alias} ({acc.last4})
+                  </option>
+                ))}
+                <option value={OTHER}>Otro banco / no estoy seguro</option>
+              </select>
+            </div>
+          )}
 
           {needsManualBank && (
             <div className="field">
