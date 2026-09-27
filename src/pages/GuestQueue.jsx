@@ -189,10 +189,6 @@ export default function GuestQueue() {
         confirmar, la persona ve el resultado en el enlace que le dimos al enviarlo.
       </p>
 
-      {membership && (
-        <CustomerLinkCard organizationId={membership.organization_id} organizationName={membership.organizations?.name} />
-      )}
-
       {error && <p className="error-text">{error}</p>}
 
       {items.length === 0 ? (
@@ -311,6 +307,12 @@ export default function GuestQueue() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {membership && (
+        <div style={{ marginTop: 28 }}>
+          <CustomerLinkCard organizationId={membership.organization_id} organizationName={membership.organizations?.name} />
         </div>
       )}
     </div>
