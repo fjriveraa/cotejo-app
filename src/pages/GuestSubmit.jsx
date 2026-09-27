@@ -86,6 +86,12 @@ export default function GuestSubmit() {
   const [aiStatus, setAiStatus] = useState('idle') // idle | uploading | analyzing | done | error | skipped
   const [aiMessage, setAiMessage] = useState(null)
   const [dateWarning, setDateWarning] = useState(null)
+  // Cuando la IA lee el monto con buena confianza, no tiene sentido pedirle
+  // al invitado que "llene" un formulario que ya está lleno -- se le muestra
+  // un resumen para CONFIRMAR (revisar y enviar), no para completar. Si algo
+  // no cuadra, puede pasar a edición manual con un solo click.
+  const [extractionConfidence, setExtractionConfidence] = useState(null)
+  const [manualOverride, setManualOverride] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
@@ -129,6 +135,8 @@ export default function GuestSubmit() {
     setAiStatus('idle')
     setAiMessage(null)
     setDateWarning(null)
+    setExtractionConfidence(null)
+    setManualOverride(false)
   }
 
   function applyExtraction(data) {
@@ -189,9 +197,10 @@ export default function GuestSubmit() {
 
       if (fnError) throw fnError
       if (fnData?.extraction) {
+        setExtractionConfidence(fnData.extraction.confidence || null)
         applyExtraction(fnData.extraction)
         setAiStatus('done')
-        setAiMessage('Datos detectados automáticamente. Revísalos antes de enviar.')
+        setAiMessage('✓ Detectamos casi todo. Confirma los datos abajo y listo.')
       } else if (fnData?.rate_limited) {
         setAiStatus('skipped')
         setAiMessage('Por ahora no podemos leer el comprobante automáticamente. Completa los datos a mano — tu comprobante ya quedó guardado y puedes enviarlo igual.')
@@ -249,6 +258,8 @@ export default function GuestSubmit() {
       setSubmitting(false)
     }
   }
+
+  const inReviewMode = aiStatus === 'done' && Boolean(form.amount) && (extractionConfidence?.amount ?? 0) >= 0.6 && !manualOverride
 
   if (loadingDirectOrg) {
     return (
@@ -336,33 +347,59 @@ export default function GuestSubmit() {
                   </p>
                 )}
               </div>
-              <div className="field">
-                <label htmlFor="amount">Monto</label>
-                <input id="amount" type="number" step="0.01" min="0" value={form.amount} onChange={(e) => updateField('amount', e.target.value)} required />
-              </div>
-              <div className="field">
-                <label htmlFor="currency">Moneda</label>
-                <select id="currency" value={form.currency} onChange={(e) => updateField('currency', e.target.value)}>
-                  <option value="HNL">Lempiras (HNL)</option>
-                  <option value="USD">Dólares (USD)</option>
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="referenceRaw">Referencia / N° de comprobante (opcional)</label>
-                <input id="referenceRaw" type="text" value={form.referenceRaw} onChange={(e) => updateField('referenceRaw', e.target.value)} />
-              </div>
-              <div className="field">
-                <label htmlFor="transactionDate">Fecha de la transferencia (opcional)</label>
-                <input
-                  id="transactionDate"
-                  type="date"
-                  value={form.transactionDate}
-                  onChange={(e) => { updateField('transactionDate', e.target.value); setDateWarning(null) }}
-                />
-                {dateWarning && (
-                  <p style={{ color: '#B08900', fontSize: 12.5, marginTop: 4 }}>⚠ {dateWarning}</p>
-                )}
-              </div>
+              {inReviewMode ? (
+                <div className="field" style={{ background: 'rgba(43, 100, 89, 0.06)', borderRadius: 10, padding: 14, marginBottom: 4 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Esto es lo que detectamos:</div>
+                  <div style={{ fontSize: 14, marginBottom: 4 }}>
+                    <strong>{form.currency} {Number(form.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}</strong>
+                  </div>
+                  <div style={{ fontSize: 13, opacity: 0.75, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {form.referenceRaw && <span>Referencia: {form.referenceRaw}</span>}
+                    {form.transactionDate && <span>Fecha: {form.transactionDate}</span>}
+                    {form.originBank && <span>Banco: {form.originBank}</span>}
+                  </div>
+                  {dateWarning && (
+                    <p style={{ color: '#B08900', fontSize: 12.5, marginTop: 8, marginBottom: 0 }}>⚠ {dateWarning}</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setManualOverride(true)}
+                    style={{ background: 'none', border: 'none', padding: 0, marginTop: 10, color: 'inherit', textDecoration: 'underline', cursor: 'pointer', fontSize: 12.5, opacity: 0.75 }}
+                  >
+                    Algo no está bien -- editar a mano
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="field">
+                    <label htmlFor="amount">Monto</label>
+                    <input id="amount" type="number" step="0.01" min="0" value={form.amount} onChange={(e) => updateField('amount', e.target.value)} required />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="currency">Moneda</label>
+                    <select id="currency" value={form.currency} onChange={(e) => updateField('currency', e.target.value)}>
+                      <option value="HNL">Lempiras (HNL)</option>
+                      <option value="USD">Dólares (USD)</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="referenceRaw">Referencia / N° de comprobante (opcional)</label>
+                    <input id="referenceRaw" type="text" value={form.referenceRaw} onChange={(e) => updateField('referenceRaw', e.target.value)} />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="transactionDate">Fecha de la transferencia (opcional)</label>
+                    <input
+                      id="transactionDate"
+                      type="date"
+                      value={form.transactionDate}
+                      onChange={(e) => { updateField('transactionDate', e.target.value); setDateWarning(null) }}
+                    />
+                    {dateWarning && (
+                      <p style={{ color: '#B08900', fontSize: 12.5, marginTop: 4 }}>⚠ {dateWarning}</p>
+                    )}
+                  </div>
+                </>
+              )}
               <div className="field">
                 <label htmlFor="submitterName">Tu nombre</label>
                 <input id="submitterName" type="text" value={form.submitterName} onChange={(e) => updateField('submitterName', e.target.value)} />
@@ -382,7 +419,7 @@ export default function GuestSubmit() {
                 style={{ width: '100%' }}
                 disabled={submitting || aiStatus === 'uploading' || aiStatus === 'analyzing'}
               >
-                {submitting ? 'Enviando...' : 'Enviar comprobante'}
+                {submitting ? 'Enviando...' : inReviewMode ? 'Confirmar y enviar' : 'Enviar comprobante'}
               </button>
             </form>
           </>

@@ -4,9 +4,9 @@ import { supabase } from '../lib/supabase'
 
 const STATUS_INFO = {
   pending: {
-    label: 'En revisión',
+    label: '✓ Comprobante recibido',
     color: '#B45309',
-    message: 'La empresa todavía está revisando tu comprobante. Vuelve a esta página más tarde para ver el resultado.'
+    message: 'Ya llegó y está siendo revisado. Guarda este enlace para ver aquí mismo cuando quede confirmado.'
   },
   confirmed: {
     label: '✓ Comprobante confirmado',
