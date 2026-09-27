@@ -40,6 +40,7 @@ export default function TopBar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [pendingPayments, setPendingPayments] = useState(0)
   const [pendingGuests, setPendingGuests] = useState(0)
+  const [orgPendingCounts, setOrgPendingCounts] = useState({})
 
   const canSeeQueue = membership && QUEUE_ROLES.includes(membership.role)
   const canInvite = membership && OWNER_ROLES.includes(membership.role)
@@ -84,6 +85,43 @@ export default function TopBar() {
     const interval = setInterval(loadCounts, 45000)
     return () => { cancelled = true; clearInterval(interval) }
   }, [canSeeQueue, membership?.organization_id])
+
+  // La persona puede pertenecer a varias empresas a la vez (por ejemplo, un
+  // contador que lleva la contabilidad de varios clientes). El contador de
+  // "Cola" de arriba solo mira la empresa activa — esto además calcula
+  // cuántos comprobantes esperan revisión en CADA empresa donde tiene un rol
+  // que puede revisar, para que el menú le muestre dónde falta trabajo sin
+  // tener que ir cambiando de empresa una por una para averiguarlo.
+  useEffect(() => {
+    const queueMemberships = (memberships || []).filter((m) => QUEUE_ROLES.includes(m.role))
+    if (queueMemberships.length === 0) {
+      setOrgPendingCounts({})
+      return
+    }
+    let cancelled = false
+    async function loadAllCounts() {
+      const results = await Promise.all(
+        queueMemberships.map((m) =>
+          supabase
+            .from('payment_records')
+            .select('id', { count: 'exact', head: true })
+            .eq('organization_id', m.organization_id)
+            .in('verification_status', ['pending', 'under_review'])
+            .then(({ count }) => [m.organization_id, count || 0])
+        )
+      )
+      if (!cancelled) setOrgPendingCounts(Object.fromEntries(results))
+    }
+    loadAllCounts()
+    const interval = setInterval(loadAllCounts, 45000)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [memberships])
+
+  function handleGoToCompanyQueue(orgId) {
+    if (orgId !== membership?.organization_id) switchOrg(orgId)
+    navigate('/cola')
+    setMenuOpen(false)
+  }
 
   return (
     <header className="topbar">
@@ -135,6 +173,38 @@ export default function TopBar() {
                 )}
               </div>
             </div>
+
+            {memberships.length > 1 && (
+              <div className="menu-section">
+                <div className="menu-section-title">Mis empresas</div>
+                {memberships.map((m) => {
+                  const isQueueRole = QUEUE_ROLES.includes(m.role)
+                  const count = orgPendingCounts[m.organization_id] || 0
+                  const isActive = m.organization_id === membership?.organization_id
+                  return (
+                    <button
+                      key={m.organization_id}
+                      type="button"
+                      className="menu-link"
+                      style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        width: '100%', background: isActive ? 'rgba(43, 100, 89, 0.06)' : 'transparent'
+                      }}
+                      onClick={() => handleGoToCompanyQueue(m.organization_id)}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                        <IconBuilding width={16} height={16} style={{ flexShrink: 0 }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {m.organizations?.name || 'Empresa'}
+                        </span>
+                        <span style={{ fontSize: 11, opacity: 0.6, flexShrink: 0 }}>· {m.role}</span>
+                      </span>
+                      {isQueueRole && count > 0 && <CountBadge count={count} />}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
             {canSeeQueue && (
               <div className="menu-section">
