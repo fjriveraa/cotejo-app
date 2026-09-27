@@ -396,8 +396,19 @@ export default function GuestSubmit() {
                   <div style={{ fontSize: 13, opacity: 0.75, display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {form.referenceRaw && <span>Referencia: {form.referenceRaw}</span>}
                     {form.transactionDate && <span>Fecha: {form.transactionDate}</span>}
-                    {form.originBank && <span>Banco: {form.originBank}</span>}
+                    {(rawExtraction?.bank || rawExtraction?.account_last4) && (
+                      <span>
+                        Cuenta destino: {rawExtraction?.bank || 'banco no identificado'}
+                        {rawExtraction?.account_last4 ? ` ****${rawExtraction.account_last4}` : ''}
+                      </span>
+                    )}
+                    {form.originBank && <span>Banco origen: {form.originBank}</span>}
+                    {form.originAccountHolder && <span>Titular origen: {form.originAccountHolder}</span>}
+                    {form.originAccountNumber && <span>Cuenta origen: {form.originAccountNumber}</span>}
                   </div>
+                  <p style={{ fontSize: 11.5, opacity: 0.55, marginTop: 8, marginBottom: 0 }}>
+                    Comparamos estos datos con el comprobante y con las cuentas registradas de {selectedOrg.name}.
+                  </p>
                   {dateWarning && (
                     <p style={{ color: '#B08900', fontSize: 12.5, marginTop: 8, marginBottom: 0 }}>⚠ {dateWarning}</p>
                   )}
