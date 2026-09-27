@@ -184,14 +184,26 @@ export default function GuestSubmit() {
     // ya quedó guardado"), lo cual era falso cuando en realidad la subida
     // había fallado (el archivo nunca se guardó). Separarlos evita decirle
     // al invitado que algo se guardó cuando no fue así.
+    // Los hashes (para detectar comprobantes reciclados) son una mejora
+    // aparte de la subida en sí -- algunos navegadores embebidos (Instagram,
+    // WhatsApp en iOS) restringen crypto.subtle o createImageBitmap y antes
+    // eso hacía fallar la subida COMPLETA con el mismo mensaje engañoso.
+    // Ahora, si fallan, simplemente ese comprobante no queda protegido por
+    // esa señal de duplicado, pero la subida real sigue adelante.
+    let hash = null
+    try {
+      hash = await hashFile(selected)
+    } catch (err) {
+      console.error('No se pudo calcular el hash del archivo (se sigue sin esta protección):', err)
+    }
+    setFileHash(hash)
+    const phash = await computePerceptualHash(selected)
+    setPerceptualHash(phash)
+
     let path = null
     try {
       setAiStatus('uploading')
       setAiMessage('Subiendo comprobante...')
-      const hash = await hashFile(selected)
-      setFileHash(hash)
-      const phash = await computePerceptualHash(selected)
-      setPerceptualHash(phash)
       const ext = selected.name.split('.').pop()
       path = `${selectedOrg.organization_id}/${crypto.randomUUID()}.${ext}`
       const { error: uploadError } = await supabase.storage.from('guest-evidence').upload(path, selected)
@@ -200,7 +212,7 @@ export default function GuestSubmit() {
     } catch (err) {
       console.error('Error subiendo comprobante:', err)
       setAiStatus('error')
-      setAiMessage('No se pudo subir tu foto. Revisa tu conexión e intenta de nuevo, o prueba con otra foto (menos de 25MB).')
+      setAiMessage(`No se pudo subir tu foto (${err?.message || 'error desconocido'}). Revisa tu conexión e intenta de nuevo, o prueba con otra foto.`)
       return
     }
 
