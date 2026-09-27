@@ -8,7 +8,8 @@ const TYPE_ROUTE = {
   payment_pending: '/cola',
   payment_confirmed: '/registrar',
   confirmation_reversed: '/cola',
-  risk_flag: '/cola'
+  risk_flag: '/cola',
+  guest_submission: '/comprobantes-invitados'
 }
 
 function timeAgo(dateStr) {
