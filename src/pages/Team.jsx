@@ -85,6 +85,16 @@ export default function Team() {
     else loadMembers()
   }
 
+  async function handleRoleChange(m, newRole) {
+    if (newRole === m.role) return
+    setBusyId(m.membership_id)
+    setError(null)
+    const { error } = await supabase.rpc('update_member_role', { p_membership_id: m.membership_id, p_new_role: newRole })
+    setBusyId(null)
+    if (error) setError(error.message)
+    else loadMembers()
+  }
+
   if (loading) {
     return <div className="container"><p style={{ opacity: 0.6 }}>Cargando equipo...</p></div>
   }
@@ -129,7 +139,7 @@ export default function Team() {
                   {m.membership_id === myMembership?.id && <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.7 }}>(tú)</span>}
                 </div>
                 <div className="meta">
-                  {ROLE_LABELS[m.role] || m.role}
+                  {m.status === 'disabled' ? ROLE_LABELS[m.role] || m.role : null}
                   {m.status === 'disabled' && <span style={{ marginLeft: 8 }}>· fuera del equipo</span>}
                   {' · desde '}{new Date(m.created_at).toLocaleDateString('es-HN')}
                   {' · '}
@@ -139,8 +149,20 @@ export default function Team() {
                 </div>
               </div>
               {m.membership_id !== myMembership?.id && (
-                <div className="actions-row">
+                <div className="actions-row" style={{ alignItems: 'center' }}>
                   {m.id_doc_path && <ViewIdDoc path={m.id_doc_path} />}
+                  {m.status !== 'disabled' && (
+                    <select
+                      value={m.role}
+                      disabled={busyId === m.membership_id}
+                      onChange={(e) => handleRoleChange(m, e.target.value)}
+                      style={{ fontSize: 12.5, padding: '4px 6px' }}
+                    >
+                      {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  )}
                   {m.status === 'disabled' ? (
                     <button className="btn btn-secondary" disabled={busyId === m.membership_id} onClick={() => handleReactivate(m)}>
                       {busyId === m.membership_id ? 'Un momento...' : 'Reactivar'}
