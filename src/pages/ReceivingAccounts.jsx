@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { bankNamesForCountry, DEFAULT_COUNTRY } from '../lib/banks'
 
-const emptyForm = { bank: '', alias: '', last4: '', currency: 'HNL' }
+const OTHER_BANK = '__other__'
+const emptyForm = { bank: '', bankOther: '', alias: '', last4: '', currency: 'HNL' }
 
 // Estas son las cuentas propias de la empresa — a dónde SÍ le pueden pagar
 // los clientes. Sirven de dos formas: (1) le dan al empleado un menú
@@ -51,7 +52,7 @@ export default function ReceivingAccounts() {
     e.preventDefault()
     setError(null)
 
-    const bank = form.bank.trim()
+    const bank = (form.bank === OTHER_BANK ? form.bankOther : form.bank).trim()
     const alias = form.alias.trim()
     const last4 = form.last4.trim()
 
@@ -112,20 +113,26 @@ export default function ReceivingAccounts() {
         <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div className="field" style={{ flex: '1 1 200px', margin: 0 }}>
             <label htmlFor="bank">Banco</label>
-            <input
-              id="bank"
-              type="text"
-              list="bank-options"
-              value={form.bank}
-              onChange={(e) => updateField('bank', e.target.value)}
-              placeholder="ej. BAC Credomatic"
-            />
-            <datalist id="bank-options">
+            <select id="bank" value={form.bank} onChange={(e) => updateField('bank', e.target.value)}>
+              <option value="">Selecciona un banco</option>
               {bankOptions.map((name) => (
-                <option key={name} value={name} />
+                <option key={name} value={name}>{name}</option>
               ))}
-            </datalist>
+              <option value={OTHER_BANK}>Otro banco (escribir)</option>
+            </select>
           </div>
+          {form.bank === OTHER_BANK && (
+            <div className="field" style={{ flex: '1 1 160px', margin: 0 }}>
+              <label htmlFor="bankOther">Nombre del banco</label>
+              <input
+                id="bankOther"
+                type="text"
+                value={form.bankOther}
+                onChange={(e) => updateField('bankOther', e.target.value)}
+                placeholder="ej. Wells Fargo"
+              />
+            </div>
+          )}
           <div className="field" style={{ flex: '1 1 140px', margin: 0 }}>
             <label htmlFor="alias">Alias</label>
             <input
@@ -133,7 +140,7 @@ export default function ReceivingAccounts() {
               type="text"
               value={form.alias}
               onChange={(e) => updateField('alias', e.target.value)}
-              placeholder="ej. Principal"
+              placeholder="ej. Ahorros, Cheques, Principal"
             />
           </div>
           <div className="field" style={{ flex: '0 1 110px', margin: 0 }}>
