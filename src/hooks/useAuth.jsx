@@ -156,7 +156,7 @@ export function AuthProvider({ children }) {
       setMembershipError(null)
       const { data, error } = await supabase
         .from('memberships')
-        .select('id, role, user_id, organization_id, branch_scope, organizations(name, country, is_public, org_type, verification_status, forensics_addon_enabled)')
+        .select('id, role, user_id, organization_id, branch_scope, organizations(name, country, is_public, org_type, verification_status, forensics_addon_enabled, contact_email)')
         .eq('user_id', session.user.id)
         .eq('status', 'active')
         .order('created_at', { ascending: true })

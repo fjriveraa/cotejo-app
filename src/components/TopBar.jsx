@@ -203,6 +203,11 @@ export default function TopBar() {
             {memberships.length > 1 && (
               <div className="menu-section">
                 <div className="menu-section-title">Mis empresas</div>
+                {memberships.filter((m) => QUEUE_ROLES.includes(m.role)).length > 1 && (
+                  <NavLink to="/todos-los-comprobantes" className="menu-link">
+                    <IconCheckCircle /> Ver todos los comprobantes juntos
+                  </NavLink>
+                )}
                 {memberships.map((m) => {
                   const isQueueRole = QUEUE_ROLES.includes(m.role)
                   const count = orgPendingCounts[m.organization_id] || 0

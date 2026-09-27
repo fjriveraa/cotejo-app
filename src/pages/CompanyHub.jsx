@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { IconUsers, IconMail, IconInbox, IconBuilding, IconChart, IconShield } from '../components/icons'
 
@@ -15,11 +17,36 @@ const VERIFICATION_BADGE = {
 // nada los presentaba como partes de un mismo lugar. Esta pantalla los junta
 // como lo que en realidad son: todo lo que le pertenece a ESTA empresa.
 export default function CompanyHub() {
-  const { membership } = useAuth()
+  const { membership, refreshMemberships } = useAuth()
   const orgName = membership?.organizations?.name || 'tu empresa'
   const verificationStatus = membership?.organizations?.verification_status
   const verificationBadge = VERIFICATION_BADGE[verificationStatus]
   const canInvite = OWNER_ROLES.includes(membership?.role)
+
+  // Correo informativo, no una credencial -- a quién contactar por esta
+  // empresa. Nunca se usa para iniciar sesión, así que no compromete saber
+  // quién hizo cada acción (eso sigue dependiendo del login real de cada
+  // persona).
+  const [contactEmail, setContactEmail] = useState(membership?.organizations?.contact_email || '')
+  const [editingEmail, setEditingEmail] = useState(false)
+  const [savingEmail, setSavingEmail] = useState(false)
+  const [emailError, setEmailError] = useState(null)
+
+  async function handleSaveContactEmail() {
+    setSavingEmail(true)
+    setEmailError(null)
+    const { error } = await supabase.rpc('update_organization_contact_email', {
+      p_organization_id: membership.organization_id,
+      p_contact_email: contactEmail
+    })
+    setSavingEmail(false)
+    if (error) {
+      setEmailError(error.message)
+      return
+    }
+    setEditingEmail(false)
+    refreshMemberships()
+  }
 
   // Reportes lo puede ver cualquiera que llegue a esta pantalla (contador,
   // supervisor, auditor incluidos) -- el resto son cosas de administrar la
@@ -56,6 +83,46 @@ export default function CompanyHub() {
           )}
         </div>
       )}
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: editingEmail ? 10 : 0 }}>
+          <IconMail width={18} height={18} style={{ opacity: 0.6, flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, opacity: 0.6 }}>Correo de contacto de esta empresa</div>
+            {!editingEmail && (
+              <div style={{ fontSize: 13.5, fontWeight: 600 }}>
+                {membership?.organizations?.contact_email || 'Sin asignar'}
+              </div>
+            )}
+          </div>
+          {canInvite && !editingEmail && (
+            <button type="button" className="btn btn-secondary" style={{ fontSize: 12.5 }} onClick={() => setEditingEmail(true)}>
+              {membership?.organizations?.contact_email ? 'Cambiar' : 'Asignar'}
+            </button>
+          )}
+        </div>
+        {editingEmail && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <input
+              type="email"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              placeholder="contacto@empresa.com"
+              style={{ flex: '1 1 200px' }}
+            />
+            <button className="btn btn-primary" disabled={savingEmail} onClick={handleSaveContactEmail}>
+              {savingEmail ? 'Guardando...' : 'Guardar'}
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => { setEditingEmail(false); setContactEmail(membership?.organizations?.contact_email || ''); setEmailError(null) }}
+            >
+              Cancelar
+            </button>
+          </div>
+        )}
+        {emailError && <p className="error-text" style={{ marginTop: 8, marginBottom: 0 }}>{emailError}</p>}
+      </div>
 
       <div className="quick-actions">
         {cards.map((c) => (

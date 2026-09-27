@@ -20,6 +20,7 @@ import GuestStatus from './pages/GuestStatus'
 import GuestQueue from './pages/GuestQueue'
 import Reports from './pages/Reports'
 import Dashboard from './pages/Dashboard'
+import AllCompaniesQueue from './pages/AllCompaniesQueue'
 import Landing from './pages/Landing'
 import TopBar from './components/TopBar'
 import OrgPicker from './components/OrgPicker'
@@ -204,6 +205,16 @@ export default function App() {
         element={
           <ProtectedLayout>
             <AccountantQueue />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/todos-los-comprobantes"
+        element={
+          <ProtectedLayout>
+            <RequireQueueAccess>
+              <AllCompaniesQueue />
+            </RequireQueueAccess>
           </ProtectedLayout>
         }
       />

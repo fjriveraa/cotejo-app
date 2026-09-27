@@ -17,7 +17,7 @@ const STATUS_LABELS = {
 // "separation_of_duties: ...") pensados para depurar, no para mostrárselos
 // tal cual a quien está usando la cola. Esto los traduce a algo que
 // cualquiera entiende sin explicación.
-function friendlyRpcError(message) {
+export function friendlyRpcError(message) {
   if (!message) return 'No se pudo completar la acción.'
   if (message.startsWith('separation_of_duties')) {
     return 'Quien registró este pago no puede confirmarlo — pídele a otra persona del equipo que lo revise.'
@@ -54,7 +54,7 @@ const FIELD_LABELS = {
   origin_account_number: 'Cuenta origen (número)'
 }
 
-function EvidenceModal({ payment, onClose }) {
+export function EvidenceModal({ payment, onClose }) {
   const [signedUrl, setSignedUrl] = useState(null)
   const [loadingUrl, setLoadingUrl] = useState(true)
   const [loadError, setLoadError] = useState(null)
@@ -328,7 +328,7 @@ function RevertConfirmationModal({ payment, onConfirm, onClose, busy }) {
   )
 }
 
-function EvidenceThumb({ path, onClick }) {
+export function EvidenceThumb({ path, onClick }) {
   const [url, setUrl] = useState(null)
 
   useEffect(() => {
