@@ -189,7 +189,16 @@ export default function TopBar() {
           <div className="menu-drawer">
             <div className="menu-account-card">
               <div style={{ fontWeight: 600, fontSize: 13.5 }}>{membership?.organizations?.name}</div>
-              <div style={{ fontSize: 12.5, opacity: 0.65, marginTop: 2 }}>{user?.email}</div>
+              {/* El correo de contacto de la empresa (informativo, no una
+                  credencial) es lo que identifica a esta empresa de un
+                  vistazo -- el correo real con el que entraste queda debajo,
+                  más chico, para no perder de vista quién hizo la acción. */}
+              <div style={{ fontSize: 12.5, opacity: 0.65, marginTop: 2 }}>
+                {membership?.organizations?.contact_email || user?.email}
+              </div>
+              {membership?.organizations?.contact_email && membership.organizations.contact_email !== user?.email && (
+                <div style={{ fontSize: 11, opacity: 0.5, marginTop: 1 }}>conectado como {user?.email}</div>
+              )}
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
                 {membership?.branch_name && (
                   <span style={{ fontSize: 12, opacity: 0.6 }}>{membership.branch_name}</span>
