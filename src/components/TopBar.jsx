@@ -212,7 +212,10 @@ export default function TopBar() {
             {memberships.length > 1 && (
               <div className="menu-section">
                 <div className="menu-section-title">Mis empresas</div>
-                {memberships.filter((m) => QUEUE_ROLES.includes(m.role)).length > 1 && (
+                {/* Solo tiene sentido ver todo mezclado desde la cuenta personal
+                    (autónomo) -- entrando a una empresa puntual, lo esperado es
+                    ver nada más lo de esa empresa. */}
+                {membership?.organizations?.org_type === 'autonomo' && memberships.filter((m) => QUEUE_ROLES.includes(m.role)).length > 1 && (
                   <NavLink to="/todos-los-comprobantes" className="menu-link">
                     <IconCheckCircle /> Ver todos los comprobantes juntos
                   </NavLink>

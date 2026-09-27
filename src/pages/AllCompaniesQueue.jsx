@@ -15,7 +15,7 @@ const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor'
 // entrar a una empresa específica sigue mostrando solo la suya, esto es
 // nada más para tener la vista de conjunto.
 export default function AllCompaniesQueue() {
-  const { memberships, switchOrg } = useAuth()
+  const { membership, memberships, switchOrg } = useAuth()
   const navigate = useNavigate()
   const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
@@ -107,6 +107,14 @@ export default function AllCompaniesQueue() {
   function goToCompanyQueue(orgId) {
     switchOrg(orgId)
     navigate('/cola')
+  }
+
+  if (membership?.organizations?.org_type !== 'autonomo') {
+    return (
+      <div className="container">
+        <p className="empty-state">Esta vista solo está disponible desde tu cuenta personal -- entra desde ahí para ver todo junto.</p>
+      </div>
+    )
   }
 
   if (queueMemberships.length <= 1) {
