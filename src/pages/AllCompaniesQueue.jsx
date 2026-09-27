@@ -14,11 +14,17 @@ const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor'
 // "BAC — Pazari" como grupos separados, aunque el banco sea el mismo) --
 // entrar a una empresa específica sigue mostrando solo la suya, esto es
 // nada más para tener la vista de conjunto.
+const CONFIRMED_LOOKBACK_DAYS = 60
+
 export default function AllCompaniesQueue() {
   const { membership, memberships, switchOrg } = useAuth()
   const navigate = useNavigate()
+  const [tab, setTab] = useState('pending')
   const [payments, setPayments] = useState([])
+  const [confirmedPayments, setConfirmedPayments] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingConfirmed, setLoadingConfirmed] = useState(false)
+  const [confirmedLoaded, setConfirmedLoaded] = useState(false)
   const [error, setError] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const [viewingPayment, setViewingPayment] = useState(null)
@@ -32,6 +38,11 @@ export default function AllCompaniesQueue() {
     loadAll()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberships])
+
+  useEffect(() => {
+    if (tab === 'confirmed' && !confirmedLoaded) loadConfirmed()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab])
 
   async function loadAll() {
     if (queueMemberships.length === 0) {
@@ -69,6 +80,52 @@ export default function AllCompaniesQueue() {
     if (firstError) setError(firstError.err.message)
     setPayments(results.flatMap((r) => r.rows))
     setLoading(false)
+  }
+
+  // Los confirmados se cargan aparte (y solo al pedirlos) porque son un
+  // historial que puede crecer mucho -- se limita a los últimos
+  // CONFIRMED_LOOKBACK_DAYS días para no traer todo el historial de golpe.
+  async function loadConfirmed() {
+    if (queueMemberships.length === 0) {
+      setConfirmedPayments([])
+      setLoadingConfirmed(false)
+      setConfirmedLoaded(true)
+      return
+    }
+    setLoadingConfirmed(true)
+    setError(null)
+    const since = new Date()
+    since.setDate(since.getDate() - CONFIRMED_LOOKBACK_DAYS)
+    const results = await Promise.all(
+      queueMemberships.map(async (m) => {
+        const { data, error: err } = await supabase
+          .from('payment_records')
+          .select(`
+            id, amount, currency, reference_raw, bank, account_last4,
+            verification_status, customer_waiting, created_at, evidence_path,
+            transaction_date, origin_account_holder, verified_at, self_confirmed
+          `)
+          .eq('organization_id', m.organization_id)
+          .eq('verification_status', 'confirmed_manual')
+          .gte('verified_at', since.toISOString())
+          .order('verified_at', { ascending: false })
+        if (err) return { err, rows: [] }
+        return {
+          err: null,
+          rows: (data || []).map((p) => ({
+            ...p,
+            orgId: m.organization_id,
+            orgName: m.organizations?.name || 'Empresa'
+          }))
+        }
+      })
+    )
+    const firstError = results.find((r) => r.err)
+    if (firstError) setError(firstError.err.message)
+    const merged = results.flatMap((r) => r.rows).sort((a, b) => new Date(b.verified_at) - new Date(a.verified_at))
+    setConfirmedPayments(merged)
+    setLoadingConfirmed(false)
+    setConfirmedLoaded(true)
   }
 
   const grouped = useMemo(() => {
@@ -132,12 +189,71 @@ export default function AllCompaniesQueue() {
   return (
     <div className="container">
       <h2 style={{ marginTop: 0, marginBottom: 4 }}>Todos tus comprobantes</h2>
-      <p style={{ opacity: 0.65, fontSize: 14, marginTop: 0, marginBottom: 20 }}>
-        Pendientes de revisión en las {queueMemberships.length} empresas donde puedes confirmar pagos.
+      <p style={{ opacity: 0.65, fontSize: 14, marginTop: 0, marginBottom: 16 }}>
+        De las {queueMemberships.length} empresas donde puedes confirmar pagos.
       </p>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        <button
+          type="button"
+          className={tab === 'pending' ? 'btn btn-primary' : 'btn btn-secondary'}
+          onClick={() => setTab('pending')}
+        >
+          Pendientes {payments.length > 0 && `(${payments.length})`}
+        </button>
+        <button
+          type="button"
+          className={tab === 'confirmed' ? 'btn btn-primary' : 'btn btn-secondary'}
+          onClick={() => setTab('confirmed')}
+        >
+          Confirmados
+        </button>
+      </div>
+
       {error && <p className="error-text">{error}</p>}
 
-      {payments.length === 0 ? (
+      {tab === 'confirmed' ? (
+        loadingConfirmed ? (
+          <p style={{ opacity: 0.6 }}>Cargando confirmados...</p>
+        ) : confirmedPayments.length === 0 ? (
+          <p className="empty-state">No hay comprobantes confirmados en los últimos {CONFIRMED_LOOKBACK_DAYS} días.</p>
+        ) : (
+          <div className="payment-list">
+            {confirmedPayments.map((p) => (
+              <div key={p.id} className="payment-row payment-row-with-thumb" style={{ flexWrap: 'wrap', gap: 12 }}>
+                <EvidenceThumb path={p.evidence_path} onClick={() => setViewingPayment(p)} />
+                <div style={{ flex: '1 1 200px' }}>
+                  <div style={{ fontSize: 12, opacity: 0.6, fontWeight: 600 }}>{p.orgName}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
+                    <div className="amount">
+                      {p.currency} {Number(p.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#2B6459', background: 'rgba(43, 100, 89, 0.08)', padding: '2px 8px', borderRadius: 999 }}>
+                      ✓ confirmado
+                    </span>
+                    {p.self_confirmed && (
+                      <span style={{ fontSize: 11, opacity: 0.6 }}>· autoconfirmado</span>
+                    )}
+                  </div>
+                  {p.origin_account_holder && (
+                    <div style={{ fontSize: 13.5, fontWeight: 600, marginTop: 2 }}>{p.origin_account_holder}</div>
+                  )}
+                  <div className="meta" style={{ marginTop: 2 }}>
+                    {p.bank}{p.account_last4 ? ` (${p.account_last4})` : ''}
+                    {p.reference_raw && ` · ref: ${p.reference_raw}`}
+                    {p.verified_at && ` · confirmado ${new Date(p.verified_at).toLocaleDateString('es-HN', { day: '2-digit', month: 'short', year: 'numeric' })}`}
+                  </div>
+                </div>
+                <div className="actions-row">
+                  <button className="btn btn-secondary" onClick={() => goToCompanyQueue(p.orgId)}>
+                    Ver {p.orgName}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      ) : payments.length === 0 ? (
         <p className="empty-state">Todo al día en todas tus empresas — no hay nada pendiente.</p>
       ) : (
         Object.entries(grouped).map(([groupLabel, items]) => (
