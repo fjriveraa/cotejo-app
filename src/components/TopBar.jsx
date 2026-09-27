@@ -7,6 +7,7 @@ import {
   IconUsers, IconMail, IconShield, IconIdCard, IconLink, IconSearch, IconLogout,
   IconBuilding
 } from './icons'
+import NotificationBell from './NotificationBell'
 
 const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
 const OWNER_ROLES = ['propietario', 'admin']
@@ -88,15 +89,18 @@ export default function TopBar() {
     <header className="topbar">
       <div className="topbar-top">
         <div className="brand">Cotejo</div>
-        <button
-          type="button"
-          className="menu-toggle"
-          onClick={() => setMenuOpen((v) => !v)}
-          aria-expanded={menuOpen}
-        >
-          {menuOpen ? <IconClose /> : <IconMenu />}
-          Menú
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <NotificationBell />
+          <button
+            type="button"
+            className="menu-toggle"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? <IconClose /> : <IconMenu />}
+            Menú
+          </button>
+        </div>
       </div>
 
       <nav className="topbar-primary">

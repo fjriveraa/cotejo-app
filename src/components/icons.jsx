@@ -159,6 +159,15 @@ export function IconHome(props) {
   )
 }
 
+export function IconBell(props) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M6 10a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c0.5-0.5 2-2 2-6z" />
+      <path d="M10 19a2 2 0 0 0 4 0" />
+    </svg>
+  )
+}
+
 export function IconBriefcase(props) {
   return (
     <svg {...base} {...props}>
