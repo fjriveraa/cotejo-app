@@ -3,14 +3,13 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import {
-  IconMenu, IconClose, IconDoc, IconCheckCircle, IconInbox, IconChart,
-  IconUsers, IconMail, IconShield, IconIdCard, IconLink, IconSearch, IconLogout,
+  IconMenu, IconClose, IconDoc, IconCheckCircle, IconInbox,
+  IconShield, IconIdCard, IconLink, IconSearch, IconLogout,
   IconBuilding
 } from './icons'
 import NotificationBell from './NotificationBell'
 
 const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
-const OWNER_ROLES = ['propietario', 'admin']
 
 const VERIFICATION_BADGE = {
   verified: { label: '✓ Verificada', color: '#2B6459' },
@@ -43,7 +42,6 @@ export default function TopBar() {
   const [orgPendingCounts, setOrgPendingCounts] = useState({})
 
   const canSeeQueue = membership && QUEUE_ROLES.includes(membership.role)
-  const canInvite = membership && OWNER_ROLES.includes(membership.role)
   // Solo el propietario puede certificar legalmente la empresa — un admin
   // que solo la configuró no debería ver esta opción como si pudiera usarla.
   const canVerify = membership && membership.role === 'propietario'
@@ -141,6 +139,34 @@ export default function TopBar() {
         </div>
       </div>
 
+      {/* Antes esto vivía abajo del todo, como un detalle chico y fácil de
+          pasar por alto -- por eso alguien terminó registrando pagos en una
+          sucursal pensando que estaba en la empresa principal. Ahora es lo
+          primero que se ve, con suficiente peso visual para que el contexto
+          (en cuál empresa, con qué rol) nunca quede en duda. */}
+      {membership && (
+        <div className="working-in-banner">
+          <IconBuilding width={15} height={15} style={{ flexShrink: 0, opacity: 0.7 }} />
+          <span style={{ opacity: 0.7 }}>Trabajando en</span>
+          {memberships.length > 1 ? (
+            <select
+              value={membership?.organization_id || ''}
+              onChange={(e) => handleSwitchOrg(e.target.value)}
+              className="org-select"
+            >
+              {memberships.map((m) => (
+                <option key={m.organization_id} value={m.organization_id}>
+                  {m.organizations?.name || 'Empresa'}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <strong className="org-name">{membership.organizations?.name}</strong>
+          )}
+          <span className={`badge badge-${membership.role}`}>{membership.role}</span>
+        </div>
+      )}
+
       <nav className="topbar-primary">
         <NavLink to="/registrar" className={({ isActive }) => `nav-pill nav-pill-primary${isActive ? ' active' : ''}`}>
           <IconDoc /> Registrar pago
@@ -209,11 +235,10 @@ export default function TopBar() {
             {canSeeQueue && (
               <div className="menu-section">
                 <div className="menu-section-title">Empresa</div>
-                <NavLink to="/reportes" className="menu-link"><IconChart /> Reportes</NavLink>
-                {canInvite && <NavLink to="/cuentas" className="menu-link"><IconBuilding /> Cuentas receptoras</NavLink>}
-                {canInvite && <NavLink to="/equipo" className="menu-link"><IconUsers /> Mi equipo</NavLink>}
-                {canInvite && <NavLink to="/invitar" className="menu-link"><IconMail /> Invitar equipo</NavLink>}
-                {canInvite && <NavLink to="/solicitudes" className="menu-link"><IconInbox /> Solicitudes</NavLink>}
+                {/* Equipo, cuentas, invitaciones, solicitudes y reportes vivían
+                    como links sueltos acá -- ahora son una sola pantalla que
+                    junta todo lo que le pertenece a esta empresa. */}
+                <NavLink to="/empresa" className="menu-link"><IconBuilding /> Mi empresa</NavLink>
                 {/* Una vez verificada, este paso ya se hizo — no tiene sentido seguir
                     mostrándolo junto a las tareas recurrentes del día a día. */}
                 {canVerify && verificationStatus !== 'verified' && (
@@ -244,27 +269,6 @@ export default function TopBar() {
           </div>
         </>
       )}
-
-      <div className="user-info">
-        {membership?.organizations?.name && (
-          memberships.length > 1 ? (
-            <select
-              value={membership?.organization_id || ''}
-              onChange={(e) => handleSwitchOrg(e.target.value)}
-              className="org-select"
-            >
-              {memberships.map((m) => (
-                <option key={m.organization_id} value={m.organization_id}>
-                  {m.organizations?.name || 'Empresa'}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span className="org-name">{membership.organizations.name}</span>
-          )
-        )}
-        {membership && <span className={`badge badge-${membership.role}`}>{membership.role}</span>}
-      </div>
 
       <nav className="bottom-tabbar">
         <NavLink to="/registrar" className={({ isActive }) => `tabbar-item tabbar-item-primary${isActive ? ' active' : ''}`}>

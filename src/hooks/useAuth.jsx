@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 const AuthContext = createContext(null)
 const PENDING_ACTION_KEY = 'cotejo_pending_action'
 const ACTIVE_ORG_KEY = 'cotejo_active_org_id'
+const ORG_CONFIRMED_KEY = 'cotejo_org_confirmed_session'
 
 export function readPendingAction() {
   try {
@@ -47,6 +48,29 @@ function writeActiveOrgId(orgId) {
   }
 }
 
+// Antes, con más de una empresa, la app simplemente asumía en cuál estabas
+// (la última guardada en el teléfono) sin volver a preguntar — así fue como
+// alguien terminó registrando pagos en una sucursal pensando que estaba en
+// la empresa principal. sessionStorage (no localStorage) hace que se
+// pregunte de nuevo cada vez que se abre una sesión de navegador nueva,
+// pero no en cada clic dentro de la misma sesión ya confirmada.
+function readOrgConfirmedThisSession() {
+  try {
+    return sessionStorage.getItem(ORG_CONFIRMED_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function writeOrgConfirmedThisSession(value) {
+  try {
+    if (value) sessionStorage.setItem(ORG_CONFIRMED_KEY, 'true')
+    else sessionStorage.removeItem(ORG_CONFIRMED_KEY)
+  } catch {
+    // no-op
+  }
+}
+
 async function runPendingAction(action) {
   if (!action) return { error: null }
   if (action.type === 'create_org') {
@@ -69,6 +93,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined) // undefined = loading, null = signed out
   const [memberships, setMemberships] = useState([]) // todas las empresas activas de este usuario
   const [activeOrgId, setActiveOrgId] = useState(readActiveOrgId())
+  const [orgConfirmedThisSession, setOrgConfirmedThisSession] = useState(readOrgConfirmedThisSession())
   const [loadingMembership, setLoadingMembership] = useState(false)
   const [membershipError, setMembershipError] = useState(null)
   const [reloadTick, setReloadTick] = useState(0)
@@ -212,6 +237,19 @@ export function AuthProvider({ children }) {
     writeActiveOrgId(orgId)
   }
 
+  // Elegir una empresa a propósito (desde el selector de bienvenida) cuenta
+  // como "confirmada" para el resto de esta sesión de navegador — ya no hace
+  // falta volver a preguntar hasta que cierre el navegador o la pestaña.
+  function confirmActiveOrg(orgId) {
+    switchOrg(orgId)
+    setOrgConfirmedThisSession(true)
+    writeOrgConfirmedThisSession(true)
+  }
+
+  // Solo tiene sentido preguntar cuando hay más de una empresa entre las
+  // cuales elegir -- con una sola no hay nada que confirmar.
+  const needsOrgConfirmation = memberships.length > 1 && !orgConfirmedThisSession
+
   async function signInWithPassword(email, password) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error }
@@ -224,6 +262,8 @@ export function AuthProvider({ children }) {
 
   async function signOut() {
     writeActiveOrgId(null)
+    writeOrgConfirmedThisSession(false)
+    setOrgConfirmedThisSession(false)
     await supabase.auth.signOut()
   }
 
@@ -245,6 +285,8 @@ export function AuthProvider({ children }) {
     memberships,
     membership,
     switchOrg,
+    confirmActiveOrg,
+    needsOrgConfirmation,
     refreshMemberships,
     loadingMembership,
     membershipError,

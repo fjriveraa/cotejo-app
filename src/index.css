@@ -243,16 +243,6 @@ a {
 .menu-link-danger:hover { background: rgba(162, 72, 58, 0.08); }
 .menu-link-danger svg { opacity: 0.8; color: var(--rust); }
 
-.topbar .user-info {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  font-size: 13px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-}
-
 .org-name {
   font-weight: 600;
   color: var(--teal-strong);
@@ -385,6 +375,26 @@ a {
 
 .badge-empleado { background: rgba(43, 100, 89, 0.12); color: var(--teal-strong); }
 .badge-contador { background: rgba(185, 129, 47, 0.15); color: var(--amber); }
+.badge-supervisor { background: rgba(162, 72, 58, 0.12); color: var(--rust); }
+.badge-propietario { background: var(--teal-strong); color: white; }
+.badge-admin { background: rgba(30, 74, 66, 0.85); color: white; }
+.badge-auditor { background: rgba(42, 38, 32, 0.1); color: var(--ink); }
+
+/* El indicador de "en qué empresa estás" -- antes era un detalle chico al
+   fondo de la barra, fácil de pasar por alto justo cuando más importa
+   notarlo (varias empresas, roles distintos). Ahora es una franja con
+   suficiente peso visual para leerse de un vistazo. */
+.working-in-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(43, 100, 89, 0.06);
+  border: 1px solid rgba(43, 100, 89, 0.15);
+}
 
 .btn {
   border: none;
@@ -850,11 +860,9 @@ a {
     width: auto;
   }
 
-  .topbar .user-info {
+  .working-in-banner {
     font-size: 12px;
-    gap: 8px;
-    width: 100%;
-    justify-content: space-between;
+    gap: 6px;
   }
 
   .container {

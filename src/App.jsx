@@ -22,6 +22,8 @@ import Reports from './pages/Reports'
 import Dashboard from './pages/Dashboard'
 import Landing from './pages/Landing'
 import TopBar from './components/TopBar'
+import OrgPicker from './components/OrgPicker'
+import CompanyHub from './pages/CompanyHub'
 import { IconBuilding, IconBriefcase, IconLink, IconSearch } from './components/icons'
 
 const OWNER_ROLES = ['propietario', 'admin']
@@ -99,13 +101,18 @@ function ErrorScreen({ message }) {
 }
 
 function ProtectedLayout({ children }) {
-  const { session, membership, isLoading, membershipError } = useAuth()
+  const { session, membership, isLoading, membershipError, needsOrgConfirmation } = useAuth()
 
   if (session === undefined) return <LoadingScreen />
   if (session === null) return <Navigate to="/login" replace />
   if (isLoading) return <LoadingScreen />
   if (membershipError) return <ErrorScreen message={membershipError} />
   if (!membership) return <ErrorScreen message="No se encontró tu cuenta." />
+  // Con más de una empresa, se pregunta a propósito en cuál se va a
+  // trabajar antes de dejar entrar a cualquier pantalla -- así se evita
+  // seguir de largo en la empresa que quedó guardada de la sesión anterior
+  // sin darse cuenta de que no es la que se necesita ahora.
+  if (needsOrgConfirmation) return <OrgPicker />
 
   return (
     <div className="app-shell">
@@ -234,6 +241,16 @@ export default function App() {
           <RequireSessionLayout>
             <Directory />
           </RequireSessionLayout>
+        }
+      />
+      <Route
+        path="/empresa"
+        element={
+          <ProtectedLayout>
+            <RequireQueueAccess>
+              <CompanyHub />
+            </RequireQueueAccess>
+          </ProtectedLayout>
         }
       />
       <Route
