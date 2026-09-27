@@ -13,6 +13,30 @@ const STATUS_LABELS = {
   voided: 'Anulado'
 }
 
+// Las RPCs devuelven errores técnicos en inglés/prefijo (ej.
+// "separation_of_duties: ...") pensados para depurar, no para mostrárselos
+// tal cual a quien está usando la cola. Esto los traduce a algo que
+// cualquiera entiende sin explicación.
+function friendlyRpcError(message) {
+  if (!message) return 'No se pudo completar la acción.'
+  if (message.startsWith('separation_of_duties')) {
+    return 'Quien registró este pago no puede confirmarlo — pídele a otra persona del equipo que lo revise.'
+  }
+  if (message.startsWith('version_conflict')) {
+    return 'Este pago cambió mientras lo revisabas. Se actualizó la lista — inténtalo de nuevo.'
+  }
+  if (message.startsWith('invalid_state_transition')) {
+    return 'Este pago ya no está pendiente de confirmación (alguien más ya lo revisó).'
+  }
+  if (message.startsWith('revert_window_expired')) {
+    return 'Ya pasaron más de 24 horas desde que se confirmó — no se puede revertir desde aquí.'
+  }
+  if (message.startsWith('forbidden')) {
+    return 'Tu rol no tiene permiso para hacer esto.'
+  }
+  return message
+}
+
 // Orden pensado como se coteja un comprobante en la práctica: primero lo que
 // descarta rápido si no cuadra (monto, fecha), luego a quién le llegó — lo
 // más importante para detectar que el pago fue a la cuenta correcta — y por
@@ -495,7 +519,7 @@ export default function AccountantQueue() {
       await Promise.all([loadQueue(), loadConfirmedToday()])
     } catch (err) {
       console.error(err)
-      setError(err.message || 'No se pudo completar la acción.')
+      setError(friendlyRpcError(err.message))
     } finally {
       setBusyId(null)
     }
@@ -578,6 +602,11 @@ export default function AccountantQueue() {
                       Confirmado por {c.confirmed_by_email} a las {new Date(c.verified_at).toLocaleTimeString('es-HN')}
                       {c.reference_raw ? ` · ref: ${c.reference_raw}` : ''}
                     </div>
+                    {c.self_confirmed && (
+                      <div style={{ fontSize: 11.5, fontWeight: 600, color: '#B45309', marginTop: 2 }}>
+                        ⚠ Autoconfirmado por el propietario — sin doble revisión
+                      </div>
+                    )}
                   </div>
                   <button
                     className="btn btn-secondary"

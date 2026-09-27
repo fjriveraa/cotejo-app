@@ -69,6 +69,7 @@ export function exportReportToExcel({ organizationName, payments, guestSubmissio
     Notas: p.notes || '',
     'Motivo no encontrado': p.not_found_reason || '',
     'Motivo de anulación': p.reversal_reason || '',
+    'Autoconfirmado por el propietario': p.self_confirmed ? 'Sí — sin doble revisión' : 'No',
     'Registrado por': p.created_by_email || '',
     'Registrado el': formatDateTime(p.created_at),
     'Confirmado el': formatDateTime(p.verified_at)
