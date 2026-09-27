@@ -257,6 +257,36 @@ export default function GuestQueue() {
                       ⚠ Comprobante muy parecido a uno enviado a otra empresa — verificar con calma
                     </span>
                   )}
+                  {s.account_mismatch && (
+                    <span
+                      style={{
+                        marginLeft: 10,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: '#7C2D12',
+                        background: '#FEE2E2',
+                        padding: '2px 8px',
+                        borderRadius: 6
+                      }}
+                    >
+                      🚨 El comprobante muestra {s.detected_bank}, que no coincide con ninguna de tus cuentas registradas — pudo ser un pago a otro negocio
+                    </span>
+                  )}
+                  {s.edited_fields && s.edited_fields.length > 0 && (
+                    <span
+                      style={{
+                        marginLeft: 10,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#92400E',
+                        background: '#FEF3C7',
+                        padding: '2px 8px',
+                        borderRadius: 6
+                      }}
+                    >
+                      ⚠ El cliente cambió {s.edited_fields.join(' y ')} que la IA leyó de la imagen — compara contra el comprobante antes de confirmar
+                    </span>
+                  )}
                 </div>
                 {forensicsEnabled && (
                   <div style={{ marginTop: 6 }}>

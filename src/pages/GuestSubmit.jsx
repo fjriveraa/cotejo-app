@@ -92,6 +92,11 @@ export default function GuestSubmit() {
   // no cuadra, puede pasar a edición manual con un solo click.
   const [extractionConfidence, setExtractionConfidence] = useState(null)
   const [manualOverride, setManualOverride] = useState(false)
+  // Copia cruda de lo que la IA leyó del comprobante, guardada aparte de lo
+  // que termina en el formulario -- así el negocio puede comparar en su cola
+  // "lo que decía la imagen" contra "lo que el invitado terminó mandando",
+  // sin importar si editó algo antes de enviar.
+  const [rawExtraction, setRawExtraction] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
@@ -137,6 +142,7 @@ export default function GuestSubmit() {
     setDateWarning(null)
     setExtractionConfidence(null)
     setManualOverride(false)
+    setRawExtraction(null)
   }
 
   function applyExtraction(data) {
@@ -198,6 +204,7 @@ export default function GuestSubmit() {
       if (fnError) throw fnError
       if (fnData?.extraction) {
         setExtractionConfidence(fnData.extraction.confidence || null)
+        setRawExtraction(fnData.extraction)
         applyExtraction(fnData.extraction)
         setAiStatus('done')
         setAiMessage('✓ Detectamos casi todo. Confirma los datos abajo y listo.')
@@ -241,7 +248,14 @@ export default function GuestSubmit() {
         p_evidence_path: evidencePath,
         p_file_hash: fileHash,
         p_is_in_person: isInPerson,
-        p_perceptual_hash: perceptualHash
+        p_perceptual_hash: perceptualHash,
+        p_detected_bank: rawExtraction?.bank || null,
+        p_detected_account_last4: rawExtraction?.account_last4 || null,
+        p_ai_amount: rawExtraction?.amount ?? null,
+        p_ai_currency: rawExtraction?.currency || null,
+        p_ai_reference_raw: rawExtraction?.reference_raw || null,
+        p_ai_transaction_date: /^\d{4}-\d{2}-\d{2}$/.test(rawExtraction?.transaction_date || '') ? rawExtraction.transaction_date : null,
+        p_ai_confidence: rawExtraction?.confidence || null
       })
 
       if (rpcError) throw rpcError

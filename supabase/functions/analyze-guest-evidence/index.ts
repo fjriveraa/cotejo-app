@@ -48,13 +48,15 @@ Extrae TODOS los datos que aparezcan en el comprobante de la imagen, con el mayo
 {
   "amount": number o null,
   "currency": "HNL" o "USD" o null,
+  "bank": string o null,
+  "account_last4": string de 4 dígitos o null,
   "origin_bank": string o null,
   "origin_account_holder": string o null,
   "origin_account_number": string o null,
   "reference_raw": string o null,
   "transaction_date": "YYYY-MM-DD" o null,
   "confidence": {
-    "amount": 0-1, "reference_raw": 0-1,
+    "amount": 0-1, "bank": 0-1, "account_last4": 0-1, "reference_raw": 0-1,
     "origin_account_holder": 0-1, "origin_account_number": 0-1,
     "transaction_date": 0-1
   },
@@ -64,6 +66,7 @@ Extrae TODOS los datos que aparezcan en el comprobante de la imagen, con el mayo
 Reglas:
 - Si un dato no aparece claramente en la imagen, usa null en ese campo y confidence 0 para ese campo. Nunca inventes datos.
 - "amount" es el monto de la transacción (el campo "Monto" o "Monto debitado"), como número (sin símbolos de moneda ni comas).
+- "bank" es el banco de la cuenta que RECIBE el pago (cuenta destino, del comercio), usando el catálogo de arriba cuando sea reconocible. "account_last4" son los últimos 4 dígitos de esa cuenta destino, si aparecen. Estos dos se usan para comparar contra las cuentas receptoras reales de la empresa, así que solo repórtalos con confianza si de verdad se leen en la imagen -- nunca los inventes ni los asumas iguales al banco de origen.
 - "origin_bank" es el banco de la cuenta que ENVÍA el pago (la cuenta del cliente), si se puede determinar.
 - "origin_account_holder" es el nombre completo de la persona o empresa titular de la cuenta ORIGEN (quien envía), tal como aparece en "Cuenta origen".
 - "origin_account_number" es el número de cuenta completo de origen, tal como aparece (no solo los últimos 4 dígitos).
