@@ -178,6 +178,13 @@ export default function GuestSubmit() {
       setAiMessage('Este archivo no se puede leer automáticamente. Completa los datos a mano.')
     }
 
+    // La subida y la lectura con IA son dos pasos distintos que pueden
+    // fallar por razones distintas -- antes un error de CUALQUIERA de los
+    // dos mostraba el mismo mensaje ("no se pudo leer con IA... el archivo
+    // ya quedó guardado"), lo cual era falso cuando en realidad la subida
+    // había fallado (el archivo nunca se guardó). Separarlos evita decirle
+    // al invitado que algo se guardó cuando no fue así.
+    let path = null
     try {
       setAiStatus('uploading')
       setAiMessage('Subiendo comprobante...')
@@ -186,15 +193,22 @@ export default function GuestSubmit() {
       const phash = await computePerceptualHash(selected)
       setPerceptualHash(phash)
       const ext = selected.name.split('.').pop()
-      const path = `${selectedOrg.organization_id}/${crypto.randomUUID()}.${ext}`
+      path = `${selectedOrg.organization_id}/${crypto.randomUUID()}.${ext}`
       const { error: uploadError } = await supabase.storage.from('guest-evidence').upload(path, selected)
       if (uploadError) throw uploadError
       setEvidencePath(path)
+    } catch (err) {
+      console.error('Error subiendo comprobante:', err)
+      setAiStatus('error')
+      setAiMessage('No se pudo subir tu foto. Revisa tu conexión e intenta de nuevo, o prueba con otra foto (menos de 25MB).')
+      return
+    }
 
-      if (!selected.type.startsWith('image/')) {
-        return
-      }
+    if (!selected.type.startsWith('image/')) {
+      return
+    }
 
+    try {
       setAiStatus('analyzing')
       setAiMessage('Leyendo comprobante con IA...')
       const { data: fnData, error: fnError } = await supabase.functions.invoke('analyze-guest-evidence', {
