@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { IconCheckCircle } from '../components/icons'
-import { isPlausibleTransactionDate } from '../lib/dateSanity'
+import { isPlausibleTransactionDate, parseLocalDate } from '../lib/dateSanity'
 
 const STATUS_LABELS = {
   pending: 'Pendiente',
@@ -230,7 +230,7 @@ function DuplicateModal({ payment, candidates, onConfirm, onClose, busy }) {
                     )}
                   </div>
                   <div className="meta">
-                    {c.transaction_date ? new Date(c.transaction_date).toLocaleDateString('es-HN') : 'sin fecha'}
+                    {c.transaction_date ? parseLocalDate(c.transaction_date).toLocaleDateString('es-HN') : 'sin fecha'}
                     {c.reference_raw ? ` · ref: ${c.reference_raw}` : ''}
                   </div>
                 </div>
@@ -620,11 +620,11 @@ export default function AccountantQueue() {
                       {!p.transaction_date && '⚠ Fecha no detectada'}
                       {p.transaction_date && !isPlausibleTransactionDate(p.transaction_date) && (
                         <span title="La IA detectó esta fecha pero no parece correcta (año/rango implausible) — verifícala contra el comprobante">
-                          ⚠ Fecha dudosa: {new Date(p.transaction_date).toLocaleDateString('es-HN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          ⚠ Fecha dudosa: {parseLocalDate(p.transaction_date).toLocaleDateString('es-HN', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </span>
                       )}
                       {p.transaction_date && isPlausibleTransactionDate(p.transaction_date) &&
-                        new Date(p.transaction_date).toLocaleDateString('es-HN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+                        parseLocalDate(p.transaction_date).toLocaleDateString('es-HN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
                       <div className="amount">

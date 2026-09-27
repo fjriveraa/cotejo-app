@@ -12,10 +12,22 @@
 const FUTURE_SLACK_DAYS = 2 // hoy + 2 días, por husos horarios / relojes desincronizados
 const PAST_SLACK_DAYS = 60 // más de 2 meses de "atraso" en un comprobante recién subido es raro
 
-export function isPlausibleTransactionDate(dateStr, referenceDate = new Date()) {
-  if (!dateStr) return false
+// "2026-09-21" sin hora se interpreta distinto según cómo se parsee: con
+// new Date("2026-09-21") a secas, JS lo toma como medianoche UTC, y en
+// Honduras (UTC-6) eso cae el día ANTERIOR a las 6pm — la fecha se muestra
+// un día corrida sin que la IA ni la base de datos se hayan equivocado en
+// nada. Agregar "T00:00:00" (sin offset) hace que JS lo tome como
+// medianoche LOCAL en vez de UTC, que es lo que realmente se quiere mostrar
+// para una fecha que no trae hora.
+export function parseLocalDate(dateStr) {
+  if (!dateStr) return null
   const d = new Date(`${dateStr}T00:00:00`)
-  if (Number.isNaN(d.getTime())) return false
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
+export function isPlausibleTransactionDate(dateStr, referenceDate = new Date()) {
+  const d = parseLocalDate(dateStr)
+  if (!d) return false
 
   const ref = new Date(referenceDate)
   ref.setHours(0, 0, 0, 0)
