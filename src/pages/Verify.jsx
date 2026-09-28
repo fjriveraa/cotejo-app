@@ -89,6 +89,7 @@ export default function Verify() {
             body: {
               organization_id: membership.organization_id,
               org_name: membership.organizations?.name || '',
+              org_type: membership.organizations?.org_type || 'empresa',
               rtn: rtn.trim() || null,
               legal_doc_path: legalDocPath,
               id_doc_path: idDocPath
