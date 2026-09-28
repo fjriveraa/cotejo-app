@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth, writePendingAction, clearPendingAction } from '../hooks/useAuth'
 import { getCanonicalOrigin } from '../lib/appUrl'
+import Spinner from '../components/Spinner'
 
 export default function Signup() {
   const { session, membership, loadingMembership, signUpWithPassword, signInWithOAuth, switchOrg, refreshMemberships } = useAuth()
@@ -297,7 +298,7 @@ export default function Signup() {
           )}
           {error && <p className="error-text">{error}</p>}
           <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-            {loading ? 'Creando...' : duplicateWarning ? 'Continuar de todas formas' : 'Crear mi empresa'}
+            {loading && <Spinner />}{loading ? 'Creando...' : duplicateWarning ? 'Continuar de todas formas' : 'Crear mi empresa'}
           </button>
         </form>
         {!session && (
@@ -314,7 +315,7 @@ export default function Signup() {
           onClick={handleGoogle}
           disabled={oauthLoading}
         >
-          {oauthLoading ? 'Conectando...' : 'Crear mi empresa con Google'}
+          {oauthLoading && <Spinner />}{oauthLoading ? 'Conectando...' : 'Crear mi empresa con Google'}
         </button>
         </>
         )}

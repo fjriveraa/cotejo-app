@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { getCanonicalOrigin } from '../lib/appUrl'
+import Spinner from '../components/Spinner'
 
 export default function Login() {
   const { signInWithPassword, signInWithOAuth } = useAuth()
@@ -63,7 +64,7 @@ export default function Login() {
           </div>
           {error && <p className="error-text">{error}</p>}
           <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-            {loading ? 'Ingresando...' : 'Ingresar'}
+            {loading && <Spinner />}{loading ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0', fontSize: 12, opacity: 0.6 }}>
@@ -78,7 +79,7 @@ export default function Login() {
           onClick={handleGoogle}
           disabled={oauthLoading}
         >
-          {oauthLoading ? 'Conectando...' : 'Continuar con Google'}
+          {oauthLoading && <Spinner />}{oauthLoading ? 'Conectando...' : 'Continuar con Google'}
         </button>
         <p style={{ marginTop: 16, fontSize: 13, opacity: 0.7 }}>
           ¿Tu empresa no tiene cuenta todavía? <Link to="/signup">Créala aquí</Link>

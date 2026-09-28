@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { isPlausibleTransactionDate } from '../lib/dateSanity'
 import PublicPageHeader from '../components/PublicPageHeader'
+import Spinner from '../components/Spinner'
 
 const emptyForm = {
   submitterName: '',
@@ -475,7 +476,7 @@ export default function GuestSubmit() {
                 style={{ width: '100%' }}
                 disabled={submitting || aiStatus === 'uploading' || aiStatus === 'analyzing'}
               >
-                {submitting ? 'Enviando...' : inReviewMode ? 'Confirmar y enviar' : 'Enviar comprobante'}
+                {submitting && <Spinner />}{submitting ? 'Enviando...' : inReviewMode ? 'Confirmar y enviar' : 'Enviar comprobante'}
               </button>
             </form>
           </>

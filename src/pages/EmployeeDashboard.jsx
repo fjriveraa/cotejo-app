@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { bankNamesForCountry, DEFAULT_COUNTRY } from '../lib/banks'
 import { isPlausibleTransactionDate } from '../lib/dateSanity'
+import Spinner from '../components/Spinner'
 
 const OTHER = '__other__'
 
@@ -439,7 +440,7 @@ export default function EmployeeDashboard() {
             disabled={submitting || aiStatus === 'uploading' || aiStatus === 'analyzing'}
             style={{ marginTop: 8 }}
           >
-            {submitting ? 'Registrando...' : 'Registrar pago'}
+            {submitting && <Spinner />}{submitting ? 'Registrando...' : 'Registrar pago'}
           </button>
         </form>
       </div>

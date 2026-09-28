@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth, writePendingAction, clearPendingAction } from '../hooks/useAuth'
 import { getCanonicalOrigin } from '../lib/appUrl'
+import Spinner from '../components/Spinner'
 
 const ROLE_LABELS = {
   empleado: 'Colaborador',
@@ -206,7 +207,7 @@ export default function Join() {
           </div>
           {error && <p className="error-text">{error}</p>}
           <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-            {loading ? 'Un momento...' : mode === 'signup' ? 'Crear cuenta y unirme' : 'Iniciar sesión y unirme'}
+            {loading && <Spinner />}{loading ? 'Un momento...' : mode === 'signup' ? 'Crear cuenta y unirme' : 'Iniciar sesión y unirme'}
           </button>
         </form>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0', fontSize: 12, opacity: 0.6 }}>
@@ -221,7 +222,7 @@ export default function Join() {
           onClick={handleGoogle}
           disabled={oauthLoading}
         >
-          {oauthLoading ? 'Conectando...' : 'Continuar con Google'}
+          {oauthLoading && <Spinner />}{oauthLoading ? 'Conectando...' : 'Continuar con Google'}
         </button>
       </div>
     </div>
