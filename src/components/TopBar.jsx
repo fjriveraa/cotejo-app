@@ -95,10 +95,15 @@ export default function TopBar() {
         showToast('Notificaciones push activadas', { tone: 'success' })
       }
     } catch (err) {
+      console.error('push subscribe error', err)
       if (err?.message === 'permission_denied') {
         showToast('Bloqueaste los permisos de notificación — actívalos desde los ajustes del navegador', { duration: 4500 })
       } else {
-        showToast('No se pudo activar — intenta de nuevo', { tone: 'error' })
+        // Mensaje temporal con el detalle técnico -- ayuda a diagnosticar
+        // mientras se activa por primera vez en distintos navegadores; una
+        // vez confirmado que funciona en todos lados, esto vuelve a un
+        // mensaje genérico.
+        showToast(`No se pudo activar: ${err?.name || ''} ${err?.message || 'error desconocido'}`, { tone: 'error', duration: 6000 })
       }
     } finally {
       setPushBusy(false)
