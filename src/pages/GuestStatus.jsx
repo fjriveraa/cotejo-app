@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import PublicPageHeader from '../components/PublicPageHeader'
 
 const STATUS_INFO = {
   pending: {
@@ -47,7 +48,10 @@ export default function GuestStatus() {
   if (info === undefined) {
     return (
       <div className="login-wrap">
-        <p style={{ opacity: 0.6 }}>Cargando...</p>
+        <div className="card login-card">
+          <PublicPageHeader />
+          <p style={{ opacity: 0.6 }}>Cargando...</p>
+        </div>
       </div>
     )
   }
@@ -56,6 +60,7 @@ export default function GuestStatus() {
     return (
       <div className="login-wrap">
         <div className="card login-card">
+          <PublicPageHeader />
           <h1>No encontramos ese comprobante</h1>
           <p>Revisa que copiaste bien el enlace, o <Link to="/comprobante">envía uno nuevo aquí</Link>.</p>
         </div>
@@ -68,6 +73,7 @@ export default function GuestStatus() {
   return (
     <div className="login-wrap">
       <div className="card login-card">
+        <PublicPageHeader />
         <h1>{info.organization_name}</h1>
         {alreadySent && (
           <p style={{ fontSize: 13, background: '#FEF3C7', color: '#92400E', padding: '8px 12px', borderRadius: 8, marginTop: -8 }}>

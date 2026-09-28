@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { isPlausibleTransactionDate } from '../lib/dateSanity'
+import PublicPageHeader from '../components/PublicPageHeader'
 
 const emptyForm = {
   submitterName: '',
@@ -304,7 +305,10 @@ export default function GuestSubmit() {
   if (loadingDirectOrg) {
     return (
       <div className="login-wrap">
-        <p style={{ opacity: 0.6 }}>Cargando...</p>
+        <div className="card login-card" style={{ maxWidth: 480 }}>
+          <PublicPageHeader />
+          <p style={{ opacity: 0.6 }}>Cargando...</p>
+        </div>
       </div>
     )
   }
@@ -312,6 +316,7 @@ export default function GuestSubmit() {
   return (
     <div className="login-wrap">
       <div className="card login-card" style={{ maxWidth: 480 }}>
+        <PublicPageHeader />
         <h1>Enviar comprobante de pago</h1>
         {!isDirectLink && <p>Busca la empresa a la que le hiciste la transferencia para que confirmen tu pago.</p>}
 

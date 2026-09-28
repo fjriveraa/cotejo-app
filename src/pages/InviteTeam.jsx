@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { getCanonicalOrigin } from '../lib/appUrl'
 
 const ROLE_LABELS = {
   empleado: 'Colaborador',
@@ -146,7 +147,7 @@ function EmailInviteSection({ organizationId }) {
 }
 
 function buildJoinUrl(token) {
-  return `${window.location.origin}/join/${token}`
+  return `${getCanonicalOrigin()}/join/${token}`
 }
 
 export default function InviteTeam() {

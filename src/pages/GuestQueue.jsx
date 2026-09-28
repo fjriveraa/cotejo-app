@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { IconInbox } from '../components/icons'
+import { getCanonicalOrigin } from '../lib/appUrl'
 
 function ViewEvidence({ path }) {
   const [loading, setLoading] = useState(false)
@@ -101,7 +102,7 @@ function LinkRow({ label, hint, link }) {
 }
 
 function CustomerLinkCard({ organizationId, organizationName }) {
-  const remoteLink = `${window.location.origin}/comprobante/${organizationId}`
+  const remoteLink = `${getCanonicalOrigin()}/comprobante/${organizationId}`
   const inPersonLink = `${remoteLink}?presencial=1`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(inPersonLink)}`
 

@@ -47,7 +47,7 @@ export default function JoinManual() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="https://cotejo-app-two.vercel.app/join/..."
+              placeholder="https://cotejo.net/join/..."
               autoComplete="off"
             />
           </div>
