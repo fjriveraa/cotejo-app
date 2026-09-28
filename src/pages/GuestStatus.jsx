@@ -98,6 +98,22 @@ export default function GuestStatus() {
         <button type="button" className="btn btn-secondary" style={{ width: '100%', marginTop: 20 }} onClick={copyLink}>
           {copied ? 'Enlace copiado' : 'Copiar este enlace para volver después'}
         </button>
+
+        {/* Quien llega hasta acá ya vio lo que necesitaba (el estado de su
+            pago) -- este bloque no interrumpe eso, solo deja la puerta
+            abierta por si le interesa tener su propio control de pagos. */}
+        <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--border, #e5e0d8)', textAlign: 'center' }}>
+          <p style={{ fontSize: 13, opacity: 0.75, margin: '0 0 10px' }}>
+            ¿Quieres llevar tus propios pagos así de claro?
+          </p>
+          <Link
+            to="/signup"
+            className="btn btn-primary"
+            style={{ display: 'inline-block', width: '100%', textDecoration: 'none', textAlign: 'center' }}
+          >
+            Crea tu cuenta gratis en Cotejo
+          </Link>
+        </div>
       </div>
     </div>
   )
