@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import {
   IconMenu, IconClose, IconDoc, IconCheckCircle, IconInbox,
   IconShield, IconIdCard, IconLink, IconSearch, IconLogout,
-  IconBuilding
+  IconBuilding, IconShare
 } from './icons'
 import NotificationBell from './NotificationBell'
 
@@ -40,6 +40,30 @@ export default function TopBar() {
   const [pendingPayments, setPendingPayments] = useState(0)
   const [pendingGuests, setPendingGuests] = useState(0)
   const [orgPendingCounts, setOrgPendingCounts] = useState({})
+  const [shareFeedback, setShareFeedback] = useState('')
+
+  // En el teléfono usamos el selector nativo de compartir (WhatsApp, correo,
+  // etc. ya instalados); en escritorio ese selector no existe, así que ahí
+  // simplemente copiamos el mensaje al portapapeles.
+  async function handleShareCotejo() {
+    const shareText = `Uso Cotejo para llevar el control de pagos de ${membership?.organizations?.name || 'mi empresa'} — evidencia y verificación de comprobantes, sin sorpresas. https://cotejo.net`
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Cotejo', text: shareText, url: 'https://cotejo.net' })
+      } catch {
+        // La persona cerró el selector de compartir -- no es un error real.
+      }
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(shareText)
+      setShareFeedback('Copiado — pégalo donde quieras')
+      setTimeout(() => setShareFeedback(''), 2500)
+    } catch {
+      setShareFeedback('No se pudo copiar')
+      setTimeout(() => setShareFeedback(''), 2500)
+    }
+  }
 
   const canSeeQueue = membership && QUEUE_ROLES.includes(membership.role)
   // Solo el propietario puede certificar legalmente la empresa — un admin
@@ -269,6 +293,15 @@ export default function TopBar() {
               <NavLink to="/mi-identificacion" className="menu-link"><IconIdCard /> Mi identificación</NavLink>
               <NavLink to="/unirme" className="menu-link"><IconLink /> Unirme a otra empresa</NavLink>
               <NavLink to="/empresas" className="menu-link"><IconSearch /> Buscar empresas</NavLink>
+            </div>
+
+            <div className="menu-section">
+              <button type="button" className="menu-link" onClick={handleShareCotejo}>
+                <IconShare /> Compartir Cotejo
+              </button>
+              {shareFeedback && (
+                <div style={{ fontSize: 12, opacity: 0.65, padding: '0 12px 6px' }}>{shareFeedback}</div>
+              )}
             </div>
 
             {isPlatformAdmin && (

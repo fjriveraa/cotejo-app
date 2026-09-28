@@ -117,6 +117,18 @@ export function IconLink(props) {
   )
 }
 
+export function IconShare(props) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.6" y1="10.6" x2="15.4" y2="6.4" />
+      <line x1="8.6" y1="13.4" x2="15.4" y2="17.6" />
+    </svg>
+  )
+}
+
 export function IconSearch(props) {
   return (
     <svg {...base} {...props}>
