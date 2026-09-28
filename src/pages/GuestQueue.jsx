@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { IconInbox } from '../components/icons'
 import { getCanonicalOrigin } from '../lib/appUrl'
 import { SkeletonPaymentList } from '../components/Skeleton'
+import { isPlausibleTransactionDate, parseLocalDate } from '../lib/dateSanity'
 
 function ViewEvidence({ path }) {
   const [loading, setLoading] = useState(false)
@@ -218,8 +219,15 @@ export default function GuestQueue() {
                   {s.submitter_name || 'Sin nombre'}{s.submitter_contact ? ` · ${s.submitter_contact}` : ''}
                   {s.reference_raw ? ` · ref: ${s.reference_raw}` : ''}
                 </div>
+                <div className="meta" style={{ fontWeight: 600, color: s.transaction_date && isPlausibleTransactionDate(s.transaction_date) ? '#2B6459' : '#B08900' }}>
+                  {s.transaction_date && isPlausibleTransactionDate(s.transaction_date)
+                    ? `Fecha del comprobante: ${parseLocalDate(s.transaction_date).toLocaleDateString('es-HN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}`
+                    : s.transaction_date
+                      ? `⚠ Fecha dudosa en el comprobante: ${parseLocalDate(s.transaction_date).toLocaleDateString('es-HN')}`
+                      : '⚠ Fecha no detectada en el comprobante'}
+                </div>
                 <div className="meta">
-                  {new Date(s.created_at).toLocaleString('es-HN')}
+                  Enviado: {new Date(s.created_at).toLocaleString('es-HN')}
                   {s.origin_account_holder ? ` · de: ${s.origin_account_holder}` : ''}
                   {s.origin_bank ? ` (${s.origin_bank})` : ''}
                 </div>
