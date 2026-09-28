@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { IconCheckCircle } from '../components/icons'
 import { SkeletonPaymentList } from '../components/Skeleton'
+import OnboardingTour, { hasSeenOnboarding } from '../components/OnboardingTour'
 import { isPlausibleTransactionDate, parseLocalDate } from '../lib/dateSanity'
 
 const STATUS_LABELS = {
@@ -362,6 +363,7 @@ export default function AccountantQueue() {
   const [showConfirmed, setShowConfirmed] = useState(false)
   const [revertingPayment, setRevertingPayment] = useState(null)
   const [flashId, setFlashId] = useState(null)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   // Si la empresa nunca configuró sus cuentas receptoras, todos los pagos
   // aparecerían como "cuenta desconocida" — una alerta que no distingue
   // nada. Solo tiene sentido mostrarla si existe al menos una cuenta
@@ -393,6 +395,10 @@ export default function AccountantQueue() {
     loadConfirmedToday()
     loadHasKnownAccounts()
   }, [membership])
+
+  useEffect(() => {
+    if (!hasSeenOnboarding()) setShowOnboarding(true)
+  }, [])
 
   async function loadHasKnownAccounts() {
     const { count, error } = await supabase
@@ -821,6 +827,8 @@ export default function AccountantQueue() {
           onClose={() => setRevertingPayment(null)}
         />
       )}
+
+      {showOnboarding && <OnboardingTour onClose={() => setShowOnboarding(false)} />}
     </div>
   )
 }
