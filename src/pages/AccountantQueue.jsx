@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { IconCheckCircle } from '../components/icons'
+import { IconCheckCircle, IconSearch, IconClose } from '../components/icons'
 import { SkeletonPaymentList } from '../components/Skeleton'
 import OnboardingTour, { hasSeenOnboarding } from '../components/OnboardingTour'
 import { isPlausibleTransactionDate, parseLocalDate } from '../lib/dateSanity'
@@ -364,6 +364,7 @@ export default function AccountantQueue() {
   const [revertingPayment, setRevertingPayment] = useState(null)
   const [flashId, setFlashId] = useState(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
   // Si la empresa nunca configuró sus cuentas receptoras, todos los pagos
   // aparecerían como "cuenta desconocida" — una alerta que no distingue
   // nada. Solo tiene sentido mostrarla si existe al menos una cuenta
@@ -479,9 +480,33 @@ export default function AccountantQueue() {
     return arr
   }
 
+  // Búsqueda simple sobre lo que ya está cargado en memoria — la cola de
+  // pendientes de una empresa no suele ser tan grande como para necesitar
+  // buscar en el servidor, y así el filtro responde al instante mientras se
+  // escribe.
+  const filteredPayments = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    if (!term) return payments
+    return payments.filter((p) => {
+      const haystack = [
+        p.origin_account_holder,
+        p.destination_account_holder,
+        p.reference_raw,
+        p.bank,
+        p.account_last4,
+        p.notes,
+        Number(p.amount).toFixed(2)
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return haystack.includes(term)
+    })
+  }, [payments, searchTerm])
+
   const grouped = useMemo(() => {
     const groups = {}
-    for (const p of payments) {
+    for (const p of filteredPayments) {
       const key = `${p.bank}${p.account_last4 ? ` (${p.account_last4})` : ''}`
       if (!groups[key]) groups[key] = []
       groups[key].push(p)
@@ -491,7 +516,7 @@ export default function AccountantQueue() {
     }
     return groups
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [payments, sortBy])
+  }, [filteredPayments, sortBy])
 
   // La referencia es lo que la IA puede comparar mejor para detectar que el
   // mismo comprobante entró dos veces (o dos personas subieron el mismo pago
@@ -610,6 +635,36 @@ export default function AccountantQueue() {
           </select>
         </label>
       </div>
+
+      {payments.length > 0 && (
+        <div style={{ position: 'relative', margin: '14px 0 20px' }}>
+          <IconSearch
+            width={16} height={16}
+            style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }}
+          />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar por nombre, monto, referencia o banco..."
+            style={{ width: '100%', padding: '9px 34px', fontSize: 13.5 }}
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              aria-label="Limpiar búsqueda"
+              style={{
+                position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer', padding: 4, opacity: 0.5, display: 'flex'
+              }}
+            >
+              <IconClose width={14} height={14} />
+            </button>
+          )}
+        </div>
+      )}
+
       {error && <p className="error-text">{error}</p>}
 
       {confirmedToday.length > 0 && (
@@ -663,6 +718,12 @@ export default function AccountantQueue() {
           <IconCheckCircle width={36} height={36} />
           <div className="title">¡Todo al día!</div>
           <div className="subtitle">No hay pagos pendientes de revisión en este momento.</div>
+        </div>
+      ) : filteredPayments.length === 0 ? (
+        <div className="empty-state-friendly">
+          <IconSearch width={36} height={36} />
+          <div className="title">Sin resultados</div>
+          <div className="subtitle">Nada coincide con "{searchTerm}" — probá con otro nombre, monto o referencia.</div>
         </div>
       ) : (
         Object.entries(grouped).map(([bankLabel, items]) => (

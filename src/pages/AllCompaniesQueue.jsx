@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import { isPlausibleTransactionDate, parseLocalDate } from '../lib/dateSanity'
 import { EvidenceModal, EvidenceThumb, friendlyRpcError } from './AccountantQueue'
 import { SkeletonPaymentList } from '../components/Skeleton'
-import { IconCheckCircle, IconDoc } from '../components/icons'
+import { IconCheckCircle, IconDoc, IconSearch, IconClose } from '../components/icons'
 
 const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
 
@@ -31,6 +31,7 @@ export default function AllCompaniesQueue() {
   const [busyId, setBusyId] = useState(null)
   const [viewingPayment, setViewingPayment] = useState(null)
   const [flashId, setFlashId] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const queueMemberships = useMemo(
     () => (memberships || []).filter((m) => QUEUE_ROLES.includes(m.role)),
@@ -131,9 +132,29 @@ export default function AllCompaniesQueue() {
     setConfirmedLoaded(true)
   }
 
+  const filteredPayments = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    if (!term) return payments
+    return payments.filter((p) => {
+      const haystack = [
+        p.origin_account_holder,
+        p.destination_account_holder,
+        p.reference_raw,
+        p.bank,
+        p.account_last4,
+        p.orgName,
+        Number(p.amount).toFixed(2)
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return haystack.includes(term)
+    })
+  }, [payments, searchTerm])
+
   const grouped = useMemo(() => {
     const groups = {}
-    for (const p of payments) {
+    for (const p of filteredPayments) {
       const key = `${p.bank}${p.account_last4 ? ` (${p.account_last4})` : ''} — ${p.orgName}`
       if (!groups[key]) groups[key] = []
       groups[key].push(p)
@@ -145,7 +166,7 @@ export default function AllCompaniesQueue() {
       })
     }
     return groups
-  }, [payments])
+  }, [filteredPayments])
 
   async function handleConfirm(p) {
     setBusyId(p.id)
@@ -221,6 +242,35 @@ export default function AllCompaniesQueue() {
         </button>
       </div>
 
+      {tab === 'pending' && payments.length > 0 && (
+        <div style={{ position: 'relative', margin: '0 0 20px' }}>
+          <IconSearch
+            width={16} height={16}
+            style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }}
+          />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar por nombre, monto, referencia, banco o empresa..."
+            style={{ width: '100%', padding: '9px 34px', fontSize: 13.5 }}
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              aria-label="Limpiar búsqueda"
+              style={{
+                position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer', padding: 4, opacity: 0.5, display: 'flex'
+              }}
+            >
+              <IconClose width={14} height={14} />
+            </button>
+          )}
+        </div>
+      )}
+
       {error && <p className="error-text">{error}</p>}
 
       {tab === 'confirmed' ? (
@@ -273,6 +323,12 @@ export default function AllCompaniesQueue() {
           <IconCheckCircle width={36} height={36} />
           <div className="title">¡Todo al día!</div>
           <div className="subtitle">No hay nada pendiente en ninguna de tus empresas.</div>
+        </div>
+      ) : filteredPayments.length === 0 ? (
+        <div className="empty-state-friendly">
+          <IconSearch width={36} height={36} />
+          <div className="title">Sin resultados</div>
+          <div className="subtitle">Nada coincide con "{searchTerm}" — probá con otro nombre, monto o referencia.</div>
         </div>
       ) : (
         Object.entries(grouped).map(([groupLabel, items]) => (
