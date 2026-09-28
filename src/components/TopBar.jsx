@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useToast } from '../hooks/useToast'
 import {
   IconMenu, IconClose, IconDoc, IconCheckCircle, IconInbox,
   IconShield, IconIdCard, IconLink, IconSearch, IconLogout,
@@ -26,6 +27,7 @@ export default function TopBar() {
   const { membership, memberships, switchOrg, signOut, user, isPlatformAdmin } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const showToast = useToast()
 
   // Cambiar de empresa no navega a ningún lado por sí solo — si la persona
   // estaba en una pantalla que no depende de la empresa (como "Buscar
@@ -40,10 +42,8 @@ export default function TopBar() {
   const [pendingPayments, setPendingPayments] = useState(0)
   const [pendingGuests, setPendingGuests] = useState(0)
   const [orgPendingCounts, setOrgPendingCounts] = useState({})
-  const [shareFeedback, setShareFeedback] = useState('')
   const [installPromptEvent, setInstallPromptEvent] = useState(null)
   const [isStandalone, setIsStandalone] = useState(false)
-  const [installFeedback, setInstallFeedback] = useState('')
 
   // Chrome/Android avisan con este evento cuando la app cumple los requisitos
   // para instalarse (manifest.json + íconos) -- sin capturarlo, no hay forma
@@ -72,12 +72,12 @@ export default function TopBar() {
       return
     }
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
-    setInstallFeedback(
+    showToast(
       isIOS
         ? 'Toca el ícono de compartir de Safari y elige "Agregar a inicio"'
-        : 'Buscá "Instalar app" o "Agregar a inicio" en el menú de tu navegador'
+        : 'Buscá "Instalar app" o "Agregar a inicio" en el menú de tu navegador',
+      { duration: 4500 }
     )
-    setTimeout(() => setInstallFeedback(''), 4500)
   }
 
   // En el teléfono usamos el selector nativo de compartir (WhatsApp, correo,
@@ -102,11 +102,9 @@ export default function TopBar() {
     }
     try {
       await navigator.clipboard.writeText(`${shareBody} https://cotejo.net`)
-      setShareFeedback('Copiado — pégalo donde quieras')
-      setTimeout(() => setShareFeedback(''), 2500)
+      showToast('Copiado — pégalo donde quieras', { tone: 'success' })
     } catch {
-      setShareFeedback('No se pudo copiar')
-      setTimeout(() => setShareFeedback(''), 2500)
+      showToast('No se pudo copiar', { tone: 'error' })
     }
   }
 
@@ -344,18 +342,10 @@ export default function TopBar() {
               <button type="button" className="menu-link" onClick={handleShareCotejo}>
                 <IconShare /> Compartir Cotejo
               </button>
-              {shareFeedback && (
-                <div style={{ fontSize: 12, opacity: 0.65, padding: '0 12px 6px' }}>{shareFeedback}</div>
-              )}
               {!isStandalone && (
-                <>
-                  <button type="button" className="menu-link" onClick={handleAddToHome}>
-                    <IconHome /> Agregar a inicio
-                  </button>
-                  {installFeedback && (
-                    <div style={{ fontSize: 12, opacity: 0.65, padding: '0 12px 6px' }}>{installFeedback}</div>
-                  )}
-                </>
+                <button type="button" className="menu-link" onClick={handleAddToHome}>
+                  <IconHome /> Agregar a inicio
+                </button>
               )}
             </div>
 
