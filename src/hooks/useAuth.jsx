@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { getCanonicalOrigin } from '../lib/appUrl'
 
 const AuthContext = createContext(null)
 const PENDING_ACTION_KEY = 'cotejo_pending_action'
@@ -274,7 +275,7 @@ export function AuthProvider({ children }) {
   async function signInWithOAuth(provider, redirectTo) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: redirectTo || window.location.href }
+      options: { redirectTo: redirectTo || `${getCanonicalOrigin()}/` }
     })
     return { error }
   }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import PublicPageHeader from '../components/PublicPageHeader'
+import { getCanonicalOrigin } from '../lib/appUrl'
 
 const STATUS_INFO = {
   pending: {
@@ -39,7 +40,7 @@ export default function GuestStatus() {
   }, [token])
 
   function copyLink() {
-    navigator.clipboard?.writeText(window.location.href).then(() => {
+    navigator.clipboard?.writeText(`${getCanonicalOrigin()}${window.location.pathname}${window.location.search}`).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
