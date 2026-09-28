@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth, writePendingAction, clearPendingAction } from '../hooks/useAuth'
+import { getCanonicalOrigin } from '../lib/appUrl'
 
 const ROLE_LABELS = {
   empleado: 'Colaborador',
@@ -28,7 +29,7 @@ export default function Join() {
     setError(null)
     setOauthLoading(true)
     writePendingAction({ type: 'join_invite', token })
-    const { error } = await signInWithOAuth('google', window.location.href)
+    const { error } = await signInWithOAuth('google', `${getCanonicalOrigin()}${window.location.pathname}${window.location.search}`)
     if (error) {
       clearPendingAction()
       setOauthLoading(false)

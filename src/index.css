@@ -580,6 +580,30 @@ a {
   text-decoration: none;
   color: var(--ink);
   background: white;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+}
+
+.choice-card:hover {
+  border-color: var(--teal-strong);
+  box-shadow: 0 4px 14px rgba(30, 74, 66, 0.1);
+}
+
+.choice-card:active {
+  transform: scale(0.99);
+}
+
+/* Círculo con tinte de marca detrás del ícono de una tarjeta de elección
+   (por ejemplo, el selector de empresa) -- le da algo de peso visual al
+   ícono sin competir con el título. */
+.choice-icon-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: rgba(43, 100, 89, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .choice-card svg { color: var(--teal-strong); }

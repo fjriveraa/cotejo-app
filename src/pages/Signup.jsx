@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth, writePendingAction, clearPendingAction } from '../hooks/useAuth'
+import { getCanonicalOrigin } from '../lib/appUrl'
 
 export default function Signup() {
   const { session, membership, loadingMembership, signUpWithPassword, signInWithOAuth, switchOrg, refreshMemberships } = useAuth()
@@ -88,7 +89,7 @@ export default function Signup() {
       setupForOther,
       ownerEmail: setupForOther ? ownerEmail.trim() : null
     })
-    const { error } = await signInWithOAuth('google', `${window.location.origin}/`)
+    const { error } = await signInWithOAuth('google', `${getCanonicalOrigin()}/`)
     if (error) {
       clearPendingAction()
       setOauthLoading(false)

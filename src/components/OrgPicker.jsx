@@ -1,5 +1,5 @@
 import { useAuth } from '../hooks/useAuth'
-import { IconBuilding } from './icons'
+import { IconBuilding, IconChevronRight } from './icons'
 
 const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
 
@@ -16,13 +16,14 @@ export default function OrgPicker() {
   return (
     <div className="login-wrap">
       <div className="card login-card" style={{ maxWidth: 460 }}>
+        <img src="/logo.png" alt="Cotejo" style={{ height: 26, width: 'auto', marginBottom: 20 }} />
         <h1 style={{ fontSize: 20 }}>¿En cuál empresa vas a trabajar?</h1>
         <p style={{ marginBottom: 20, fontSize: 13.5, opacity: 0.7 }}>
           Perteneces a más de una — elige una para entrar. Puedes cambiar de empresa
           en cualquier momento desde el menú.
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {memberships.map((m) => (
             <button
               key={m.organization_id}
@@ -34,13 +35,21 @@ export default function OrgPicker() {
               }}
               onClick={() => confirmActiveOrg(m.organization_id)}
             >
-              <IconBuilding width={22} height={22} style={{ flexShrink: 0 }} />
-              <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span className="choice-title">{m.organizations?.name || 'Empresa'}</span>
-                <span className="choice-subtitle">
-                  {m.role}{QUEUE_ROLES.includes(m.role) ? '' : ' · no revisa pagos'}
+              <span className="choice-icon-badge">
+                <IconBuilding width={19} height={19} style={{ color: 'var(--teal-strong)' }} />
+              </span>
+              <span style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
+                <span className="choice-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {m.organizations?.name || 'Empresa'}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className={`badge badge-${m.role}`}>{m.role}</span>
+                  {!QUEUE_ROLES.includes(m.role) && (
+                    <span className="choice-subtitle">no revisa pagos</span>
+                  )}
                 </span>
               </span>
+              <IconChevronRight width={18} height={18} style={{ flexShrink: 0, opacity: 0.35 }} />
             </button>
           ))}
         </div>

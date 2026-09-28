@@ -180,6 +180,14 @@ export function IconBell(props) {
   )
 }
 
+export function IconChevronRight(props) {
+  return (
+    <svg {...base} {...props}>
+      <polyline points="9 6 15 12 9 18" />
+    </svg>
+  )
+}
+
 export function IconBriefcase(props) {
   return (
     <svg {...base} {...props}>

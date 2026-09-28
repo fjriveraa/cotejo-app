@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { getCanonicalOrigin } from '../lib/appUrl'
 
 export default function Login() {
   const { signInWithPassword, signInWithOAuth } = useAuth()
@@ -24,7 +25,7 @@ export default function Login() {
   async function handleGoogle() {
     setError(null)
     setOauthLoading(true)
-    const { error } = await signInWithOAuth('google', `${window.location.origin}/`)
+    const { error } = await signInWithOAuth('google', `${getCanonicalOrigin()}/`)
     if (error) {
       setOauthLoading(false)
       setError('No se pudo continuar con Google.')
