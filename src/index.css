@@ -675,6 +675,7 @@ a {
 }
 
 .payment-row {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -683,6 +684,51 @@ a {
   border-radius: 10px;
   background: var(--card);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  overflow: hidden;
+}
+
+/* Al confirmar un pago, un destello verde + check reafirma que la acción
+   quedó registrada de verdad — importante en una app donde la gente está
+   verificando dinero y de otro modo solo vería la fila desaparecer. */
+.payment-row-confirmed-flash {
+  border-color: rgba(43, 100, 89, 0.45);
+  box-shadow: 0 0 0 3px rgba(43, 100, 89, 0.12);
+}
+
+.confirm-flash-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(246, 241, 230, 0.92);
+  color: var(--teal-strong);
+  animation: confirm-flash-fade 0.65s ease forwards;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.confirm-flash-overlay svg {
+  animation: confirm-flash-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes confirm-flash-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes confirm-flash-fade {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-color-scheme: dark) {
+  .confirm-flash-overlay {
+    background: rgba(30, 27, 22, 0.92);
+  }
 }
 
 .payment-row:hover {

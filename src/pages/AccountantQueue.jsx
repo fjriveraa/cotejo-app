@@ -361,6 +361,7 @@ export default function AccountantQueue() {
   const [confirmedToday, setConfirmedToday] = useState([])
   const [showConfirmed, setShowConfirmed] = useState(false)
   const [revertingPayment, setRevertingPayment] = useState(null)
+  const [flashId, setFlashId] = useState(null)
   // Si la empresa nunca configuró sus cuentas receptoras, todos los pagos
   // aparecerían como "cuenta desconocida" — una alerta que no distingue
   // nada. Solo tiene sentido mostrarla si existe al menos una cuenta
@@ -526,7 +527,30 @@ export default function AccountantQueue() {
     }
   }
 
-  const handleConfirm = (p) => callRpc('confirm_payment', p)
+  // A diferencia de las otras acciones (que solo recargan la cola), confirmar
+  // primero muestra un check animado sobre la fila y espera a que se vea
+  // antes de recargar — si se recargara de inmediato, la fila desaparecería
+  // sin que la animación llegara a jugarse.
+  async function handleConfirm(p) {
+    setBusyId(p.id)
+    setError(null)
+    try {
+      const { error } = await supabase.rpc('confirm_payment', {
+        p_payment_id: p.id,
+        p_expected_version: p.version
+      })
+      if (error) throw error
+      setFlashId(p.id)
+      await new Promise((resolve) => setTimeout(resolve, 650))
+      await Promise.all([loadQueue(), loadConfirmedToday()])
+    } catch (err) {
+      console.error(err)
+      setError(friendlyRpcError(err.message))
+    } finally {
+      setBusyId(null)
+      setFlashId(null)
+    }
+  }
   const handleUnderReview = (p) => callRpc('mark_under_review', p)
 
   function handleNotFound(p) {
@@ -640,7 +664,16 @@ export default function AccountantQueue() {
             <div className="group-header">{bankLabel} <span style={{ opacity: 0.5, fontWeight: 400 }}>({items.length})</span></div>
             <div className="payment-list">
               {items.map((p) => (
-                <div key={p.id} className="payment-row payment-row-with-thumb" style={{ flexWrap: 'wrap', gap: 12 }}>
+                <div
+                  key={p.id}
+                  className={`payment-row payment-row-with-thumb${flashId === p.id ? ' payment-row-confirmed-flash' : ''}`}
+                  style={{ flexWrap: 'wrap', gap: 12 }}
+                >
+                  {flashId === p.id && (
+                    <div className="confirm-flash-overlay">
+                      <IconCheckCircle width={40} height={40} />
+                    </div>
+                  )}
                   <EvidenceThumb path={p.evidence_path} onClick={() => setViewingPayment(p)} />
                   <div style={{ flex: '1 1 200px' }}>
                     {/* Lo primero que hace falta para cotejar es a qué día ir en la app

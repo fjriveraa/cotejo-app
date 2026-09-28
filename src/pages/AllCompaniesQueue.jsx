@@ -30,6 +30,7 @@ export default function AllCompaniesQueue() {
   const [error, setError] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const [viewingPayment, setViewingPayment] = useState(null)
+  const [flashId, setFlashId] = useState(null)
 
   const queueMemberships = useMemo(
     () => (memberships || []).filter((m) => QUEUE_ROLES.includes(m.role)),
@@ -155,11 +156,14 @@ export default function AllCompaniesQueue() {
         p_expected_version: p.version
       })
       if (err) throw err
+      setFlashId(p.id)
+      await new Promise((resolve) => setTimeout(resolve, 650))
       await loadAll()
     } catch (err) {
       setError(friendlyRpcError(err.message))
     } finally {
       setBusyId(null)
+      setFlashId(null)
     }
   }
 
@@ -276,7 +280,16 @@ export default function AllCompaniesQueue() {
             <div className="group-header">{groupLabel} <span style={{ opacity: 0.5, fontWeight: 400 }}>({items.length})</span></div>
             <div className="payment-list">
               {items.map((p) => (
-                <div key={p.id} className="payment-row payment-row-with-thumb" style={{ flexWrap: 'wrap', gap: 12 }}>
+                <div
+                  key={p.id}
+                  className={`payment-row payment-row-with-thumb${flashId === p.id ? ' payment-row-confirmed-flash' : ''}`}
+                  style={{ flexWrap: 'wrap', gap: 12 }}
+                >
+                  {flashId === p.id && (
+                    <div className="confirm-flash-overlay">
+                      <IconCheckCircle width={40} height={40} />
+                    </div>
+                  )}
                   <EvidenceThumb path={p.evidence_path} onClick={() => setViewingPayment(p)} />
                   <div style={{ flex: '1 1 200px' }}>
                     <div
