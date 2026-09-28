@@ -6,9 +6,13 @@ import { useToast } from '../hooks/useToast'
 import {
   IconMenu, IconClose, IconDoc, IconCheckCircle, IconInbox,
   IconShield, IconIdCard, IconLink, IconSearch, IconLogout,
-  IconBuilding, IconShare, IconHome
+  IconBuilding, IconShare, IconHome, IconBell
 } from './icons'
 import NotificationBell from './NotificationBell'
+import {
+  isPushSupported, needsInstallForPush, getExistingPushSubscription,
+  subscribeToPush, unsubscribeFromPush
+} from '../lib/push'
 
 const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
 
@@ -44,6 +48,8 @@ export default function TopBar() {
   const [orgPendingCounts, setOrgPendingCounts] = useState({})
   const [installPromptEvent, setInstallPromptEvent] = useState(null)
   const [isStandalone, setIsStandalone] = useState(false)
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
 
   // Chrome/Android avisan con este evento cuando la app cumple los requisitos
   // para instalarse (manifest.json + íconos) -- sin capturarlo, no hay forma
@@ -60,6 +66,44 @@ export default function TopBar() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
   }, [])
+
+  // Al abrir la app, se revisa si este navegador ya tiene una suscripción
+  // push activa (pudo haberse activado en una sesión anterior) para que el
+  // botón del menú muestre el estado correcto desde el primer render.
+  useEffect(() => {
+    if (!isPushSupported()) return
+    let cancelled = false
+    getExistingPushSubscription().then((sub) => {
+      if (!cancelled) setPushEnabled(Boolean(sub))
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  async function handleTogglePush() {
+    if (pushBusy) return
+    setPushBusy(true)
+    try {
+      if (pushEnabled) {
+        await unsubscribeFromPush()
+        setPushEnabled(false)
+        showToast('Notificaciones push desactivadas')
+      } else if (needsInstallForPush()) {
+        showToast('Primero agrega Cotejo a la pantalla de inicio — en iPhone, push solo funciona así', { duration: 4500 })
+      } else {
+        await subscribeToPush()
+        setPushEnabled(true)
+        showToast('Notificaciones push activadas', { tone: 'success' })
+      }
+    } catch (err) {
+      if (err?.message === 'permission_denied') {
+        showToast('Bloqueaste los permisos de notificación — actívalos desde los ajustes del navegador', { duration: 4500 })
+      } else {
+        showToast('No se pudo activar — intenta de nuevo', { tone: 'error' })
+      }
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   // iOS Safari nunca dispara "beforeinstallprompt" -- no existe un diálogo
   // nativo que se pueda invocar desde código ahí, así que la única opción es
@@ -345,6 +389,11 @@ export default function TopBar() {
               {!isStandalone && (
                 <button type="button" className="menu-link" onClick={handleAddToHome}>
                   <IconHome /> Agregar a inicio
+                </button>
+              )}
+              {isPushSupported() && (
+                <button type="button" className="menu-link" onClick={handleTogglePush} disabled={pushBusy}>
+                  <IconBell /> {pushEnabled ? 'Desactivar notificaciones push' : 'Activar notificaciones push'}
                 </button>
               )}
             </div>
