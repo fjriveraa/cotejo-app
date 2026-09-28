@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import {
   IconMenu, IconClose, IconDoc, IconCheckCircle, IconInbox,
   IconShield, IconIdCard, IconLink, IconSearch, IconLogout,
-  IconBuilding, IconShare
+  IconBuilding, IconShare, IconHome
 } from './icons'
 import NotificationBell from './NotificationBell'
 
@@ -41,6 +41,44 @@ export default function TopBar() {
   const [pendingGuests, setPendingGuests] = useState(0)
   const [orgPendingCounts, setOrgPendingCounts] = useState({})
   const [shareFeedback, setShareFeedback] = useState('')
+  const [installPromptEvent, setInstallPromptEvent] = useState(null)
+  const [isStandalone, setIsStandalone] = useState(false)
+  const [installFeedback, setInstallFeedback] = useState('')
+
+  // Chrome/Android avisan con este evento cuando la app cumple los requisitos
+  // para instalarse (manifest.json + íconos) -- sin capturarlo, no hay forma
+  // de disparar el diálogo nativo de instalación desde un botón propio. Si la
+  // persona ya la tiene instalada (abierta en modo standalone), no tiene
+  // sentido ofrecerle instalarla de nuevo.
+  useEffect(() => {
+    const standalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true
+    setIsStandalone(standalone)
+    function handleBeforeInstallPrompt(e) {
+      e.preventDefault()
+      setInstallPromptEvent(e)
+    }
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+  }, [])
+
+  // iOS Safari nunca dispara "beforeinstallprompt" -- no existe un diálogo
+  // nativo que se pueda invocar desde código ahí, así que la única opción es
+  // guiar a la persona a hacerlo manualmente desde el menú de compartir.
+  async function handleAddToHome() {
+    if (installPromptEvent) {
+      installPromptEvent.prompt()
+      await installPromptEvent.userChoice
+      setInstallPromptEvent(null)
+      return
+    }
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
+    setInstallFeedback(
+      isIOS
+        ? 'Toca el ícono de compartir de Safari y elige "Agregar a inicio"'
+        : 'Buscá "Instalar app" o "Agregar a inicio" en el menú de tu navegador'
+    )
+    setTimeout(() => setInstallFeedback(''), 4500)
+  }
 
   // En el teléfono usamos el selector nativo de compartir (WhatsApp, correo,
   // etc. ya instalados); en escritorio ese selector no existe, así que ahí
@@ -308,6 +346,16 @@ export default function TopBar() {
               </button>
               {shareFeedback && (
                 <div style={{ fontSize: 12, opacity: 0.65, padding: '0 12px 6px' }}>{shareFeedback}</div>
+              )}
+              {!isStandalone && (
+                <>
+                  <button type="button" className="menu-link" onClick={handleAddToHome}>
+                    <IconHome /> Agregar a inicio
+                  </button>
+                  {installFeedback && (
+                    <div style={{ fontSize: 12, opacity: 0.65, padding: '0 12px 6px' }}>{installFeedback}</div>
+                  )}
+                </>
               )}
             </div>
 
