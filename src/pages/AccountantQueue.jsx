@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { IconCheckCircle } from '../components/icons'
+import { SkeletonPaymentList } from '../components/Skeleton'
 import { isPlausibleTransactionDate, parseLocalDate } from '../lib/dateSanity'
 
 const STATUS_LABELS = {
@@ -554,7 +555,12 @@ export default function AccountantQueue() {
   }
 
   if (loading) {
-    return <div className="container"><p style={{ opacity: 0.6 }}>Cargando cola...</p></div>
+    return (
+      <div className="container">
+        <h2 style={{ marginTop: 0 }}>Cola de confirmación</h2>
+        <SkeletonPaymentList rows={5} />
+      </div>
+    )
   }
 
   return (

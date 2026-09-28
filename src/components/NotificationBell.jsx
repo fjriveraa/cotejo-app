@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { IconBell } from './icons'
+import { SkeletonListRow } from './Skeleton'
 
 const TYPE_ROUTE = {
   payment_pending: '/cola',
@@ -152,7 +153,13 @@ export default function NotificationBell() {
             )}
           </div>
 
-          {loading && <p style={{ fontSize: 13, opacity: 0.6 }}>Cargando...</p>}
+          {loading && (
+            <div>
+              <SkeletonListRow />
+              <SkeletonListRow />
+              <SkeletonListRow />
+            </div>
+          )}
 
           {!loading && notifications.length === 0 && (
             <p className="empty-state" style={{ fontSize: 13 }}>Todavía no tienes notificaciones.</p>

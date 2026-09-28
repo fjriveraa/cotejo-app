@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { IconInbox } from '../components/icons'
 import { getCanonicalOrigin } from '../lib/appUrl'
+import { SkeletonPaymentList } from '../components/Skeleton'
 
 function ViewEvidence({ path }) {
   const [loading, setLoading] = useState(false)
@@ -180,7 +181,14 @@ export default function GuestQueue() {
     load()
   }
 
-  if (loading) return <div className="container"><p style={{ opacity: 0.6 }}>Cargando...</p></div>
+  if (loading) {
+    return (
+      <div className="container">
+        <h2 style={{ marginTop: 0 }}>Comprobantes de invitados</h2>
+        <SkeletonPaymentList rows={4} />
+      </div>
+    )
+  }
 
   return (
     <div className="container">

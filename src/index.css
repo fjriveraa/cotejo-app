@@ -931,6 +931,35 @@ a {
   }
 }
 
+.loading-logo {
+  animation: loading-pulse 1.3s ease-in-out infinite;
+}
+
+@keyframes loading-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.9; }
+}
+
+/* Placeholders de carga (Skeleton.jsx) -- una barra clara con un brillo que
+   se desliza de izquierda a derecha, en vez del texto "Cargando...". */
+.skeleton-bar {
+  background: linear-gradient(90deg, rgba(42, 38, 32, 0.08) 25%, rgba(42, 38, 32, 0.14) 37%, rgba(42, 38, 32, 0.08) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@media (prefers-color-scheme: dark) {
+  .skeleton-bar {
+    background: linear-gradient(90deg, rgba(237, 231, 217, 0.08) 25%, rgba(237, 231, 217, 0.16) 37%, rgba(237, 231, 217, 0.08) 63%);
+    background-size: 400% 100%;
+  }
+}
+
 /* Notificaciones flotantes (useToast) -- reemplazan los textos de feedback
    sueltos que antes vivían debajo de cada botón. Se apilan arriba, centradas,
    y respetan el notch/isla dinámica con env(safe-area-inset-top). */

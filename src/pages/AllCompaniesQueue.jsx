@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { isPlausibleTransactionDate, parseLocalDate } from '../lib/dateSanity'
 import { EvidenceModal, EvidenceThumb, friendlyRpcError } from './AccountantQueue'
+import { SkeletonPaymentList } from '../components/Skeleton'
 
 const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
 
@@ -183,7 +184,12 @@ export default function AllCompaniesQueue() {
   }
 
   if (loading) {
-    return <div className="container"><p style={{ opacity: 0.6 }}>Cargando comprobantes de todas tus empresas...</p></div>
+    return (
+      <div className="container">
+        <h2 style={{ marginTop: 0 }}>Todos tus comprobantes</h2>
+        <SkeletonPaymentList rows={5} />
+      </div>
+    )
   }
 
   return (
@@ -214,7 +220,7 @@ export default function AllCompaniesQueue() {
 
       {tab === 'confirmed' ? (
         loadingConfirmed ? (
-          <p style={{ opacity: 0.6 }}>Cargando confirmados...</p>
+          <SkeletonPaymentList rows={4} />
         ) : confirmedPayments.length === 0 ? (
           <p className="empty-state">No hay comprobantes confirmados en los últimos {CONFIRMED_LOOKBACK_DAYS} días.</p>
         ) : (

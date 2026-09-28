@@ -31,9 +31,12 @@ const OWNER_ROLES = ['propietario', 'admin']
 const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
 
 function LoadingScreen() {
+  // Esta es la primera pantalla que ve absolutamente cualquiera al abrir la
+  // app, aunque sea por una fracción de segundo -- vale la pena que muestre
+  // el logo en vez de un texto genérico de "Cargando...".
   return (
     <div className="login-wrap">
-      <p style={{ opacity: 0.6 }}>Cargando...</p>
+      <img src="/logo.png" alt="Cotejo" className="loading-logo" style={{ height: 30, width: 'auto' }} />
     </div>
   )
 }
