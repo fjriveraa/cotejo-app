@@ -118,7 +118,11 @@ a {
   background: rgba(42, 38, 32, 0.05);
   border: 1px solid transparent;
   white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
 }
+
+.nav-pill:hover { background: rgba(42, 38, 32, 0.09); }
+.nav-pill:active { transform: scale(0.97); }
 
 .nav-pill svg { opacity: 0.75; flex-shrink: 0; }
 
@@ -127,6 +131,8 @@ a {
   border-color: rgba(43, 100, 89, 0.25);
   color: var(--teal-strong);
 }
+
+.nav-pill.active:hover { background: rgba(43, 100, 89, 0.18); }
 
 .nav-pill.active svg { opacity: 1; }
 
@@ -138,6 +144,8 @@ a {
   color: white;
   border-color: transparent;
 }
+
+.nav-pill.nav-pill-primary:hover { background: var(--teal-strong); opacity: 0.9; }
 
 .nav-pill.nav-pill-primary svg { opacity: 1; }
 
@@ -210,6 +218,7 @@ a {
   font-weight: 500;
   color: var(--ink);
   text-decoration: none;
+  transition: background 0.15s ease;
 }
 
 .menu-link svg { opacity: 0.6; flex-shrink: 0; }
@@ -348,7 +357,15 @@ a {
   text-decoration: none;
   font-weight: 600;
   font-size: 14px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
 }
+
+.quick-action:hover {
+  border-color: var(--teal-strong);
+  box-shadow: 0 4px 14px rgba(30, 74, 66, 0.1);
+}
+
+.quick-action:active { transform: scale(0.99); }
 
 .quick-action .nav-count {
   position: absolute;
@@ -402,10 +419,11 @@ a {
   padding: 10px 18px;
   font-size: 14px;
   font-weight: 600;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, transform 0.05s ease;
 }
 
 .btn:hover { opacity: 0.9; }
+.btn:active:not(:disabled) { transform: scale(0.98); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-primary { background: var(--teal-strong); color: white; }
@@ -664,6 +682,12 @@ a {
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--card);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.payment-row:hover {
+  border-color: rgba(43, 100, 89, 0.3);
+  box-shadow: 0 2px 10px rgba(42, 38, 32, 0.06);
 }
 
 .payment-row .amount {
