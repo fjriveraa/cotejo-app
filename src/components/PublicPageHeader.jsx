@@ -8,8 +8,8 @@ import { Link } from 'react-router-dom'
 export default function PublicPageHeader() {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-      <Link to="/" style={{ fontWeight: 700, fontSize: 15, color: 'var(--teal-strong)', textDecoration: 'none' }}>
-        Cotejo
+      <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+        <img src="/logo.png" alt="Cotejo" style={{ height: 18, width: 'auto' }} />
       </Link>
       <Link to="/login" style={{ fontSize: 13, opacity: 0.75 }}>
         Iniciar sesión

@@ -155,7 +155,7 @@ export default function TopBar() {
   return (
     <header className="topbar">
       <div className="topbar-top">
-        <div className="brand">Cotejo</div>
+        <img src="/logo.png" alt="Cotejo" className="brand" style={{ height: 24, width: 'auto' }} />
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <NotificationBell />
           <button
