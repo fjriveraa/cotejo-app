@@ -95,6 +95,30 @@ export default function AdminVerifications() {
                   </div>
                 )}
                 {v.notes && <div className="meta">Notas: {v.notes}</div>}
+                {v.ai_verdict && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: 12,
+                      padding: '8px 10px',
+                      borderRadius: 8,
+                      background: v.ai_verdict === 'match' ? '#ECFDF5' : v.ai_verdict === 'mismatch' ? '#FEE2E2' : '#F3F4F6',
+                      color: v.ai_verdict === 'match' ? '#065F46' : v.ai_verdict === 'mismatch' ? '#7C2D12' : '#374151'
+                    }}
+                  >
+                    <strong>
+                      🤖 IA: {v.ai_verdict === 'match' ? 'coincide' : v.ai_verdict === 'mismatch' ? 'no coincide' : 'no está clara'}
+                      {typeof v.ai_confidence === 'number' ? ` (${Math.round(v.ai_confidence * 100)}% de confianza)` : ''}
+                    </strong>
+                    {v.ai_reasoning && <div style={{ marginTop: 2 }}>{v.ai_reasoning}</div>}
+                    {v.ai_extracted?.legal_doc?.business_name && (
+                      <div style={{ marginTop: 2, opacity: 0.85 }}>
+                        Nombre leído en el documento: {v.ai_extracted.legal_doc.business_name}
+                        {v.ai_extracted.legal_doc.rtn ? ` · RTN leído: ${v.ai_extracted.legal_doc.rtn}` : ''}
+                      </div>
+                    )}
+                  </div>
+                )}
                 {(v.rtn_duplicate_org_name || v.doc_duplicate_org_name) && (
                   <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {v.rtn_duplicate_org_name && (

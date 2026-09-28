@@ -29,8 +29,10 @@ export default function Verify() {
   const [socialEvidenceFile, setSocialEvidenceFile] = useState(null)
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
+  const [autoApproved, setAutoApproved] = useState(false)
 
   const status = membership?.organizations?.verification_status || 'unverified'
   const statusInfo = STATUS_LABELS[status] || STATUS_LABELS.unverified
@@ -71,7 +73,42 @@ export default function Verify() {
         socialEvidencePath = await uploadFile(socialEvidenceFile, membership.organization_id, 'redes')
       }
 
-      const { error: rpcError } = await supabase.rpc('submit_organization_verification', {
+      // La IA le da una primera leída a la escritura/identificación (lee el
+      // nombre y el RTN y compara contra lo que la empresa registró) — esto
+      // solo aplica a documentos legales, con redes sociales no hay nada que
+      // la IA pueda leer y comparar.
+      let aiVerdict = null
+      let aiConfidence = null
+      let aiExtracted = null
+      let aiReasoning = null
+
+      if (method === 'documentos_legales' && (legalDocPath || idDocPath)) {
+        setAnalyzing(true)
+        try {
+          const { data: aiData, error: aiError } = await supabase.functions.invoke('analyze-organization-verification', {
+            body: {
+              organization_id: membership.organization_id,
+              org_name: membership.organizations?.name || '',
+              rtn: rtn.trim() || null,
+              legal_doc_path: legalDocPath,
+              id_doc_path: idDocPath
+            }
+          })
+          if (!aiError && aiData?.result) {
+            aiVerdict = aiData.result.verdict || null
+            aiConfidence = typeof aiData.result.confidence === 'number' ? aiData.result.confidence : null
+            aiExtracted = aiData.result
+            aiReasoning = aiData.result.reasoning || null
+          }
+        } catch {
+          // Si la IA falla, seguimos igual — la solicitud simplemente queda
+          // para revisión manual, como antes de tener este análisis.
+        } finally {
+          setAnalyzing(false)
+        }
+      }
+
+      const { data: submitData, error: rpcError } = await supabase.rpc('submit_organization_verification', {
         p_organization_id: membership.organization_id,
         p_method: method,
         p_rtn: rtn.trim() || null,
@@ -83,11 +120,16 @@ export default function Verify() {
         p_legal_doc_hash: legalDocHash,
         p_id_doc_hash: idDocHash,
         p_legal_doc_phash: legalDocPhash,
-        p_id_doc_phash: idDocPhash
+        p_id_doc_phash: idDocPhash,
+        p_ai_verdict: aiVerdict,
+        p_ai_confidence: aiConfidence,
+        p_ai_extracted: aiExtracted,
+        p_ai_reasoning: aiReasoning
       })
 
       if (rpcError) throw rpcError
 
+      setAutoApproved(Boolean(submitData?.auto_approved))
       setSuccess(true)
       refreshMemberships()
     } catch (err) {
@@ -117,7 +159,11 @@ export default function Verify() {
 
       {success ? (
         <div className="card">
-          <p>Tu solicitud fue enviada. La vamos a revisar y te avisamos aquí mismo cuando quede lista.</p>
+          {autoApproved ? (
+            <p>¡Tu empresa quedó verificada al instante! La IA leyó tus documentos y todo coincidió — no hizo falta esperar revisión manual.</p>
+          ) : (
+            <p>Tu solicitud fue enviada. La vamos a revisar y te avisamos aquí mismo cuando quede lista.</p>
+          )}
         </div>
       ) : status === 'pending' ? (
         <div className="card">
@@ -192,7 +238,7 @@ export default function Verify() {
             </div>
             {error && <p className="error-text">{error}</p>}
             <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-              {loading ? 'Enviando...' : 'Enviar para revisión'}
+              {analyzing ? 'Analizando documentos con IA...' : loading ? 'Enviando...' : 'Enviar para revisión'}
             </button>
           </form>
         </div>
