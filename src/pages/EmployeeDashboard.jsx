@@ -212,7 +212,7 @@ export default function EmployeeDashboard() {
         receiving_account_id: needsManualBank ? null : (form.receiving_account_id || null),
         bank,
         account_last4: needsManualBank ? null : (selectedAccount?.last4 ?? null),
-        routing_reason: needsManualBank ? 'Banco indicado manualmente por el empleado' : null,
+        routing_reason: needsManualBank ? 'Banco indicado manualmente por el colaborador' : null,
         amount: Number(form.amount),
         currency: form.currency,
         reference_raw: form.reference_raw || null,
