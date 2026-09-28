@@ -45,18 +45,25 @@ export default function TopBar() {
   // En el teléfono usamos el selector nativo de compartir (WhatsApp, correo,
   // etc. ya instalados); en escritorio ese selector no existe, así que ahí
   // simplemente copiamos el mensaje al portapapeles.
+  //
+  // El texto y el link van por separado en navigator.share: si el link va
+  // adentro del texto Y también en "url", varias apps (Mensajes de iOS
+  // incluido) lo agregan dos veces al mensaje final. El texto tampoco puede
+  // asumir que quien comparte es una empresa -- una cuenta autónoma pondría
+  // ahí su propio nombre de persona ("el control de pagos de Fernando..."),
+  // que suena a error, no a invitación.
   async function handleShareCotejo() {
-    const shareText = `Uso Cotejo para llevar el control de pagos de ${membership?.organizations?.name || 'mi empresa'} — evidencia y verificación de comprobantes, sin sorpresas. https://cotejo.net`
+    const shareBody = 'Te recomiendo Cotejo: verifica cada comprobante de pago automáticamente y detecta duplicados o alteraciones antes de que sean un problema. Me ha ahorrado más de un dolor de cabeza.'
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Cotejo', text: shareText, url: 'https://cotejo.net' })
+        await navigator.share({ title: 'Cotejo', text: shareBody, url: 'https://cotejo.net' })
       } catch {
         // La persona cerró el selector de compartir -- no es un error real.
       }
       return
     }
     try {
-      await navigator.clipboard.writeText(shareText)
+      await navigator.clipboard.writeText(`${shareBody} https://cotejo.net`)
       setShareFeedback('Copiado — pégalo donde quieras')
       setTimeout(() => setShareFeedback(''), 2500)
     } catch {
