@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { IconShield } from '../components/icons'
 
 const METHOD_LABELS = {
   documentos_legales: 'Escritura / RTN / identificación',
@@ -72,7 +73,11 @@ export default function AdminVerifications() {
       {error && <p className="error-text">{error}</p>}
 
       {items.length === 0 ? (
-        <p className="empty-state">No hay verificaciones pendientes.</p>
+        <div className="empty-state-friendly">
+          <IconShield width={36} height={36} />
+          <div className="title">Nada pendiente</div>
+          <div className="subtitle">No hay verificaciones esperando revisión.</div>
+        </div>
       ) : (
         <div className="payment-list">
           {items.map((v) => (

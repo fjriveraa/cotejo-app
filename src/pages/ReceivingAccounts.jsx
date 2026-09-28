@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { bankNamesForCountry, DEFAULT_COUNTRY } from '../lib/banks'
+import { IconBuilding } from '../components/icons'
 
 const OTHER_BANK = '__other__'
 const emptyForm = { bank: '', bankOther: '', alias: '', last4: '', currency: 'HNL' }
@@ -171,7 +172,11 @@ export default function ReceivingAccounts() {
       {error && <p className="error-text">{error}</p>}
 
       {accounts.length === 0 ? (
-        <p className="empty-state">Todavía no has registrado ninguna cuenta receptora.</p>
+        <div className="empty-state-friendly">
+          <IconBuilding width={36} height={36} />
+          <div className="title">Sin cuentas registradas</div>
+          <div className="subtitle">Agrega una arriba para empezar a recibir pagos con ella.</div>
+        </div>
       ) : (
         <div className="payment-list">
           {accounts.map((acc) => (

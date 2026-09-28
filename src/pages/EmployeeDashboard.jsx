@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { bankNamesForCountry, DEFAULT_COUNTRY } from '../lib/banks'
 import { isPlausibleTransactionDate } from '../lib/dateSanity'
 import Spinner from '../components/Spinner'
+import { IconDoc } from '../components/icons'
 
 const OTHER = '__other__'
 
@@ -447,7 +448,11 @@ export default function EmployeeDashboard() {
 
       <h3>Tus últimos registros</h3>
       {recent.length === 0 ? (
-        <p className="empty-state">Todavía no has registrado comprobantes.</p>
+        <div className="empty-state-friendly">
+          <IconDoc width={36} height={36} />
+          <div className="title">Todavía nada por aquí</div>
+          <div className="subtitle">Cuando registres un comprobante, va a aparecer en esta lista.</div>
+        </div>
       ) : (
         <div className="payment-list">
           {recent.map((p) => (

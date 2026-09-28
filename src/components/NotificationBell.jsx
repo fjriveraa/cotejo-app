@@ -162,7 +162,11 @@ export default function NotificationBell() {
           )}
 
           {!loading && notifications.length === 0 && (
-            <p className="empty-state" style={{ fontSize: 13 }}>Todavía no tienes notificaciones.</p>
+            <div className="empty-state-friendly" style={{ padding: '28px 12px' }}>
+              <IconBell width={30} height={30} />
+              <div className="title" style={{ fontSize: 15 }}>Sin novedades</div>
+              <div className="subtitle">Te avisamos aquí cuando pase algo importante.</div>
+            </div>
           )}
 
           {!loading && notifications.map((n) => (

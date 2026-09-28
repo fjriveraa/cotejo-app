@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import { isPlausibleTransactionDate, parseLocalDate } from '../lib/dateSanity'
 import { EvidenceModal, EvidenceThumb, friendlyRpcError } from './AccountantQueue'
 import { SkeletonPaymentList } from '../components/Skeleton'
+import { IconCheckCircle, IconDoc } from '../components/icons'
 
 const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
 
@@ -222,7 +223,11 @@ export default function AllCompaniesQueue() {
         loadingConfirmed ? (
           <SkeletonPaymentList rows={4} />
         ) : confirmedPayments.length === 0 ? (
-          <p className="empty-state">No hay comprobantes confirmados en los últimos {CONFIRMED_LOOKBACK_DAYS} días.</p>
+          <div className="empty-state-friendly">
+            <IconDoc width={36} height={36} />
+            <div className="title">Sin confirmados recientes</div>
+            <div className="subtitle">No hay comprobantes confirmados en los últimos {CONFIRMED_LOOKBACK_DAYS} días.</div>
+          </div>
         ) : (
           <div className="payment-list">
             {confirmedPayments.map((p) => (
@@ -260,7 +265,11 @@ export default function AllCompaniesQueue() {
           </div>
         )
       ) : payments.length === 0 ? (
-        <p className="empty-state">Todo al día en todas tus empresas — no hay nada pendiente.</p>
+        <div className="empty-state-friendly">
+          <IconCheckCircle width={36} height={36} />
+          <div className="title">¡Todo al día!</div>
+          <div className="subtitle">No hay nada pendiente en ninguna de tus empresas.</div>
+        </div>
       ) : (
         Object.entries(grouped).map(([groupLabel, items]) => (
           <div key={groupLabel}>

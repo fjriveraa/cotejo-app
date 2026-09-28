@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { getCanonicalOrigin } from '../lib/appUrl'
+import { IconLink } from '../components/icons'
 
 const ROLE_LABELS = {
   empleado: 'Colaborador',
@@ -257,7 +258,11 @@ export default function InviteTeam() {
       </div>
 
       {links.length === 0 ? (
-        <p className="empty-state">Todavía no has creado ningún enlace de invitación.</p>
+        <div className="empty-state-friendly">
+          <IconLink width={36} height={36} />
+          <div className="title">Sin enlaces todavía</div>
+          <div className="subtitle">Crea uno arriba para invitar a alguien a tu equipo.</div>
+        </div>
       ) : (
         <div className="payment-list">
           {links.map((link) => (

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { IconCheckCircle } from '../components/icons'
 
 const ROLE_LABELS = {
   empleado: 'Colaborador',
@@ -62,7 +63,11 @@ export default function JoinRequests() {
       {error && <p className="error-text">{error}</p>}
 
       {requests.length === 0 ? (
-        <p className="empty-state">No hay solicitudes pendientes.</p>
+        <div className="empty-state-friendly">
+          <IconCheckCircle width={36} height={36} />
+          <div className="title">Nada pendiente</div>
+          <div className="subtitle">No hay solicitudes esperando revisión.</div>
+        </div>
       ) : (
         <div className="payment-list">
           {requests.map((r) => (

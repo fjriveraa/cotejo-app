@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { IconUsers } from '../components/icons'
 
 const ROLE_LABELS = {
   empleado: 'Colaborador',
@@ -128,7 +129,11 @@ export default function Team() {
       </div>
 
       {members.length === 0 ? (
-        <p className="empty-state">Todavía no hay nadie en tu equipo.</p>
+        <div className="empty-state-friendly">
+          <IconUsers width={36} height={36} />
+          <div className="title">Todavía es solo vos</div>
+          <div className="subtitle">Invita a alguien desde "Invitar equipo" para que aparezca aquí.</div>
+        </div>
       ) : (
         <div className="payment-list">
           {members.map((m) => (
