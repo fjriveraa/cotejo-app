@@ -4,6 +4,33 @@ import { supabase } from '../lib/supabase'
 import { getCanonicalOrigin } from '../lib/appUrl'
 import { SkeletonPaymentList } from '../components/Skeleton'
 
+function ViewEvidence({ path }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  async function open() {
+    setLoading(true)
+    setError(null)
+    const { data, error: fetchError } = await supabase.storage.from('guest-evidence').createSignedUrl(path, 300)
+    setLoading(false)
+    if (fetchError || !data?.signedUrl) {
+      setError('No se pudo abrir. Intenta de nuevo.')
+      return
+    }
+    window.open(data.signedUrl, '_blank', 'noopener')
+  }
+
+  if (!path) return null
+  return (
+    <span>
+      <button type="button" className="btn btn-secondary" onClick={open} disabled={loading} style={{ fontSize: 12, padding: '4px 10px' }}>
+        {loading ? 'Abriendo...' : 'Ver comprobante'}
+      </button>
+      {error && <span style={{ marginLeft: 8, fontSize: 12, color: '#B91C1C' }}>{error}</span>}
+    </span>
+  )
+}
+
 function CopyLink({ link }) {
   const [copied, setCopied] = useState(false)
   function copy() {
@@ -153,12 +180,61 @@ function ImportMembersForm({ groupId, onImported }) {
   )
 }
 
-function RegisterPaymentForm({ groupId, member, onDone, onCancel }) {
+function RegisterPaymentForm({ groupId, organizationId, member, onDone, onCancel }) {
   const [amount, setAmount] = useState(member.expected_amount || '')
   const [transactionDate, setTransactionDate] = useState('')
   const [notes, setNotes] = useState('')
+  const [evidencePath, setEvidencePath] = useState(null)
+  const [aiStatus, setAiStatus] = useState('idle') // idle | uploading | analyzing | done | error
+  const [aiMessage, setAiMessage] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+
+  // Para cuando el inquilino/persona le manda la foto del comprobante por
+  // WhatsApp u otro medio y quien administra el grupo prefiere subirla
+  // directamente aquí, sin tener que ir al formulario público y salir de
+  // esta pantalla. La IA intenta leerla igual que en el envío normal, para
+  // no tener que copiar los datos a mano si ya se pueden leer solos.
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAiStatus('uploading')
+    setAiMessage('Subiendo comprobante...')
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `${organizationId}/manual-${crypto.randomUUID()}.${ext}`
+      const { error: uploadError } = await supabase.storage.from('guest-evidence').upload(path, file)
+      if (uploadError) throw uploadError
+      setEvidencePath(path)
+
+      if (!file.type.startsWith('image/')) {
+        setAiStatus('done')
+        setAiMessage('Comprobante adjunto. Completa el monto a mano.')
+        return
+      }
+
+      setAiStatus('analyzing')
+      setAiMessage('Leyendo comprobante con IA...')
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('analyze-guest-evidence', {
+        body: { path, organization_id: organizationId }
+      })
+      if (fnError) throw fnError
+      const extraction = fnData?.extraction
+      if (extraction) {
+        if (extraction.amount && !amount) setAmount(String(extraction.amount))
+        if (extraction.transaction_date && !transactionDate) setTransactionDate(extraction.transaction_date)
+        setAiStatus('done')
+        setAiMessage('✓ Comprobante adjunto. Revisa los datos antes de guardar.')
+      } else {
+        setAiStatus('done')
+        setAiMessage('Comprobante adjunto. No se pudieron leer los datos solos -- complétalos a mano.')
+      }
+    } catch (err) {
+      console.error('Error subiendo/leyendo comprobante:', err)
+      setAiStatus('error')
+      setAiMessage('No se pudo subir el comprobante. Puedes registrar el pago sin foto.')
+    }
+  }
 
   async function submit(e) {
     e.preventDefault()
@@ -173,7 +249,8 @@ function RegisterPaymentForm({ groupId, member, onDone, onCancel }) {
       p_member_id: member.member_id,
       p_amount: Number(amount),
       p_transaction_date: transactionDate || null,
-      p_notes: notes.trim() || null
+      p_notes: notes.trim() || null,
+      p_evidence_path: evidencePath
     })
     setBusy(false)
     if (error) {
@@ -188,8 +265,19 @@ function RegisterPaymentForm({ groupId, member, onDone, onCancel }) {
       <form onSubmit={submit}>
         <p style={{ fontSize: 13, marginTop: 0, fontWeight: 600 }}>Registrar pago de {member.display_name}</p>
         <p style={{ fontSize: 12, opacity: 0.65, marginTop: -8, marginBottom: 12 }}>
-          Para cuando la persona pagó pero no mandó comprobante (efectivo, o ya lo confirmaste por tu cuenta).
+          Para cuando tú tienes el comprobante (te lo mandó por WhatsApp, por ejemplo) o la persona pagó sin mandar
+          nada (efectivo, o ya lo confirmaste por tu cuenta).
         </p>
+        <div className="field">
+          <label htmlFor="regFile">Foto del comprobante (opcional)</label>
+          <input id="regFile" type="file" accept="image/*,application/pdf" onChange={handleFileChange} />
+          {aiMessage && (
+            <p style={{ fontSize: 12, marginTop: 4, color: aiStatus === 'error' ? '#A2483A' : aiStatus === 'done' ? '#2B6459' : 'inherit' }}>
+              {(aiStatus === 'uploading' || aiStatus === 'analyzing') && '⏳ '}
+              {aiMessage}
+            </p>
+          )}
+        </div>
         <div className="field">
           <label htmlFor="regAmount">Monto</label>
           <input id="regAmount" type="number" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} required />
@@ -204,7 +292,9 @@ function RegisterPaymentForm({ groupId, member, onDone, onCancel }) {
         </div>
         {error && <p className="error-text">{error}</p>}
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Guardando...' : 'Registrar pago'}</button>
+          <button type="submit" className="btn btn-primary" disabled={busy || aiStatus === 'uploading' || aiStatus === 'analyzing'}>
+            {busy ? 'Guardando...' : 'Registrar pago'}
+          </button>
           <button type="button" className="btn btn-secondary" onClick={onCancel}>Cancelar</button>
         </div>
       </form>
@@ -316,6 +406,7 @@ export default function PaymentGroupDetail() {
                 {registeringFor === m.member_id && (
                   <RegisterPaymentForm
                     groupId={groupId}
+                    organizationId={group.organization_id}
                     member={m}
                     onCancel={() => setRegisteringFor(null)}
                     onDone={() => { setRegisteringFor(null); load() }}
@@ -342,7 +433,10 @@ export default function PaymentGroupDetail() {
                     {' · '}{m.entry_method === 'manual' ? 'Registrado manualmente' : m.entry_status === 'confirmed' ? 'Comprobante confirmado' : 'Comprobante en revisión'}
                   </div>
                 </div>
-                <CopyLink link={`${origin}/g/${group.link_code}/${m.member_code}`} />
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {m.evidence_path && <ViewEvidence path={m.evidence_path} />}
+                  <CopyLink link={`${origin}/g/${group.link_code}/${m.member_code}`} />
+                </div>
               </div>
             ))}
           </div>
