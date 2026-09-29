@@ -8,13 +8,26 @@ Mac.
 
 - `capacitor.config.json` — `appId: net.cotejo.app`, `appName: Cotejo`, `webDir: dist`.
 - `package.json` — dependencias de Capacitor agregadas (`@capacitor/core`,
-  `@capacitor/ios`, `@capacitor/app`, `@capacitor/cli`, `@capacitor/assets`) y
-  scripts `ios:sync` / `ios:open`.
+  `@capacitor/ios`, `@capacitor/app`, `@capacitor/cli`, `@capacitor/assets`,
+  `@capacitor/filesystem`, `@capacitor/share`, `@capgo/capacitor-native-biometric`)
+  y scripts `ios:sync` / `ios:open`.
 - `resources/icon.png` (1024×1024, sin transparencia) y `resources/splash.png`
   (2732×2732) — un ícono/splash de arranque generados a partir del logo actual
   (`public/logo-mark.png`). Es un borrador funcional; si tienes una versión más
   nítida o vectorial del logo, reemplaza estos dos archivos antes de generar los
   íconos finales (paso 4).
+- **Eliminación de cuenta** (`/ajustes` → "Zona de peligro") — obligatorio
+  para pasar revisión (guideline 5.1.1(v), ver abajo). Ya implementado de
+  punta a punta: RPCs `get_account_deletion_preview` / `request_account_deletion`
+  + Edge Function `delete-account` + UI.
+- **Bloqueo con Face ID/Touch ID** (`/ajustes` → "Seguridad") — usa
+  `@capgo/capacitor-native-biometric`, ya integrado y gateado a
+  `Capacitor.isNativePlatform()` (no hace nada en la web).
+- **Export de Excel arreglado para nativo** — `src/lib/exportExcel.js` ahora
+  detecta `Capacitor.isNativePlatform()` y, en vez de la descarga de
+  navegador (que no funciona dentro de un WKWebView empacado), escribe el
+  archivo con `@capacitor/filesystem` y abre la hoja nativa de compartir con
+  `@capacitor/share`.
 
 ## 1. Requisitos en tu Mac
 
@@ -72,9 +85,11 @@ As > Source Code, o edítalo como texto):
 <string>Cotejo usa la cámara para tomar fotos de comprobantes de pago.</string>
 <key>NSPhotoLibraryUsageDescription</key>
 <string>Cotejo necesita acceso a tus fotos para adjuntar comprobantes de pago.</string>
+<key>NSFaceIDUsageDescription</key>
+<string>Cotejo usa Face ID para bloquear la app cuando activas esa opción en Ajustes.</string>
 ```
 
-Sin estas dos líneas, la app truena al pedir la cámara/galería y Apple la
+Sin estas líneas, la app truena al pedir la cámara/galería/Face ID y Apple la
 rechaza en revisión.
 
 ## 7. Abrir en Xcode y configurar la firma
@@ -134,25 +149,58 @@ Apple ID) y confirma que:
 - Puede subir un comprobante desde cámara y desde galería (aquí es donde
   fallaría si el paso 6 quedó incompleto).
 - Los links `/g/:linkCode` de Grupos abren bien dentro de la app.
+- Activar el bloqueo biométrico en Ajustes, cerrar y reabrir la app: debe
+  pedir Face ID/Touch ID antes de mostrar cualquier pantalla.
+- Generar un reporte en Excel desde Reportes: debe abrir la hoja nativa de
+  compartir (no debe quedarse sin hacer nada).
+- Probar "Eliminar mi cuenta" en Ajustes con una cuenta de prueba que NO sea
+  la única propietaria de ninguna empresa, para confirmar que el flujo
+  completo funciona antes de que un revisor de Apple lo intente.
 
 ## 11. Enviar a revisión
 
 En App Store Connect, dentro de la versión: selecciona el build subido,
 completa lo que falte, y **Enviar para revisión**.
 
-## Dos cosas a tener en cuenta
+## Puntos de revisión de Apple — qué ya está cubierto y qué falta
+
+**Guideline 5.1.1(v) — Eliminación de cuenta (obligatorio, ya resuelto).**
+Apple exige textualmente: *"If your app supports account creation, you must
+also offer account deletion within the app."* Cotejo crea cuentas dentro de
+la misma app (`Signup.jsx`), así que este punto es de cumplimiento
+obligatorio — ya está implementado en `/ajustes`. Ojo: si la persona es la
+única propietaria activa de alguna empresa, el borrado se bloquea con un
+mensaje explicando por qué (para no dejar esa empresa huérfana) — es
+comportamiento esperado, no un bug, pero vale la pena probarlo con una
+cuenta de prueba que SÍ pueda borrarse antes de enviar a revisión.
+
+**Guideline 3.1.1 / 3.1.3(c) — Compras y "Enterprise Services".** Cotejo hoy
+solo vende suscripciones fuera de la app (no tiene Apple In-App Purchase).
+Para una app de consumo eso sería motivo de rechazo, pero Apple tiene una
+excepción textual para B2B: *"If your app is only sold directly by you to
+organizations or groups for their employees or students... you may allow
+enterprise users to access previously-purchased content or subscriptions.
+Consumer, single user, or family sales must use in-app purchase."* Cotejo se
+vende a empresas (no a consumidores individuales), así que debería calificar
+— pero **no lo des por hecho sin más**: en el campo "Notas para el revisor"
+de App Store Connect (paso 8), cita explícitamente la guideline 3.1.3(c) y
+explica en 2-3 líneas que Cotejo es una herramienta B2B vendida directamente
+a empresas para su equipo interno, no una suscripción de consumidor. Da
+también una **cuenta de demo** (usuario + contraseña) en esas notas para que
+el revisor pueda entrar sin fricción — muchos rechazos de apps B2B pasan
+simplemente porque el revisor no pudo entrar a probar nada.
+
+**Guideline 4.2 — "Funcionalidad mínima" / no ser solo un sitio web
+empacado.** Cotejo ya tiene bastante funcionalidad nativa propia que ayuda
+acá: cámara/galería para comprobantes, flujos de aprobación con roles,
+bloqueo con Face ID/Touch ID, compartir nativo del reporte Excel. Si aun así
+lo rechazan por esto, la siguiente mejora más efectiva sería push nativo
+(ver abajo) y haptics en confirmaciones (`@capacitor/haptics`).
 
 **Notificaciones push:** Cotejo hoy usa Web Push (VAPID) para las
 notificaciones del navegador. Dentro de la app nativa empacada con Capacitor,
 ese mecanismo generalmente **no funciona igual** — para push nativo real hace
 falta el plugin `@capacitor/push-notifications` más un certificado/key de
-APNs configurado en el Developer portal. Es trabajo aparte; si quieres, lo
-armamos en una siguiente vuelta una vez que la app básica esté aprobada.
-
-**Riesgo de rechazo (guideline 4.2, "funcionalidad mínima"):** Apple a veces
-rechaza apps que se sienten como "solo un sitio web metido en una app". Cotejo
-ya tiene bastante funcionalidad propia (cámara, subida de archivos, flujos de
-aprobación) que ayuda, pero si la rechazan por esto, algunas mejoras rápidas
-que lo refuerzan: desbloqueo con Face ID/Touch ID al abrir la app
-(`@capacitor/biometric`), compartir nativo de reportes
-(`@capacitor/share`), o haptics en confirmaciones (`@capacitor/haptics`).
+APNs configurado en el Developer portal. Es trabajo aparte, priorizado
+después de lo anterior; si quieres, lo armamos en una siguiente vuelta una
+vez que la app básica esté aprobada.

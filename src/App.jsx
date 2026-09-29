@@ -13,6 +13,7 @@ import JoinRequests from './pages/JoinRequests'
 import Autonomo from './pages/Autonomo'
 import Verify from './pages/Verify'
 import MyIdentification from './pages/MyIdentification'
+import Settings from './pages/Settings'
 import AdminVerifications from './pages/AdminVerifications'
 import ReceivingAccounts from './pages/ReceivingAccounts'
 import GuestSubmit from './pages/GuestSubmit'
@@ -27,6 +28,7 @@ import Landing from './pages/Landing'
 import TopBar from './components/TopBar'
 import OrgPicker from './components/OrgPicker'
 import CompanyHub from './pages/CompanyHub'
+import BiometricLockScreen from './components/BiometricLockScreen'
 import { IconBuilding, IconBriefcase, IconLink, IconSearch } from './components/icons'
 
 const OWNER_ROLES = ['propietario', 'admin']
@@ -121,10 +123,12 @@ function ProtectedLayout({ children }) {
   if (needsOrgConfirmation) return <OrgPicker />
 
   return (
-    <div className="app-shell">
-      <TopBar />
-      {children}
-    </div>
+    <BiometricLockScreen>
+      <div className="app-shell">
+        <TopBar />
+        {children}
+      </div>
+    </BiometricLockScreen>
   )
 }
 
@@ -162,10 +166,12 @@ function RequireSessionLayout({ children }) {
   if (session === null) return <Navigate to="/login" replace />
   if (isLoading) return <LoadingScreen />
   return (
-    <div className="app-shell">
-      <TopBar />
-      {children}
-    </div>
+    <BiometricLockScreen>
+      <div className="app-shell">
+        <TopBar />
+        {children}
+      </div>
+    </BiometricLockScreen>
   )
 }
 
@@ -322,6 +328,14 @@ export default function App() {
         element={
           <ProtectedLayout>
             <MyIdentification />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/ajustes"
+        element={
+          <ProtectedLayout>
+            <Settings />
           </ProtectedLayout>
         }
       />

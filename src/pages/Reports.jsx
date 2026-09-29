@@ -48,7 +48,7 @@ export default function Reports() {
       if (paymentsError) throw paymentsError
       if (guestError) throw guestError
 
-      exportReportToExcel({
+      await exportReportToExcel({
         organizationName: membership.organizations?.name,
         payments,
         guestSubmissions,

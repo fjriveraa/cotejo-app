@@ -6,7 +6,7 @@ import { useToast } from '../hooks/useToast'
 import {
   IconMenu, IconClose, IconDoc, IconCheckCircle, IconInbox,
   IconShield, IconIdCard, IconLink, IconSearch, IconLogout,
-  IconBuilding, IconShare, IconHome, IconBell, IconUsers
+  IconBuilding, IconShare, IconHome, IconBell, IconUsers, IconSettings
 } from './icons'
 import NotificationBell from './NotificationBell'
 import {
@@ -393,6 +393,7 @@ export default function TopBar() {
               <NavLink to="/mi-identificacion" className="menu-link"><IconIdCard /> Mi identificación</NavLink>
               <NavLink to="/unirme" className="menu-link"><IconLink /> Unirme a otra empresa</NavLink>
               <NavLink to="/empresas" className="menu-link"><IconSearch /> Buscar empresas</NavLink>
+              <NavLink to="/ajustes" className="menu-link"><IconSettings /> Ajustes</NavLink>
             </div>
 
             <div className="menu-section">

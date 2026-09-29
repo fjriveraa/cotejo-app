@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx'
+import { Capacitor } from '@capacitor/core'
 
 const PAYMENT_STATUS_LABELS = {
   pending: 'Pendiente',
@@ -45,11 +46,30 @@ function money(value) {
   return Number.isFinite(n) ? n : value
 }
 
+// XLSX.writeFile() dispara una descarga de navegador (crea un <a> con
+// blob: y hace click) -- eso no existe dentro del WKWebView de una app
+// empacada con Capacitor, así que ahí el botón de exportar se sentiría roto
+// (no pasa nada visible). En native, en vez de "descargar", se escribe el
+// archivo a una carpeta temporal de la app y se abre la hoja nativa de
+// compartir/guardar (@capacitor/share) -- desde ahí la persona puede
+// guardarlo en Archivos, mandarlo por WhatsApp/correo, etc.
+async function writeAndShareNative(wb, fileName) {
+  const { Filesystem, Directory } = await import('@capacitor/filesystem')
+  const { Share } = await import('@capacitor/share')
+
+  const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' })
+  await Filesystem.writeFile({ path: fileName, data: base64, directory: Directory.Cache })
+  const { uri } = await Filesystem.getUri({ path: fileName, directory: Directory.Cache })
+
+  await Share.share({ title: fileName, url: uri, dialogTitle: 'Guardar o compartir reporte' })
+}
+
 /**
- * Genera y descarga un archivo Excel (.xlsx) con los pagos registrados y los
- * comprobantes de invitados de una empresa, cada uno en su propia hoja.
+ * Genera el Excel (.xlsx) con los pagos registrados y los comprobantes de
+ * invitados de una empresa, cada uno en su propia hoja. En la web dispara
+ * una descarga normal; dentro de la app nativa abre la hoja de compartir.
  */
-export function exportReportToExcel({ organizationName, payments, guestSubmissions, from, to }) {
+export async function exportReportToExcel({ organizationName, payments, guestSubmissions, from, to }) {
   const wb = XLSX.utils.book_new()
 
   const paymentRows = (payments || []).map((p) => ({
@@ -106,5 +126,9 @@ export function exportReportToExcel({ organizationName, payments, guestSubmissio
   const safeName = (organizationName || 'cotejo').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
   const fileName = `cotejo-${safeName}-${rangeLabel}.xlsx`
 
-  XLSX.writeFile(wb, fileName)
+  if (Capacitor.isNativePlatform()) {
+    await writeAndShareNative(wb, fileName)
+  } else {
+    XLSX.writeFile(wb, fileName)
+  }
 }
