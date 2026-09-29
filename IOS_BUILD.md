@@ -252,3 +252,59 @@ APNs y configurarla en Supabase — paso 6.2 arriba. Sin ese paso, el botón
 funciona pero nadie recibe nada; con él, `send-push-notification` manda por
 Web Push y APNs a la vez, sin duplicar (cada persona recibe según en qué
 tenga activado el permiso).
+
+**Guideline 4.8 — Sign in with Apple.** Solo es obligatorio cuando la
+*única* forma de crear cuenta es un login social de terceros (Google,
+Facebook, etc.) sin alternativa. Cotejo ofrece **email/contraseña
+(`signUpWithPassword`) además de** "Continuar con Google" en `Signup.jsx` —
+como el email/contraseña pide solo nombre y correo, deja que la persona
+decida qué correo usar, y Cotejo no hace tracking publicitario, esa
+alternativa ya cumple los tres criterios que Apple pide. **No hace falta
+agregar Sign in with Apple** mientras el email/contraseña siga siendo una
+opción visible en el login y el signup — no lo quites ni lo escondas detrás
+de Google sin darte cuenta en un rediseño futuro.
+
+**Privacy Manifest (`PrivacyInfo.xcprivacy`) — obligatorio desde 2024, no
+verificado aún.** Apple exige que cada app (y cada SDK de terceros que use
+"Required Reason APIs" — UserDefaults, timestamps de archivos, espacio en
+disco, etc.) declare por qué las usa, o el build puede ser rechazado
+**automáticamente en la subida** (antes de llegar a revisión humana) con un
+error tipo `ITMS-91053`/`ITMS-91055`. Los plugins de Capacitor de primera
+línea (`@capacitor/filesystem`, `@capacitor/share`, `@capacitor/push-notifications`,
+`@capacitor/app`) en versiones recientes ya traen su propio
+`PrivacyInfo.xcprivacy` embebido, así que probablemente no haga falta nada
+manual — pero **confírmalo la primera vez que subas el build**: si Xcode o
+App Store Connect marcan un plugin sin manifiesto, hay que revisar qué API
+"Required Reason" usa y declararla (la guía de Capacitor lo explica:
+https://capacitorjs.com/docs/v6/ios/privacy-manifest). No se puede verificar
+esto desde la sesión en la nube porque necesita Xcode/el proceso real de
+subida — queda pendiente para cuando hagas el paso 9.
+
+**App Tracking Transparency (ATT) — no aplica.** Cotejo no tiene SDKs de
+publicidad ni de tracking entre apps, así que no debería pedir el permiso de
+ATT. Si en el futuro se agrega algún SDK de analítica/marketing que
+comparta datos entre apps, ahí sí habría que agregar el prompt de ATT
+(`@capgo/capacitor-app-tracking-transparency` o similar) antes de subir.
+
+**Checklist rápido antes de enviar a revisión (con base en investigación de
+los motivos de rechazo más comunes en 2026):**
+- [ ] Cuenta de demo lista y probada en las notas del revisor (ver más abajo
+      — ya se creó `revisor@cotejo.net`).
+- [ ] Notas del revisor citan 3.1.3(c) y explican que Cotejo es B2B (arriba).
+- [ ] Capturas de pantalla reales del dispositivo (no del sitio web en
+      escritorio) — mínimo 6.9" o 6.7", ver sección de capturas más abajo.
+- [ ] Política de privacidad accesible y el **cuestionario de App Privacy**
+      (paso 8) coincide exactamente con lo que la app realmente recolecta —
+      Apple compara ambos y un desajuste es causa común de rechazo (2.3.1 /
+      5.1.1).
+- [ ] Descripción y palabras clave no prometen nada que la app no hace
+      todavía (1.1.6) ni repiten palabras clave sin sentido (4.5.6).
+- [ ] Probar el flujo completo de eliminación de cuenta con una cuenta que sí
+      pueda borrarse (ya cubierto en la sección 10 arriba).
+- [ ] Confirmar que la build no truena al abrir sin conexión ni en el primer
+      arranque sin sesión — un crash reproducible en el primer intento es el
+      motivo de rechazo #1 según Apple (guideline 2.1).
+- [ ] Revisar que no quede ningún texto/botón de "en construcción",
+      placeholder o feature a medio hacer visible (2.3.1 — funcionalidad
+      oculta o incompleta).
+- [ ] Confirmar `PrivacyInfo.xcprivacy` sin advertencias al archivar (arriba).
