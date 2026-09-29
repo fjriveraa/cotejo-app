@@ -8,11 +8,17 @@ import {
   IconShield, IconIdCard, IconLink, IconSearch, IconLogout,
   IconBuilding, IconShare, IconHome, IconBell, IconUsers, IconSettings
 } from './icons'
+import { Capacitor } from '@capacitor/core'
 import NotificationBell from './NotificationBell'
 import {
   isPushSupported, needsInstallForPush, getExistingPushSubscription,
   subscribeToPush, unsubscribeFromPush
 } from '../lib/push'
+import {
+  isNativePushSupported, getNativePushStatus, registerNativePush, unregisterNativePush
+} from '../lib/nativePush'
+
+const IS_NATIVE = Capacitor.isNativePlatform()
 
 const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
 
@@ -67,10 +73,26 @@ export default function TopBar() {
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
   }, [])
 
-  // Al abrir la app, se revisa si este navegador ya tiene una suscripción
-  // push activa (pudo haberse activado en una sesión anterior) para que el
-  // botón del menú muestre el estado correcto desde el primer render.
+  // Al abrir la app, se revisa el estado actual de las notificaciones push
+  // para que el botón del menú muestre el estado correcto desde el primer
+  // render -- en la app nativa eso es el permiso del sistema operativo; en
+  // la web, si este navegador ya tiene una suscripción activa (pudo haberse
+  // activado en una sesión anterior).
   useEffect(() => {
+    if (IS_NATIVE) {
+      if (!isNativePushSupported()) return
+      let cancelled = false
+      getNativePushStatus().then((status) => {
+        if (cancelled) return
+        const granted = status === 'granted'
+        setPushEnabled(granted)
+        // Si el permiso ya estaba concedido de una sesión anterior, se
+        // vuelve a registrar en silencio (sin pedir permiso otra vez) para
+        // mantener el token al día -- Apple puede rotarlo ocasionalmente.
+        if (granted) registerNativePush().catch((err) => console.error('push re-registro silencioso', err))
+      })
+      return () => { cancelled = true }
+    }
     if (!isPushSupported()) return
     let cancelled = false
     getExistingPushSubscription().then((sub) => {
@@ -83,6 +105,18 @@ export default function TopBar() {
     if (pushBusy) return
     setPushBusy(true)
     try {
+      if (IS_NATIVE) {
+        if (pushEnabled) {
+          await unregisterNativePush()
+          setPushEnabled(false)
+          showToast('Notificaciones push desactivadas')
+        } else {
+          await registerNativePush()
+          setPushEnabled(true)
+          showToast('Notificaciones push activadas', { tone: 'success' })
+        }
+        return
+      }
       if (pushEnabled) {
         await unsubscribeFromPush()
         setPushEnabled(false)
@@ -97,7 +131,12 @@ export default function TopBar() {
     } catch (err) {
       console.error('push subscribe error', err)
       if (err?.message === 'permission_denied') {
-        showToast('Bloqueaste los permisos de notificación — actívalos desde los ajustes del navegador', { duration: 4500 })
+        showToast(
+          IS_NATIVE
+            ? 'Bloqueaste los permisos de notificación — actívalos desde Ajustes del sistema en tu teléfono'
+            : 'Bloqueaste los permisos de notificación — actívalos desde los ajustes del navegador',
+          { duration: 4500 }
+        )
       } else {
         // Mensaje temporal con el detalle técnico -- ayuda a diagnosticar
         // mientras se activa por primera vez en distintos navegadores; una
@@ -400,12 +439,12 @@ export default function TopBar() {
               <button type="button" className="menu-link" onClick={handleShareCotejo}>
                 <IconShare /> Compartir Cotejo
               </button>
-              {!isStandalone && (
+              {!IS_NATIVE && !isStandalone && (
                 <button type="button" className="menu-link" onClick={handleAddToHome}>
                   <IconHome /> Agregar a inicio
                 </button>
               )}
-              {isPushSupported() && (
+              {(IS_NATIVE ? isNativePushSupported() : isPushSupported()) && (
                 <button type="button" className="menu-link" onClick={handleTogglePush} disabled={pushBusy}>
                   <IconBell /> {pushEnabled ? 'Desactivar notificaciones push' : 'Activar notificaciones push'}
                 </button>

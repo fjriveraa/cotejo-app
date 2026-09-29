@@ -1,5 +1,7 @@
-import { Routes, Route, Navigate, Link } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
+import { listenForNativePushTaps } from './lib/nativePush'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Join from './pages/Join'
@@ -177,6 +179,15 @@ function RequireSessionLayout({ children }) {
 
 export default function App() {
   const { session } = useAuth()
+  const navigate = useNavigate()
+
+  // Traduce un tap sobre una notificación push nativa (la app estaba en
+  // segundo plano o cerrada) en una navegación dentro de la app -- en la
+  // web, esto mismo lo maneja el service worker (sw.js) con
+  // notificationclick, así que aquí solo hace falta para Capacitor.
+  useEffect(() => {
+    return listenForNativePushTaps((url) => navigate(url))
+  }, [navigate])
 
   return (
     <Routes>

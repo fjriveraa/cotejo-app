@@ -28,6 +28,14 @@ Mac.
   navegador (que no funciona dentro de un WKWebView empacado), escribe el
   archivo con `@capacitor/filesystem` y abre la hoja nativa de compartir con
   `@capacitor/share`.
+- **Notificaciones push nativas** — el botón "Activar notificaciones push"
+  del menú ahora usa `@capacitor/push-notifications` dentro de la app nativa
+  (en la web sigue usando Web Push/VAPID igual que antes). El token del
+  dispositivo se guarda en la tabla `push_device_tokens`, y
+  `send-push-notification` (Edge Function) ya manda por APNs además de Web
+  Push -- pero **solo si configuras la key de Apple** (paso 6.1 abajo); si no
+  la configuras, todo sigue funcionando igual que hoy, simplemente sin push
+  nativo.
 
 ## 1. Requisitos en tu Mac
 
@@ -91,6 +99,41 @@ As > Source Code, o edítalo como texto):
 
 Sin estas líneas, la app truena al pedir la cámara/galería/Face ID y Apple la
 rechaza en revisión.
+
+### 6.1 Activar el capability de Push Notifications
+
+Dentro de Xcode (paso 7): selecciona el proyecto `App` → pestaña **Signing &
+Capabilities** → **+ Capability** → agrega **Push Notifications**. Sin esto,
+el permiso de notificaciones nunca aparece aunque el código ya esté listo.
+
+### 6.2 Generar la key de APNs (para que el push nativo realmente envíe)
+
+Sin este paso, el botón "Activar notificaciones push" va a funcionar (pide
+permiso, guarda el token), pero nadie va a recibir nada — `send-push-notification`
+detecta que falta la key y simplemente no intenta mandar por APNs, sin
+romper nada más.
+
+1. En [developer.apple.com/account](https://developer.apple.com/account) →
+   **Certificates, Identifiers & Profiles** → **Keys** → **+**.
+2. Nombre: `Cotejo Push`. Marca **Apple Push Notifications service (APNs)**.
+   Continuar → Registrar → **Descargar** (el archivo `.p8` solo se puede
+   descargar una vez — guárdalo bien).
+3. Anota el **Key ID** (aparece junto al nombre de la key) y tu **Team ID**
+   (arriba a la derecha en el portal, o en **Membership**).
+4. En el proyecto de Supabase (`leprvnyswebmuohvvabd`) → **Edge Functions** →
+   **Manage secrets**, agrega:
+   - `APNS_KEY_ID` — el Key ID del paso 3.
+   - `APNS_TEAM_ID` — tu Team ID.
+   - `APNS_BUNDLE_ID` — `net.cotejo.app` (o el que hayas usado si lo cambiaste).
+   - `APNS_PRIVATE_KEY` — el contenido completo del archivo `.p8` que
+     descargaste, tal cual (con las líneas `-----BEGIN PRIVATE KEY-----` /
+     `-----END PRIVATE KEY-----`).
+   - `APNS_USE_SANDBOX` — déjalo sin configurar (o `false`) para builds de
+     App Store/TestFlight. Solo ponlo en `true` si vas a probar push desde
+     un build de desarrollo/debug instalado directo desde Xcode (esos usan
+     el entorno sandbox de Apple, no el de producción).
+5. No hace falta redesplegar nada — la Edge Function ya está lista y lee
+   estas variables en cada llamada.
 
 ## 7. Abrir en Xcode y configurar la firma
 
@@ -156,6 +199,10 @@ Apple ID) y confirma que:
 - Probar "Eliminar mi cuenta" en Ajustes con una cuenta de prueba que NO sea
   la única propietaria de ninguna empresa, para confirmar que el flujo
   completo funciona antes de que un revisor de Apple lo intente.
+- Si ya configuraste la key de APNs (paso 6.2): activar push desde el menú,
+  y desde otro dispositivo/cuenta generar una notificación real (ej. enviar
+  un comprobante de invitado) para confirmar que llega y que el tap abre la
+  pantalla correcta.
 
 ## 11. Enviar a revisión
 
@@ -193,14 +240,15 @@ simplemente porque el revisor no pudo entrar a probar nada.
 **Guideline 4.2 — "Funcionalidad mínima" / no ser solo un sitio web
 empacado.** Cotejo ya tiene bastante funcionalidad nativa propia que ayuda
 acá: cámara/galería para comprobantes, flujos de aprobación con roles,
-bloqueo con Face ID/Touch ID, compartir nativo del reporte Excel. Si aun así
-lo rechazan por esto, la siguiente mejora más efectiva sería push nativo
-(ver abajo) y haptics en confirmaciones (`@capacitor/haptics`).
+bloqueo con Face ID/Touch ID, compartir nativo del reporte Excel, y
+notificaciones push nativas (una vez configures la key de APNs en el paso
+6.2). Si aun así lo rechazan por esto, la siguiente mejora más efectiva
+sería haptics en confirmaciones (`@capacitor/haptics`).
 
-**Notificaciones push:** Cotejo hoy usa Web Push (VAPID) para las
-notificaciones del navegador. Dentro de la app nativa empacada con Capacitor,
-ese mecanismo generalmente **no funciona igual** — para push nativo real hace
-falta el plugin `@capacitor/push-notifications` más un certificado/key de
-APNs configurado en el Developer portal. Es trabajo aparte, priorizado
-después de lo anterior; si quieres, lo armamos en una siguiente vuelta una
-vez que la app básica esté aprobada.
+**Notificaciones push:** ya está integrado el plugin
+`@capacitor/push-notifications` (el botón del menú lo usa automáticamente
+dentro de la app nativa). Lo único que falta de tu lado es generar la key de
+APNs y configurarla en Supabase — paso 6.2 arriba. Sin ese paso, el botón
+funciona pero nadie recibe nada; con él, `send-push-notification` manda por
+Web Push y APNs a la vez, sin duplicar (cada persona recibe según en qué
+tenga activado el permiso).
