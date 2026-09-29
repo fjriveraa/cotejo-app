@@ -450,6 +450,12 @@ export default function TopBar() {
             <span>Invitados</span>
           </NavLink>
         )}
+        {canSeeQueue && (
+          <NavLink to="/grupos" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
+            <IconUsers width={21} height={21} />
+            <span>Grupos</span>
+          </NavLink>
+        )}
       </nav>
     </header>
   )
