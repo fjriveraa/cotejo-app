@@ -1,8 +1,73 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
 import { getCanonicalOrigin } from '../lib/appUrl'
 import { SkeletonPaymentList } from '../components/Skeleton'
+
+// Palabras que ayudan a reconocer qué columna es cuál en un Excel/CSV con
+// encabezados. Si no se reconoce ninguna, se asume el mismo orden que ya
+// usa el pegado manual: nombre, identificador, monto.
+const NAME_HEADER_RE = /nombre|name/i
+const IDENTIFIER_HEADER_RE = /identificador|depto|apart|unidad|local|salon|salón|grado|equipo|casa|lote/i
+const AMOUNT_HEADER_RE = /monto|renta|cuota|amount|pago|esperado/i
+
+// Convierte filas ya parseadas (de Excel/CSV o de la lectura por IA de una
+// imagen) al mismo formato de texto "nombre, identificador, monto" que ya
+// usa el textarea de pegado manual -- así el admin revisa/corrige todo en
+// un solo lugar antes de confirmar la importación, sin importar de dónde
+// vino cada fila.
+function rowsToText(rows) {
+  return rows
+    .map((r) => {
+      // El monto solo se puede poner en la 3ra posición, así que si hay monto pero no
+      // identificador, se deja ese hueco vacío en vez de correr el monto a la 2da posición.
+      if (r.amount != null) return `${r.name}, ${r.identifier || ''}, ${r.amount}`
+      if (r.identifier) return `${r.name}, ${r.identifier}`
+      return r.name
+    })
+    .join('\n')
+}
+
+function parseSpreadsheetFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo'))
+    reader.onload = () => {
+      try {
+        const data = new Uint8Array(reader.result)
+        const wb = XLSX.read(data, { type: 'array' })
+        const sheet = wb.Sheets[wb.SheetNames[0]]
+        const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
+        if (grid.length === 0) return resolve([])
+
+        // ¿La primera fila es un encabezado reconocible, o ya es una persona?
+        const firstRow = grid[0].map((c) => String(c || ''))
+        let nameIdx = firstRow.findIndex((c) => NAME_HEADER_RE.test(c))
+        let idIdx = firstRow.findIndex((c) => IDENTIFIER_HEADER_RE.test(c))
+        let amountIdx = firstRow.findIndex((c) => AMOUNT_HEADER_RE.test(c))
+        const hasHeader = nameIdx !== -1
+        const dataRows = hasHeader ? grid.slice(1) : grid
+        if (!hasHeader) { nameIdx = 0; idIdx = 1; amountIdx = 2 }
+
+        const rows = dataRows
+          .map((r) => {
+            const name = String(r[nameIdx] ?? '').trim()
+            if (!name) return null
+            const identifier = idIdx !== -1 ? String(r[idIdx] ?? '').trim() : ''
+            const rawAmount = amountIdx !== -1 ? r[amountIdx] : ''
+            const amount = rawAmount !== '' && Number.isFinite(Number(rawAmount)) ? Number(rawAmount) : null
+            return { name, identifier: identifier || null, amount }
+          })
+          .filter(Boolean)
+        resolve(rows)
+      } catch (err) {
+        reject(err)
+      }
+    }
+    reader.readAsArrayBuffer(file)
+  })
+}
 
 const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 
@@ -197,14 +262,73 @@ function AddMemberForm({ groupId, onAdded }) {
 }
 
 // Importa varias personas de un pegado tipo CSV (una por línea:
-// nombre,identificador,monto) -- suficientemente simple para pegar desde un
-// Excel/Sheets sin tener que subir un archivo.
-function ImportMembersForm({ groupId, onImported }) {
+// nombre,identificador,monto), de un archivo Excel/CSV, o de una foto/
+// captura de una lista (la IA la lee). Las tres vías terminan en el mismo
+// textarea para que el admin revise y corrija antes de confirmar -- ni el
+// parseo del Excel ni la lectura de la IA son perfectos, así que nunca se
+// crea a nadie en la lista sin que alguien lo vea primero.
+function ImportMembersForm({ groupId, organizationId, onImported }) {
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
+  const [fileStatus, setFileStatus] = useState(null) // mensaje de progreso/errores de la carga de archivo
   const [error, setError] = useState(null)
   const [result, setResult] = useState(null)
+
+  async function handleFile(e) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // permite volver a elegir el mismo archivo si hace falta reintentar
+    if (!file) return
+    setError(null)
+    setResult(null)
+
+    const isImage = file.type.startsWith('image/')
+    const isSpreadsheet = /\.(xlsx|xls|csv)$/i.test(file.name)
+
+    if (!isImage && !isSpreadsheet) {
+      setFileStatus('Formato no reconocido. Sube una imagen, o un archivo .xlsx/.xls/.csv.')
+      return
+    }
+
+    try {
+      if (isSpreadsheet) {
+        setFileStatus('Leyendo archivo...')
+        const rows = await parseSpreadsheetFile(file)
+        if (rows.length === 0) {
+          setFileStatus('No se encontró ninguna fila con nombre en el archivo.')
+          return
+        }
+        setText((prev) => (prev ? `${prev}\n${rowsToText(rows)}` : rowsToText(rows)))
+        setFileStatus(`✓ ${rows.length} persona(s) leídas del archivo. Revisa la lista antes de importar.`)
+        return
+      }
+
+      // Imagen: se sube primero a Storage (mismo patrón que el comprobante manual)
+      // y la Edge Function la lee con IA con el usuario ya autenticado -- no es el
+      // formulario público de invitado.
+      setFileStatus('Subiendo imagen...')
+      const ext = file.name.split('.').pop()
+      const path = `${organizationId}/roster-${crypto.randomUUID()}.${ext}`
+      const { error: uploadError } = await supabase.storage.from('guest-evidence').upload(path, file)
+      if (uploadError) throw uploadError
+
+      setFileStatus('Leyendo la lista con IA...')
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('extract-roster-list', { body: { path } })
+      if (fnError) throw fnError
+      if (fnData?.error) throw new Error(fnData.error)
+
+      const rows = fnData?.members || []
+      if (rows.length === 0) {
+        setFileStatus('La IA no pudo leer nombres en esa imagen. Prueba con una foto más clara, o pega la lista a mano.')
+        return
+      }
+      setText((prev) => (prev ? `${prev}\n${rowsToText(rows)}` : rowsToText(rows)))
+      setFileStatus(`✓ ${rows.length} persona(s) leídas de la imagen. Revisa la lista antes de importar -- la IA puede equivocarse en nombres poco claros.`)
+    } catch (err) {
+      console.error('Error importando archivo:', err)
+      setFileStatus(err.message || 'No se pudo leer el archivo. Prueba con otro, o pega la lista a mano.')
+    }
+  }
 
   async function submit(e) {
     e.preventDefault()
@@ -230,6 +354,7 @@ function ImportMembersForm({ groupId, onImported }) {
     setBusy(false)
     setResult(`${ok} agregados${failed > 0 ? `, ${failed} con error` : ''}.`)
     setText('')
+    setFileStatus(null)
     onImported()
   }
 
@@ -244,6 +369,11 @@ function ImportMembersForm({ groupId, onImported }) {
   return (
     <div className="card" style={{ maxWidth: 480, marginBottom: 16 }}>
       <form onSubmit={submit}>
+        <div className="field">
+          <label htmlFor="importFile">O sube una foto de la lista, o un archivo Excel/CSV</label>
+          <input id="importFile" type="file" accept="image/*,.xlsx,.xls,.csv" onChange={handleFile} />
+          {fileStatus && <p style={{ fontSize: 12, marginTop: 4, color: fileStatus.startsWith('✓') ? '#2B6459' : 'inherit', opacity: fileStatus.startsWith('✓') ? 1 : 0.7 }}>{fileStatus}</p>}
+        </div>
         <div className="field">
           <label htmlFor="importText">Una persona por línea: nombre, identificador (opcional), monto esperado (opcional)</label>
           <textarea
@@ -482,7 +612,7 @@ export default function PaymentGroupDetail() {
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         <AddMemberForm groupId={groupId} onAdded={load} />
-        <ImportMembersForm groupId={groupId} onImported={load} />
+        <ImportMembersForm groupId={groupId} organizationId={group.organization_id} onImported={load} />
       </div>
 
       {pending.length > 0 && (
