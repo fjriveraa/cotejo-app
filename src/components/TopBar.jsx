@@ -6,7 +6,7 @@ import { useToast } from '../hooks/useToast'
 import {
   IconMenu, IconClose, IconDoc, IconCheckCircle, IconInbox,
   IconShield, IconIdCard, IconLink, IconSearch, IconLogout,
-  IconBuilding, IconShare, IconHome, IconBell
+  IconBuilding, IconShare, IconHome, IconBell, IconUsers
 } from './icons'
 import NotificationBell from './NotificationBell'
 import {
@@ -298,6 +298,11 @@ export default function TopBar() {
         {canSeeQueue && (
           <NavLink to="/comprobantes-invitados" className={({ isActive }) => `nav-pill${isActive ? ' active' : ''}`}>
             <IconInbox /> Comprobantes de invitados <CountBadge count={pendingGuests} />
+          </NavLink>
+        )}
+        {canSeeQueue && (
+          <NavLink to="/grupos" className={({ isActive }) => `nav-pill${isActive ? ' active' : ''}`}>
+            <IconUsers /> Grupos
           </NavLink>
         )}
       </nav>

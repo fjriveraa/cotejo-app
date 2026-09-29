@@ -219,6 +219,11 @@ export default function GuestQueue() {
                   {s.submitter_name || 'Sin nombre'}{s.submitter_contact ? ` · ${s.submitter_contact}` : ''}
                   {s.reference_raw ? ` · ref: ${s.reference_raw}` : ''}
                 </div>
+                {s.group_name && (
+                  <div className="meta" style={{ fontWeight: 600 }}>
+                    📁 {s.group_name}{s.group_member_name ? ` · ${s.group_member_name}` : ''}
+                  </div>
+                )}
                 <div className="meta" style={{ fontWeight: 600, color: s.transaction_date && isPlausibleTransactionDate(s.transaction_date) ? '#2B6459' : '#B08900' }}>
                   {s.transaction_date && isPlausibleTransactionDate(s.transaction_date)
                     ? `Fecha del comprobante: ${parseLocalDate(s.transaction_date).toLocaleDateString('es-HN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}`

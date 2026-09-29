@@ -21,6 +21,8 @@ import GuestQueue from './pages/GuestQueue'
 import Reports from './pages/Reports'
 import Dashboard from './pages/Dashboard'
 import AllCompaniesQueue from './pages/AllCompaniesQueue'
+import PaymentGroups from './pages/PaymentGroups'
+import PaymentGroupDetail from './pages/PaymentGroupDetail'
 import Landing from './pages/Landing'
 import TopBar from './components/TopBar'
 import OrgPicker from './components/OrgPicker'
@@ -326,12 +328,34 @@ export default function App() {
       <Route path="/comprobante" element={<GuestSubmit />} />
       <Route path="/comprobante/estado/:token" element={<GuestStatus />} />
       <Route path="/comprobante/:organizationId" element={<GuestSubmit />} />
+      <Route path="/g/:linkCode" element={<GuestSubmit />} />
+      <Route path="/g/:linkCode/:memberCode" element={<GuestSubmit />} />
       <Route
         path="/comprobantes-invitados"
         element={
           <ProtectedLayout>
             <RequireQueueAccess>
               <GuestQueue />
+            </RequireQueueAccess>
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/grupos"
+        element={
+          <ProtectedLayout>
+            <RequireQueueAccess>
+              <PaymentGroups />
+            </RequireQueueAccess>
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/grupos/:groupId"
+        element={
+          <ProtectedLayout>
+            <RequireQueueAccess>
+              <PaymentGroupDetail />
             </RequireQueueAccess>
           </ProtectedLayout>
         }

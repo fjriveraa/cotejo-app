@@ -66,9 +66,10 @@ async function computePerceptualHash(file) {
 
 export default function GuestSubmit() {
   const navigate = useNavigate()
-  const { organizationId } = useParams() // presente solo si llegó por un enlace directo de una empresa
+  const { organizationId, linkCode, memberCode } = useParams() // organizationId: enlace directo de empresa; linkCode: enlace de grupo
   const [searchParams] = useSearchParams()
   const isDirectLink = Boolean(organizationId)
+  const isGroupLink = Boolean(linkCode)
   // El mismo enlace directo puede ser para el QR de la tienda (?presencial=1)
   // o para compartir por WhatsApp/Instagram (sin el parámetro) — son casos
   // distintos aunque apunten a la misma empresa.
@@ -79,7 +80,11 @@ export default function GuestSubmit() {
   const [searching, setSearching] = useState(false)
   const [searched, setSearched] = useState(false)
   const [selectedOrg, setSelectedOrg] = useState(null)
-  const [loadingDirectOrg, setLoadingDirectOrg] = useState(isDirectLink)
+  const [loadingDirectOrg, setLoadingDirectOrg] = useState(isDirectLink || isGroupLink)
+  // Cuando el enlace ya identifica a la persona (uno individual del roster,
+  // no el genérico del grupo), no tiene sentido pedirle su nombre otra vez
+  // ni dejar que lo cambie -- ya sabemos quién es.
+  const [groupInfo, setGroupInfo] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [file, setFile] = useState(null)
   const [evidencePath, setEvidencePath] = useState(null)
@@ -117,6 +122,29 @@ export default function GuestSubmit() {
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [organizationId])
+
+  useEffect(() => {
+    if (!isGroupLink) return
+    let cancelled = false
+    supabase.rpc('resolve_payment_group_link', { p_link_code: linkCode, p_member_code: memberCode || null }).then(({ data, error }) => {
+      if (cancelled) return
+      setLoadingDirectOrg(false)
+      const row = data?.[0]
+      if (error || !row) {
+        setError('Este enlace no es válido. Pide uno nuevo a quien te lo compartió.')
+        return
+      }
+      setSelectedOrg({ organization_id: row.organization_id, name: row.organization_name })
+      setGroupInfo(row)
+      if (row.member_id) {
+        // Enlace individual: ya sabemos quién es -- se precarga el nombre y
+        // no se le pide que lo escriba.
+        setForm((prev) => ({ ...prev, submitterName: row.member_display_name }))
+      }
+    })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkCode, memberCode])
 
   async function handleSearch(e) {
     e.preventDefault()
@@ -283,7 +311,9 @@ export default function GuestSubmit() {
         p_ai_currency: rawExtraction?.currency || null,
         p_ai_reference_raw: rawExtraction?.reference_raw || null,
         p_ai_transaction_date: /^\d{4}-\d{2}-\d{2}$/.test(rawExtraction?.transaction_date || '') ? rawExtraction.transaction_date : null,
-        p_ai_confidence: rawExtraction?.confidence || null
+        p_ai_confidence: rawExtraction?.confidence || null,
+        p_group_id: groupInfo?.group_id || null,
+        p_group_member_id: groupInfo?.member_id || null
       })
 
       if (rpcError) throw rpcError
@@ -319,7 +349,7 @@ export default function GuestSubmit() {
       <div className="card login-card" style={{ maxWidth: 480 }}>
         <PublicPageHeader />
         <h1>Enviar comprobante de pago</h1>
-        {!isDirectLink && <p>Busca la empresa a la que le hiciste la transferencia para que confirmen tu pago.</p>}
+        {!isDirectLink && !isGroupLink && <p>Busca la empresa a la que le hiciste la transferencia para que confirmen tu pago.</p>}
 
         {!selectedOrg ? (
           <>
@@ -367,13 +397,24 @@ export default function GuestSubmit() {
         ) : (
           <>
             <p style={{ fontSize: 14 }}>
-              Enviando comprobante a <strong>{selectedOrg.name}</strong>.{' '}
-              {!isDirectLink && (
+              Enviando comprobante a <strong>{selectedOrg.name}</strong>
+              {groupInfo?.group_name ? <> · <strong>{groupInfo.group_name}</strong></> : null}.{' '}
+              {!isDirectLink && !isGroupLink && (
                 <button type="button" onClick={() => setSelectedOrg(null)} style={{ background: 'none', border: 'none', color: '#2B6459', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: 14 }}>
                   Cambiar empresa
                 </button>
               )}
             </p>
+            {groupInfo?.member_id && (
+              <p style={{ fontSize: 13, opacity: 0.75, marginTop: -8 }}>
+                Enviando como <strong>{groupInfo.member_display_name}</strong>.
+              </p>
+            )}
+            {(groupInfo?.member_expected_amount || groupInfo?.default_expected_amount) && (
+              <p style={{ fontSize: 13, opacity: 0.75, marginTop: -8 }}>
+                Monto esperado: L {Number(groupInfo.member_expected_amount || groupInfo.default_expected_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+              </p>
+            )}
             <form onSubmit={handleSubmit}>
               <div className="field">
                 <label htmlFor="file">Foto o captura de tu comprobante</label>
@@ -457,10 +498,15 @@ export default function GuestSubmit() {
                   </div>
                 </>
               )}
-              <div className="field">
-                <label htmlFor="submitterName">Tu nombre</label>
-                <input id="submitterName" type="text" value={form.submitterName} onChange={(e) => updateField('submitterName', e.target.value)} />
-              </div>
+              {!groupInfo?.member_id && (
+                <div className="field">
+                  <label htmlFor="submitterName">Tu nombre</label>
+                  <input id="submitterName" type="text" value={form.submitterName} onChange={(e) => updateField('submitterName', e.target.value)} required={isGroupLink} />
+                  {isGroupLink && (
+                    <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Escribe tu nombre igual que en la lista para que te encontremos más rápido.</p>
+                  )}
+                </div>
+              )}
               <div className="field">
                 <label htmlFor="submitterContact">Tu teléfono o correo (para que te contacten si hace falta)</label>
                 <input id="submitterContact" type="text" value={form.submitterContact} onChange={(e) => updateField('submitterContact', e.target.value)} />
@@ -482,7 +528,7 @@ export default function GuestSubmit() {
           </>
         )}
 
-        {!isDirectLink && (
+        {!isDirectLink && !isGroupLink && (
           <p style={{ marginTop: 16, fontSize: 13, opacity: 0.7 }}>
             ¿Trabajas en una empresa registrada en Cotejo? <Link to="/login">Inicia sesión aquí</Link>
           </p>
