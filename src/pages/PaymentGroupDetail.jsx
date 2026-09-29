@@ -4,6 +4,92 @@ import { supabase } from '../lib/supabase'
 import { getCanonicalOrigin } from '../lib/appUrl'
 import { SkeletonPaymentList } from '../components/Skeleton'
 
+const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+// "2026-09" -> "septiembre 2026"
+function formatPeriodLabel(period) {
+  if (!period) return period
+  const [year, month] = period.split('-')
+  const name = MONTH_NAMES[Number(month) - 1]
+  return name ? `${name} ${year}` : period
+}
+
+// Racha de pagos de una persona -- mismo lenguaje visual que las bolitas W/D/L de "forma
+// reciente" en FiguSwitch: de un vistazo se ve el patrón (quién falla seguido) sin tener que
+// abrir el historial mes por mes. Verde = pagó, rojo = no pagó, gris = todavía no estaba en
+// el grupo ese mes (nunca se marca como "no pagó" a alguien que ni existía).
+function PaymentStreak({ history }) {
+  if (!history || history.length <= 1) return null
+  return (
+    <div style={{ display: 'flex', gap: 3, marginTop: 4 }} title="Racha de pagos, mes a mes (más reciente a la derecha)">
+      {history.map((h) => (
+        <span
+          key={h.period}
+          title={`${formatPeriodLabel(h.period)}${h.paid === null ? ': todavía no estaba en el grupo' : h.paid ? ': pagó' : ': no pagó'}`}
+          style={{
+            width: 12,
+            height: 12,
+            borderRadius: '50%',
+            display: 'inline-block',
+            background: h.paid === null ? '#e5e7eb' : h.paid ? '#2B6459' : '#B91C1C'
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+// Sección de un mes anterior en el historial -- colapsada por defecto si ya se completó
+// (todos pagaron), abierta si a alguien le falta, igual que las fases del mundial en
+// FiguSwitch (una fase se colapsa sola solo cuando ya se jugó completa). La lista de
+// integrantes de ese mes se carga solo al abrir la sección, no de una vez con todo lo demás.
+function MonthHistorySection({ groupId, period, paidCount, totalCount, defaultOpen }) {
+  const [open, setOpen] = useState(defaultOpen)
+  const [members, setMembers] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  async function toggle() {
+    const next = !open
+    setOpen(next)
+    if (next && members === null) {
+      setLoading(true)
+      const { data } = await supabase.rpc('list_payment_group_members', { p_group_id: groupId, p_period: period })
+      setLoading(false)
+      setMembers(data || [])
+    }
+  }
+
+  const complete = totalCount > 0 && paidCount >= totalCount
+
+  return (
+    <div style={{ marginBottom: 8, background: '#fff', border: `1px solid ${complete ? '#e5e7eb' : '#f3c9c9'}`, borderRadius: 12, overflow: 'hidden' }}>
+      <button
+        type="button"
+        onClick={toggle}
+        style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, textAlign: 'left' }}
+      >
+        <span style={{ flex: 1, fontSize: 13, fontWeight: 700, textTransform: 'capitalize' }}>{formatPeriodLabel(period)}</span>
+        <span style={{ fontSize: 12, opacity: 0.65 }}>{paidCount}/{totalCount} pagaron</span>
+        <span style={{ fontSize: 11, opacity: 0.5 }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div style={{ padding: '0 14px 12px' }}>
+          {loading && <p style={{ fontSize: 12, opacity: 0.6 }}>Cargando...</p>}
+          {members && members.length === 0 && <p style={{ fontSize: 12, opacity: 0.6 }}>Nadie en la lista ese mes.</p>}
+          {members && members.map((m) => (
+            <div key={m.member_id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '6px 0', borderTop: '1px solid #f1f1f1' }}>
+              <span style={{ fontSize: 13 }}>{m.display_name}{m.identifier ? ` · ${m.identifier}` : ''}</span>
+              <span style={{ fontSize: 12, opacity: 0.7 }}>
+                {m.paid ? `✓ L ${Number(m.paid_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}` : '✗ No pagó'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ViewEvidence({ path }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -306,6 +392,8 @@ export default function PaymentGroupDetail() {
   const { groupId } = useParams()
   const [group, setGroup] = useState(null)
   const [members, setMembers] = useState([])
+  const [periods, setPeriods] = useState([])
+  const [memberHistory, setMemberHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [registeringFor, setRegisteringFor] = useState(null)
@@ -318,9 +406,16 @@ export default function PaymentGroupDetail() {
   async function load() {
     setLoading(true)
     setError(null)
-    const [{ data: groupData, error: groupError }, { data: memberData, error: memberError }] = await Promise.all([
+    const [
+      { data: groupData, error: groupError },
+      { data: memberData, error: memberError },
+      { data: periodData, error: periodError },
+      { data: historyData, error: historyError }
+    ] = await Promise.all([
       supabase.rpc('get_payment_group', { p_group_id: groupId }),
-      supabase.rpc('list_payment_group_members', { p_group_id: groupId })
+      supabase.rpc('list_payment_group_members', { p_group_id: groupId }),
+      supabase.rpc('list_payment_group_periods', { p_group_id: groupId }),
+      supabase.rpc('list_payment_group_member_history', { p_group_id: groupId })
     ])
     setLoading(false)
     if (groupError || memberError) {
@@ -329,6 +424,10 @@ export default function PaymentGroupDetail() {
     }
     setGroup(groupData?.[0] || null)
     setMembers(memberData || [])
+    // Periodos e historial son "extra" -- si fallan (ej. rol sin acceso a auditor, o el RPC
+    // todavía no está desplegado), no se bloquea la pantalla principal por eso.
+    setPeriods(periodError ? [] : (periodData || []))
+    setMemberHistory(historyError ? [] : (historyData || []))
   }
 
   if (loading) {
@@ -351,6 +450,12 @@ export default function PaymentGroupDetail() {
   const groupLink = `${origin}/g/${group.link_code}`
   const paidCount = members.filter((m) => m.paid).length
   const pending = members.filter((m) => !m.paid)
+  const historyByMember = {}
+  memberHistory.forEach((h) => { historyByMember[h.member_id] = h.history })
+  // El mes actual ya se muestra completo arriba (Faltan / Ya pagaron), así que el historial
+  // solo lista los meses anteriores -- evitar mostrar el mismo mes dos veces.
+  const currentPeriod = group.period_type === 'monthly' ? periods[0]?.period : null
+  const pastPeriods = periods.filter((p) => p.period !== currentPeriod)
 
   return (
     <div className="container">
@@ -395,6 +500,7 @@ export default function PaymentGroupDetail() {
                       {m.expected_amount ? `Esperado: L ${Number(m.expected_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}` : 'Sin monto esperado'}
                       {m.source === 'auto' && ' · 🆕 nuevo, no estaba en la lista'}
                     </div>
+                    <PaymentStreak history={historyByMember[m.member_id]} />
                   </div>
                   <div className="actions-row">
                     <CopyLink link={`${origin}/g/${group.link_code}/${m.member_code}`} />
@@ -432,6 +538,7 @@ export default function PaymentGroupDetail() {
                     L {Number(m.paid_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
                     {' · '}{m.entry_method === 'manual' ? 'Registrado manualmente' : m.entry_status === 'confirmed' ? 'Comprobante confirmado' : 'Comprobante en revisión'}
                   </div>
+                  <PaymentStreak history={historyByMember[m.member_id]} />
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   {m.evidence_path && <ViewEvidence path={m.evidence_path} />}
@@ -445,6 +552,22 @@ export default function PaymentGroupDetail() {
 
       {members.length === 0 && (
         <p className="empty-state">Todavía no hay nadie en la lista. Agrega personas o importa una lista arriba.</p>
+      )}
+
+      {pastPeriods.length > 0 && (
+        <>
+          <h3 style={{ fontSize: 15, marginTop: 28, marginBottom: 8 }}>Historial</h3>
+          {pastPeriods.map((p) => (
+            <MonthHistorySection
+              key={p.period}
+              groupId={groupId}
+              period={p.period}
+              paidCount={p.paid_count}
+              totalCount={p.total_count}
+              defaultOpen={p.total_count > 0 && p.paid_count < p.total_count}
+            />
+          ))}
+        </>
       )}
     </div>
   )
