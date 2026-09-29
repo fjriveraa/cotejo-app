@@ -19,6 +19,16 @@ const TYPE_ROUTE: Record<string, string> = {
   guest_submission: "/comprobantes-invitados",
 }
 
+// Texto del botón, distinto por tipo -- un verbo de acción específico
+// convierte más que un genérico "Ver en Cotejo" para todo.
+const TYPE_CTA: Record<string, string> = {
+  payment_pending: "Confirmar pago",
+  payment_confirmed: "Ver en Cotejo",
+  confirmation_reversed: "Revisar",
+  risk_flag: "Revisar alerta",
+  guest_submission: "Revisar comprobante",
+}
+
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -26,18 +36,44 @@ function escapeHtml(value: string) {
     .replace(/>/g, "&gt;")
 }
 
+// "L 4,500 · BAC" a partir de "L 4,500 · BAC — Sin alertas." -- la parte
+// antes del guión largo es el dato concreto (monto + banco/persona); el
+// resto es la evaluación de riesgo, que no aporta al asunto ni al
+// preheader y solo le resta espacio a lo que sí importa para decidir abrir
+// el correo.
+function extractHighlight(body: string) {
+  const [head] = body.split(" — ")
+  return head?.trim() || null
+}
+
+// Texto relativo tipo "hace 2 min" / "hace 3 h" -- crea más urgencia para
+// abrir que una marca de tiempo absoluta, sobre todo en pagos pendientes.
+function relativeTime(createdAt: string) {
+  const diffMs = Date.now() - new Date(createdAt).getTime()
+  const minutes = Math.floor(diffMs / 60000)
+  if (minutes < 1) return "justo ahora"
+  if (minutes < 60) return `hace ${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `hace ${hours} h`
+  const days = Math.floor(hours / 24)
+  return `hace ${days} d`
+}
+
 function buildEmailHtml(opts: {
   orgName: string
   title: string
   body: string
   ctaPath: string
+  ctaLabel: string
+  preheader: string
   isAlert: boolean
 }) {
-  const { orgName, title, body, ctaPath, isAlert } = opts
+  const { orgName, title, body, ctaPath, ctaLabel, preheader, isAlert } = opts
   const accent = isAlert ? "#A2483A" : "#2B6459"
   return `<!doctype html>
 <html>
   <body style="margin:0;padding:0;background:#f5f1e8;font-family:-apple-system,Helvetica,Arial,sans-serif;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(preheader)}</div>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f1e8;padding:24px 0;">
       <tr>
         <td align="center">
@@ -56,7 +92,7 @@ function buildEmailHtml(opts: {
             </tr>
             <tr>
               <td style="padding:20px 24px 26px;">
-                <a href="${APP_URL}${ctaPath}" style="display:inline-block;background:${accent};color:#ffffff;text-decoration:none;font-size:13px;font-weight:600;padding:10px 18px;border-radius:6px;">Ver en Cotejo</a>
+                <a href="${APP_URL}${ctaPath}" style="display:block;text-align:center;background:${accent};color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:13px 18px;border-radius:8px;">${escapeHtml(ctaLabel)}</a>
               </td>
             </tr>
             <tr>
@@ -102,7 +138,7 @@ Deno.serve(async (req) => {
 
   const { data: notification, error: notifError } = await supabase
     .from("notifications")
-    .select("id, organization_id, membership_id, type, title, body")
+    .select("id, organization_id, membership_id, type, title, body, created_at")
     .eq("id", notificationId)
     .single()
 
@@ -130,11 +166,29 @@ Deno.serve(async (req) => {
 
   const isAlert = notification.title?.includes("🚨") ?? false
   const ctaPath = TYPE_ROUTE[notification.type] ?? "/cola"
+  const ctaLabel = TYPE_CTA[notification.type] ?? "Ver en Cotejo"
+  const body = notification.body ?? ""
+  const highlight = extractHighlight(body)
+  const when = notification.created_at ? relativeTime(notification.created_at) : null
+
+  // El asunto lleva el dato concreto (monto/banco o quién envió) en vez de
+  // solo el título genérico -- es lo primero que se lee en la bandeja, sin
+  // abrir el correo, así que es donde más vale la pena ser específico.
+  const subject = highlight ? `${notification.title} · ${highlight}` : notification.title
+
+  // El preheader es el fragmento que Gmail/Outlook muestran junto al
+  // asunto en la bandeja, antes de abrir -- sin uno propio, toman texto al
+  // azar del HTML (el "Cotejo" del encabezado, típicamente). Aquí ponemos
+  // el dato + qué tan reciente es, para reforzar la urgencia ya desde ahí.
+  const preheader = when ? `${body} · ${when}` : body
+
   const html = buildEmailHtml({
     orgName: org?.name ?? "tu empresa",
     title: notification.title,
-    body: notification.body ?? "",
+    body: when ? `${body} (${when})` : body,
     ctaPath,
+    ctaLabel,
+    preheader,
     isAlert,
   })
 
@@ -147,7 +201,7 @@ Deno.serve(async (req) => {
     body: JSON.stringify({
       from: FROM_ADDRESS,
       to: [email],
-      subject: notification.title,
+      subject,
       html,
     }),
   })
