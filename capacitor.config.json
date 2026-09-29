@@ -1,0 +1,11 @@
+{
+  "appId": "net.cotejo.app",
+  "appName": "Cotejo",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "automatic"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

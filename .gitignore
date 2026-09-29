@@ -3,3 +3,11 @@ dist
 .env
 .env.local
 .DS_Store
+
+# iOS (Capacitor) -- la carpeta ios/ en sí SÍ se sube a git (Info.plist, firma,
+# ajustes propios del proyecto viven ahí), solo se ignora lo que Xcode/CocoaPods
+# regenera solos en cada máquina.
+ios/App/Pods
+ios/App/App.xcworkspace/xcuserdata
+ios/App/App.xcodeproj/xcuserdata
+ios/App/App.xcodeproj/project.xcworkspace/xcuserdata
