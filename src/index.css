@@ -224,6 +224,20 @@ a {
   transition: background 0.15s ease;
 }
 
+/* Cuando el enlace del menú es un <button> (Compartir, Agregar a inicio),
+   iOS le pone su fondo gris por defecto: se resetea para que se vea igual
+   que los demás enlaces, en claro y en oscuro. */
+button.menu-link {
+  width: 100%;
+  background: none;
+  border: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 .menu-link svg { opacity: 0.6; flex-shrink: 0; }
 
 .menu-link:hover { background: rgba(42, 38, 32, 0.05); }
