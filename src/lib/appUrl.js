@@ -12,3 +12,11 @@ export function getCanonicalOrigin() {
   if (host === 'localhost' || host === '127.0.0.1') return window.location.origin
   return 'https://cotejo.net'
 }
+
+// True cuando la web corre empaquetada dentro de la app nativa (Capacitor).
+// Ahí el login con Google no funciona: Google bloquea OAuth dentro de un
+// WebView y el redirect terminaría abriendo el navegador. En la app nativa
+// se entra con correo y contraseña.
+export function isNativeApp() {
+  return typeof window !== 'undefined' && !!window.Capacitor?.isNativePlatform?.()
+}

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth, writePendingAction, clearPendingAction } from '../hooks/useAuth'
-import { getCanonicalOrigin } from '../lib/appUrl'
+import { getCanonicalOrigin, isNativeApp } from '../lib/appUrl'
 import Spinner from '../components/Spinner'
 
 const ROLE_LABELS = {
@@ -210,20 +210,24 @@ export default function Join() {
             {loading && <Spinner />}{loading ? 'Un momento...' : mode === 'signup' ? 'Crear cuenta y unirme' : 'Iniciar sesión y unirme'}
           </button>
         </form>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0', fontSize: 12, opacity: 0.6 }}>
-          <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
-          o
-          <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
-        </div>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ width: '100%' }}
-          onClick={handleGoogle}
-          disabled={oauthLoading}
-        >
-          {oauthLoading && <Spinner />}{oauthLoading ? 'Conectando...' : 'Continuar con Google'}
-        </button>
+        {!isNativeApp() && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0', fontSize: 12, opacity: 0.6 }}>
+              <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
+              o
+              <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ width: '100%' }}
+              onClick={handleGoogle}
+              disabled={oauthLoading}
+            >
+              {oauthLoading && <Spinner />}{oauthLoading ? 'Conectando...' : 'Continuar con Google'}
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
