@@ -1094,7 +1094,20 @@ a {
 }
 
 @media (prefers-color-scheme: dark) {
-  :root { --teal-text: #7CC6B4; }
+  /* En oscuro se invierten las variables base: casi todo el CSS lee --ink,
+     --card, --paper y --border, así que un solo cambio aquí corrige etiquetas,
+     textos secundarios y estados vacíos que antes quedaban oscuros sobre oscuro. */
+  :root {
+    --teal-text: #7CC6B4;
+    --ink: #EDE7D9;
+    --paper: #1B1812;
+    --card: #24211A;
+    --border: rgba(237, 231, 217, 0.14);
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  }
+  .toast { background: #3A352B; }
+  .toast-success { background: var(--teal-strong); }
+  .toast-error { background: var(--rust); }
   body { background: var(--paper-dark); color: var(--ink-dark); }
   .topbar, .card, .payment-row, .menu-drawer, .choice-card, .landing-secondary,
   .stat-tile, .quick-action, .bottom-tabbar { background: var(--card-dark); border-color: var(--border-dark); color: var(--ink-dark); }

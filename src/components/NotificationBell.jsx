@@ -114,7 +114,7 @@ export default function NotificationBell() {
         onClick={toggleOpen}
         aria-label="Notificaciones"
         style={{
-          position: 'relative', background: 'none', border: '1px solid var(--border, #e5e0d8)',
+          position: 'relative', background: 'none', color: 'var(--ink)', border: '1px solid var(--border, #e5e0d8)',
           borderRadius: 8, padding: '6px 9px', cursor: 'pointer', display: 'flex', alignItems: 'center'
         }}
       >
