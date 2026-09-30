@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { getCanonicalOrigin, isNativeApp } from '../lib/appUrl'
@@ -11,6 +11,14 @@ export default function Login() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState(false)
+
+  // Si el usuario vuelve desde Google con el botón "atrás", la página se
+  // restaura desde caché con el estado anterior y quedaba en "Conectando...".
+  useEffect(() => {
+    const reset = () => setOauthLoading(false)
+    window.addEventListener('pageshow', reset)
+    return () => window.removeEventListener('pageshow', reset)
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()

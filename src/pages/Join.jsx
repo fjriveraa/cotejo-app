@@ -26,6 +26,14 @@ export default function Join() {
   const [joining, setJoining] = useState(false)
   const [oauthLoading, setOauthLoading] = useState(false)
 
+  // Si el usuario vuelve desde Google con el botón "atrás", la página se
+  // restaura desde caché con el estado anterior y quedaba en "Conectando...".
+  useEffect(() => {
+    const reset = () => setOauthLoading(false)
+    window.addEventListener('pageshow', reset)
+    return () => window.removeEventListener('pageshow', reset)
+  }, [])
+
   async function handleGoogle() {
     setError(null)
     setOauthLoading(true)
