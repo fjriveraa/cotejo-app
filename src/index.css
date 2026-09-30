@@ -5,6 +5,9 @@
   --ink-dark: #EDE7D9;
   --teal: #2B6459;
   --teal-strong: #1E4A42;
+  /* Verde de la marca para TEXTO e íconos. En oscuro se aclara para que se lea
+     (--teal-strong sigue siendo el fondo de botones y etiquetas). */
+  --teal-text: #1E4A42;
   --amber: #B9812F;
   --rust: #A2483A;
   --card: #FFFDF8;
@@ -50,7 +53,7 @@ button {
 }
 
 a {
-  color: var(--teal-strong);
+  color: var(--teal-text);
 }
 
 .app-shell {
@@ -79,7 +82,7 @@ a {
   font-family: var(--font-display);
   font-size: 20px;
   font-weight: 700;
-  color: var(--teal-strong);
+  color: var(--teal-text);
 }
 
 /* Visible en cualquier tamaño de pantalla: el cajón que abre contiene
@@ -129,7 +132,7 @@ a {
 .nav-pill.active {
   background: rgba(43, 100, 89, 0.12);
   border-color: rgba(43, 100, 89, 0.25);
-  color: var(--teal-strong);
+  color: var(--teal-text);
 }
 
 .nav-pill.active:hover { background: rgba(43, 100, 89, 0.18); }
@@ -227,7 +230,7 @@ a {
 
 .menu-link.active {
   background: rgba(43, 100, 89, 0.1);
-  color: var(--teal-strong);
+  color: var(--teal-text);
   font-weight: 600;
 }
 
@@ -254,7 +257,7 @@ a {
 
 .org-name {
   font-weight: 600;
-  color: var(--teal-strong);
+  color: var(--teal-text);
 }
 
 .org-select {
@@ -264,7 +267,7 @@ a {
   border-radius: 6px;
   border: 1px solid var(--border);
   background: white;
-  color: var(--teal-strong);
+  color: var(--teal-text);
 }
 
 /* Navegación inferior fija: en móvil, la parte alta de la pantalla es la
@@ -290,9 +293,9 @@ a {
   font-weight: 600;
 }
 
-.tabbar-item.active { opacity: 1; color: var(--teal-strong); }
+.tabbar-item.active { opacity: 1; color: var(--teal-text); }
 
-.tabbar-item-primary { opacity: 1; color: var(--teal-strong); }
+.tabbar-item-primary { opacity: 1; color: var(--teal-text); }
 
 .tabbar-icon-wrap { position: relative; display: inline-flex; }
 
@@ -327,7 +330,7 @@ a {
   font-family: var(--font-mono);
   font-size: 26px;
   font-weight: 700;
-  color: var(--teal-strong);
+  color: var(--teal-text);
 }
 
 .stat-label {
@@ -361,7 +364,7 @@ a {
 }
 
 .quick-action:hover {
-  border-color: var(--teal-strong);
+  border-color: var(--teal-text);
   box-shadow: 0 4px 14px rgba(30, 74, 66, 0.1);
 }
 
@@ -390,7 +393,7 @@ a {
   letter-spacing: 0.03em;
 }
 
-.badge-empleado { background: rgba(43, 100, 89, 0.12); color: var(--teal-strong); }
+.badge-empleado { background: rgba(43, 100, 89, 0.12); color: var(--teal-text); }
 .badge-contador { background: rgba(185, 129, 47, 0.15); color: var(--amber); }
 .badge-supervisor { background: rgba(162, 72, 58, 0.12); color: var(--rust); }
 .badge-propietario { background: var(--teal-strong); color: white; }
@@ -427,7 +430,7 @@ a {
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-primary { background: var(--teal-strong); color: white; }
-.btn-secondary { background: transparent; color: var(--teal-strong); border: 1px solid var(--border); }
+.btn-secondary { background: transparent; color: var(--teal-text); border: 1px solid var(--border); }
 .btn-amber { background: var(--amber); color: white; }
 .btn-rust { background: var(--rust); color: white; }
 .btn-ghost { background: transparent; color: var(--ink); opacity: 0.7; }
@@ -488,7 +491,7 @@ a {
 
 .status-pending { background: rgba(185, 129, 47, 0.15); color: var(--amber); }
 .status-under_review { background: rgba(162, 72, 58, 0.12); color: var(--rust); }
-.status-confirmed_manual { background: rgba(43, 100, 89, 0.15); color: var(--teal-strong); }
+.status-confirmed_manual { background: rgba(43, 100, 89, 0.15); color: var(--teal-text); }
 .status-not_found { background: rgba(162, 72, 58, 0.15); color: var(--rust); }
 .status-rejected { background: rgba(162, 72, 58, 0.15); color: var(--rust); }
 .status-voided { background: rgba(42, 38, 32, 0.1); color: var(--ink); opacity: 0.7; }
@@ -509,7 +512,7 @@ a {
 
 .landing-brand h1 {
   font-size: 34px;
-  color: var(--teal-strong);
+  color: var(--teal-text);
   margin: 0 0 6px;
 }
 
@@ -563,7 +566,7 @@ a {
   font-family: var(--font-display);
   font-size: 16px;
   font-weight: 600;
-  color: var(--teal-strong);
+  color: var(--teal-text);
 }
 
 .landing-secondary .subtitle {
@@ -602,7 +605,7 @@ a {
 }
 
 .choice-card:hover {
-  border-color: var(--teal-strong);
+  border-color: var(--teal-text);
   box-shadow: 0 4px 14px rgba(30, 74, 66, 0.1);
 }
 
@@ -624,7 +627,7 @@ a {
   flex-shrink: 0;
 }
 
-.choice-card svg { color: var(--teal-strong); }
+.choice-card svg { color: var(--teal-text); }
 
 .choice-title {
   font-family: var(--font-display);
@@ -653,7 +656,7 @@ a {
 .login-card h1 {
   font-size: 28px;
   margin: 0 0 4px;
-  color: var(--teal-strong);
+  color: var(--teal-text);
 }
 
 .login-card p {
@@ -702,7 +705,7 @@ a {
   align-items: center;
   justify-content: center;
   background: rgba(246, 241, 230, 0.92);
-  color: var(--teal-strong);
+  color: var(--teal-text);
   animation: confirm-flash-fade 0.65s ease forwards;
   pointer-events: none;
   z-index: 1;
@@ -752,7 +755,7 @@ a {
   font-size: 18px;
   font-weight: 600;
   margin: 28px 0 12px;
-  color: var(--teal-strong);
+  color: var(--teal-text);
 }
 
 .group-header:first-child {
@@ -892,7 +895,7 @@ a {
   gap: 10px;
   text-align: center;
   padding: 48px 24px;
-  color: var(--teal-strong);
+  color: var(--teal-text);
 }
 
 .empty-state-friendly svg {
@@ -1091,6 +1094,7 @@ a {
 }
 
 @media (prefers-color-scheme: dark) {
+  :root { --teal-text: #7CC6B4; }
   body { background: var(--paper-dark); color: var(--ink-dark); }
   .topbar, .card, .payment-row, .menu-drawer, .choice-card, .landing-secondary,
   .stat-tile, .quick-action, .bottom-tabbar { background: var(--card-dark); border-color: var(--border-dark); color: var(--ink-dark); }
