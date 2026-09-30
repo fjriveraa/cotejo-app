@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth, writePendingAction, clearPendingAction } from '../hooks/useAuth'
-import { getCanonicalOrigin } from '../lib/appUrl'
+import { getCanonicalOrigin, isNativeApp } from '../lib/appUrl'
 import Spinner from '../components/Spinner'
 
 export default function Signup() {
@@ -16,6 +16,11 @@ export default function Signup() {
   const [error, setError] = useState(null)
   const [needsConfirmation, setNeedsConfirmation] = useState(false)
   const [oauthLoading, setOauthLoading] = useState(false)
+  useEffect(() => {
+    const reset = () => setOauthLoading(false)
+    window.addEventListener('pageshow', reset)
+    return () => window.removeEventListener('pageshow', reset)
+  }, [])
   const [duplicateWarning, setDuplicateWarning] = useState(null)
   const [confirmedDuplicate, setConfirmedDuplicate] = useState(false)
   // Para el caso "Sistemas/Operaciones da de alta una empresa grande que no
@@ -301,7 +306,7 @@ export default function Signup() {
             {loading && <Spinner />}{loading ? 'Creando...' : duplicateWarning ? 'Continuar de todas formas' : 'Crear mi empresa'}
           </button>
         </form>
-        {!session && (
+        {!session && !isNativeApp() && (
         <>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0', fontSize: 12, opacity: 0.6 }}>
           <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
