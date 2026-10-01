@@ -80,8 +80,12 @@ export async function nativeSignIn(provider) {
         provider: 'apple',
         options: { scopes: ['email', 'name'], nonce: hashedNonce }
       })
-      const token = res?.result?.idToken
-      if (!token) return { error: new Error('Apple no devolvió idToken') }
+      // En @capgo/capacitor-social-login 6.0.x el JWT de identidad de Apple
+      // viene en accessToken.token; idToken es el código de autorización.
+      const jwtLike = (t) => typeof t === 'string' && t.split('.').length === 3 && t.startsWith('eyJ')
+      const candidates = [res?.result?.accessToken?.token, res?.result?.idToken]
+      const token = candidates.find(jwtLike)
+      if (!token) return { error: new Error('Apple no devolvió un token de identidad válido') }
       const { error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token,
