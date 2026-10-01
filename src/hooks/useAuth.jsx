@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { getCanonicalOrigin } from '../lib/appUrl'
+import { getCanonicalOrigin, isNativeApp } from '../lib/appUrl'
+import { nativeSignIn } from '../lib/nativeAuth'
 
 const AuthContext = createContext(null)
 const PENDING_ACTION_KEY = 'cotejo_pending_action'
@@ -273,6 +274,9 @@ export function AuthProvider({ children }) {
   // quien llama debe guardar la acción pendiente (writePendingAction) ANTES de
   // invocar esto, igual que con signUpWithPassword.
   async function signInWithOAuth(provider, redirectTo) {
+    // En la app nativa no se usa redirect: se abre la hoja nativa de Google o
+    // Apple y la sesión se crea con el id_token (ver lib/nativeAuth.js).
+    if (isNativeApp()) return nativeSignIn(provider)
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: redirectTo || `${getCanonicalOrigin()}/` }

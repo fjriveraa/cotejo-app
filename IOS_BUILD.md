@@ -308,3 +308,16 @@ los motivos de rechazo más comunes en 2026):**
       placeholder o feature a medio hacer visible (2.3.1 — funcionalidad
       oculta o incompleta).
 - [ ] Confirmar `PrivacyInfo.xcprivacy` sin advertencias al archivar (arriba).
+
+## Inicio de sesión nativo con Google y Apple (rama native-social-login)
+
+Código: `src/lib/nativeAuth.js` + `src/components/SocialButtons.jsx`. En la app
+se abre la hoja nativa y se canjea el id_token con `supabase.auth.signInWithIdToken`.
+La web sigue con el OAuth normal de Google (sin botón de Apple).
+
+Configuración fuera del código:
+- Google Cloud: cliente OAuth tipo iOS (bundle `net.cotejo.app`). Su ID está en `nativeAuth.js`.
+- Supabase -> Authentication -> Providers: Google (agregar el ID iOS a *Authorized Client IDs* y activar *Skip nonce checks*); Apple (Client IDs = `net.cotejo.app`).
+- Xcode: capability *Sign in with Apple*.
+- Info.plist: URL scheme con el ID de cliente invertido:
+  `com.googleusercontent.apps.586447784686-skt0bs8i37gaicpuci7a6eqp3v70nt7b`

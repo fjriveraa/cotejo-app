@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { getCanonicalOrigin, isNativeApp } from '../lib/appUrl'
+import { getCanonicalOrigin } from '../lib/appUrl'
 import Spinner from '../components/Spinner'
+import SocialButtons from '../components/SocialButtons'
 
 export default function Login() {
   const { signInWithPassword, signInWithOAuth } = useAuth()
@@ -31,15 +32,16 @@ export default function Login() {
     }
   }
 
-  async function handleGoogle() {
+  async function handleSocial(provider) {
     setError(null)
     setOauthLoading(true)
-    const { error } = await signInWithOAuth('google', `${getCanonicalOrigin()}/`)
-    if (error) {
+    const { error, cancelled } = await signInWithOAuth(provider, `${getCanonicalOrigin()}/`)
+    if (error || cancelled) {
       setOauthLoading(false)
-      setError('No se pudo continuar con Google.')
+      if (error) setError(`No se pudo continuar con ${provider === 'apple' ? 'Apple' : 'Google'}.`)
     }
-    // Si no hay error, el navegador redirige a Google y vuelve solo.
+    // Web: el navegador redirige a Google y vuelve solo. App: la sesión
+    // llega por onAuthStateChange.
   }
 
   return (
@@ -75,24 +77,7 @@ export default function Login() {
             {loading && <Spinner />}{loading ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
-        {!isNativeApp() && (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0', fontSize: 12, opacity: 0.6 }}>
-              <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
-              o
-              <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
-            </div>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ width: '100%' }}
-              onClick={handleGoogle}
-              disabled={oauthLoading}
-            >
-              {oauthLoading && <Spinner />}{oauthLoading ? 'Conectando...' : 'Continuar con Google'}
-            </button>
-          </>
-        )}
+        <SocialButtons onGoogle={() => handleSocial('google')} onApple={() => handleSocial('apple')} loading={oauthLoading} />
         <p style={{ marginTop: 16, fontSize: 13, opacity: 0.7 }}>
           ¿Tu empresa no tiene cuenta todavía? <Link to="/signup">Créala aquí</Link>
         </p>

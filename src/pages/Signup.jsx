@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth, writePendingAction, clearPendingAction } from '../hooks/useAuth'
-import { getCanonicalOrigin, isNativeApp } from '../lib/appUrl'
+import { getCanonicalOrigin } from '../lib/appUrl'
 import Spinner from '../components/Spinner'
+import SocialButtons from '../components/SocialButtons'
 
 export default function Signup() {
   const { session, membership, loadingMembership, signUpWithPassword, signInWithOAuth, switchOrg, refreshMemberships } = useAuth()
@@ -72,9 +73,10 @@ export default function Signup() {
     navigate('/')
   }
 
-  async function handleGoogle() {
+  async function handleSocial(provider) {
+    const providerName = provider === 'apple' ? 'Apple' : 'Google'
     if (!orgName.trim()) {
-      setError('Primero escribe el nombre de tu empresa, luego continúa con Google.')
+      setError(`Primero escribe el nombre de tu empresa, luego continúa con ${providerName}.`)
       return
     }
     if (session) {
@@ -95,11 +97,11 @@ export default function Signup() {
       setupForOther,
       ownerEmail: setupForOther ? ownerEmail.trim() : null
     })
-    const { error } = await signInWithOAuth('google', `${getCanonicalOrigin()}/`)
-    if (error) {
+    const { error, cancelled } = await signInWithOAuth(provider, `${getCanonicalOrigin()}/`)
+    if (error || cancelled) {
       clearPendingAction()
       setOauthLoading(false)
-      setError('No se pudo continuar con Google.')
+      if (error) setError(`No se pudo continuar con ${providerName}.`)
     }
   }
 
@@ -306,23 +308,14 @@ export default function Signup() {
             {loading && <Spinner />}{loading ? 'Creando...' : duplicateWarning ? 'Continuar de todas formas' : 'Crear mi empresa'}
           </button>
         </form>
-        {!session && !isNativeApp() && (
-        <>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0', fontSize: 12, opacity: 0.6 }}>
-          <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
-          o
-          <div style={{ flex: 1, height: 1, background: 'currentColor', opacity: 0.3 }} />
-        </div>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ width: '100%' }}
-          onClick={handleGoogle}
-          disabled={oauthLoading}
-        >
-          {oauthLoading && <Spinner />}{oauthLoading ? 'Conectando...' : 'Crear mi empresa con Google'}
-        </button>
-        </>
+        {!session && (
+          <SocialButtons
+            onGoogle={() => handleSocial('google')}
+            onApple={() => handleSocial('apple')}
+            loading={oauthLoading}
+            googleLabel="Crear mi empresa con Google"
+            appleLabel="Crear mi empresa con Apple"
+          />
         )}
         {!session && (
           <p style={{ marginTop: 16, fontSize: 13, opacity: 0.7 }}>
