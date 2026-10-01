@@ -38,7 +38,7 @@ export default function Login() {
     const { error, cancelled } = await signInWithOAuth(provider, `${getCanonicalOrigin()}/`)
     if (error || cancelled) {
       setOauthLoading(false)
-      if (error) setError(`No se pudo continuar con ${provider === 'apple' ? 'Apple' : 'Google'}.`)
+      if (error) setError(`No se pudo continuar con ${provider === 'apple' ? 'Apple' : 'Google'}.${error.message ? ' (' + error.message + ')' : ''}`)
     }
     // Web: el navegador redirige a Google y vuelve solo. App: la sesión
     // llega por onAuthStateChange.

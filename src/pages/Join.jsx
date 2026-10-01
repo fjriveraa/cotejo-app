@@ -43,7 +43,7 @@ export default function Join() {
     if (error || cancelled) {
       clearPendingAction()
       setOauthLoading(false)
-      if (error) setError(`No se pudo continuar con ${provider === 'apple' ? 'Apple' : 'Google'}.`)
+      if (error) setError(`No se pudo continuar con ${provider === 'apple' ? 'Apple' : 'Google'}.${error.message ? ' (' + error.message + ')' : ''}`)
     }
   }
 

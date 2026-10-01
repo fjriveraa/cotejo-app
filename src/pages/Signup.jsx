@@ -101,7 +101,7 @@ export default function Signup() {
     if (error || cancelled) {
       clearPendingAction()
       setOauthLoading(false)
-      if (error) setError(`No se pudo continuar con ${providerName}.`)
+      if (error) setError(`No se pudo continuar con ${providerName}.${error.message ? ' (' + error.message + ')' : ''}`)
     }
   }
 
