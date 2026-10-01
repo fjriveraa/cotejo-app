@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import BackButton from '../components/BackButton'
 
 const ROLE_LABELS = {
   empleado: 'Colaborador',
@@ -10,23 +11,27 @@ const ROLE_LABELS = {
 export default function Directory() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [searched, setSearched] = useState(false)
   const [error, setError] = useState(null)
   const [roleByOrg, setRoleByOrg] = useState({})
   const [busyOrgId, setBusyOrgId] = useState(null)
   const [message, setMessage] = useState(null)
 
-  useEffect(() => {
-    search()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
+  // No se lista nada hasta que la persona busca: así no se expone el
+  // directorio completo de empresas a cualquiera que cree una cuenta.
   async function search(e) {
     e?.preventDefault()
+    const q = query.trim()
+    if (q.length < 3) {
+      setError('Escribe al menos 3 letras del nombre de la empresa.')
+      return
+    }
     setLoading(true)
     setError(null)
-    const { data, error } = await supabase.rpc('search_organizations', { p_query: query })
+    const { data, error } = await supabase.rpc('search_organizations', { p_query: q })
     setLoading(false)
+    setSearched(true)
     if (error) setError(error.message)
     else setResults(data || [])
   }
@@ -48,6 +53,7 @@ export default function Directory() {
 
   return (
     <div className="container">
+      <BackButton />
       <h2 style={{ marginTop: 0 }}>Buscar empresas en Cotejo</h2>
       <p style={{ opacity: 0.7, fontSize: 14, marginTop: -8, marginBottom: 24 }}>
         Busca una empresa ya registrada y pide unirte, sin necesitar un enlace. El dueño de esa empresa aprueba
@@ -70,7 +76,9 @@ export default function Directory() {
       {error && <p className="error-text">{error}</p>}
       {message && <p style={{ color: '#2B6459', fontSize: 13, marginBottom: 12 }}>{message}</p>}
 
-      {results.length === 0 && !loading ? (
+      {!searched ? (
+        <p className="empty-state">Escribe el nombre de la empresa para buscarla.</p>
+      ) : results.length === 0 && !loading ? (
         <p className="empty-state">No se encontraron empresas con ese nombre.</p>
       ) : (
         <div className="payment-list">

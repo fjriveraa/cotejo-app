@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import BackButton from '../components/BackButton'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 
@@ -32,6 +33,7 @@ export default function JoinManual() {
 
   return (
     <div className="container">
+      <BackButton />
       <h2 style={{ marginTop: 0 }}>Unirme a otra empresa</h2>
       <p style={{ opacity: 0.7, fontSize: 14, marginTop: -8, marginBottom: 24 }}>
         Si alguien te compartió un enlace de invitación de otra empresa en Cotejo, pégalo aquí para vincular tu

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import BackButton from '../components/BackButton'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 
@@ -47,6 +48,7 @@ export default function Autonomo() {
 
   return (
     <div className="container">
+      <BackButton />
       <h2 style={{ marginTop: 0 }}>Trabajar como comerciante individual</h2>
       <p style={{ opacity: 0.7, fontSize: 14, marginTop: -8, marginBottom: 24 }}>
         Si trabajas por tu cuenta — formal o informal — registra tu negocio con tu nombre o el

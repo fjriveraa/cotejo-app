@@ -4,7 +4,16 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import { AuthProvider } from './hooks/useAuth.jsx'
 import { ToastProvider } from './hooks/useToast.jsx'
+import { isNativeApp } from './lib/appUrl'
 import './index.css'
+
+// En la app nativa no se permite el zoom de la página: un toque accidental al
+// escribir en un campo dejaba la pantalla ampliada sin forma de volver.
+if (isNativeApp()) {
+  document
+    .querySelector('meta[name="viewport"]')
+    ?.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0')
+}
 
 // Se registra apenas carga la app -- sin esto no hay dónde recibir un evento
 // push ni mostrar la notificación cuando la pestaña está cerrada. No hace

@@ -1134,3 +1134,13 @@ button.menu-link {
   .nav-pill.nav-pill-primary, .quick-action-primary, .tabbar-item-primary { color: white; }
   .nav-pill.nav-pill-primary, .quick-action-primary { background: var(--teal-strong); }
 }
+
+/* iOS hace zoom automático al enfocar un campo con letra menor a 16px y a
+   veces el zoom no se quita. En iOS los campos usan 16px para que no ocurra. */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea,
+  .field input, .field select, .field textarea,
+  .org-select {
+    font-size: 16px !important;
+  }
+}
