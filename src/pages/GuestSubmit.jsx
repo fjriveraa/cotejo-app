@@ -87,6 +87,14 @@ export default function GuestSubmit() {
   const [groupInfo, setGroupInfo] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [file, setFile] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
+  useEffect(() => {
+    if (!file || !file.type.startsWith('image/')) { setPreviewUrl(null); return }
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
   const [evidencePath, setEvidencePath] = useState(null)
   const [fileHash, setFileHash] = useState(null)
   const [perceptualHash, setPerceptualHash] = useState(null)
@@ -453,9 +461,31 @@ export default function GuestSubmit() {
                   </p>
                 )}
                 {showFields && (
-                  <label htmlFor="file" style={{ display: 'inline-block', marginTop: 6, fontSize: 12.5, textDecoration: 'underline', opacity: 0.75, cursor: 'pointer', fontWeight: 400 }}>
-                    Cambiar foto
-                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                    {previewUrl ? (
+                      <button type="button" onClick={() => setPreviewOpen(true)} style={{ padding: 0, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', background: 'none', cursor: 'pointer', width: 64, height: 64, flex: '0 0 auto' }} aria-label="Ver comprobante">
+                        <img src={previewUrl} alt="Tu comprobante" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: 13 }}>📄 {file?.name}</span>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+                      {previewUrl && (
+                        <button type="button" onClick={() => setPreviewOpen(true)} style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', color: '#2B6459', textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>
+                          Ver mi comprobante
+                        </button>
+                      )}
+                      <label htmlFor="file" style={{ textDecoration: 'underline', opacity: 0.75, cursor: 'pointer', fontWeight: 400, fontSize: 13 }}>
+                        Cambiar foto
+                      </label>
+                    </div>
+                  </div>
+                )}
+                {previewOpen && previewUrl && (
+                  <div onClick={() => setPreviewOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                    <img src={previewUrl} alt="Tu comprobante" style={{ maxWidth: '100%', maxHeight: '85%', objectFit: 'contain', borderRadius: 8 }} />
+                    <button type="button" className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setPreviewOpen(false)}>Cerrar</button>
+                  </div>
                 )}
               </div>
               {showFields && (<>
