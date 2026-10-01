@@ -159,7 +159,7 @@ export default function GuestSubmit() {
 
   async function handleSearch(e) {
     e.preventDefault()
-    if (!query.trim()) return
+    if (query.trim().length < 3) { setError('Escribe al menos 3 letras del nombre de la empresa.'); return }
     setSearching(true)
     setSearched(true)
     setError(null)
