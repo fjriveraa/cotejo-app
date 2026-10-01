@@ -27,6 +27,21 @@ function isCancel(e) {
   return msg.includes('cancel') || msg.includes('1001') || msg.includes('dismiss')
 }
 
+// Diagnóstico: describe un token sin mostrar datos personales (solo forma,
+// emisor, audiencia y si trae nonce).
+function describeToken(t) {
+  if (!t || typeof t !== 'string') return 'vacío'
+  const parts = t.split('.')
+  if (parts.length !== 3) return `no-JWT(len=${t.length},partes=${parts.length})`
+  try {
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const payload = JSON.parse(atob(b64.padEnd(Math.ceil(b64.length / 4) * 4, '=')))
+    return `JWT(iss=${payload.iss},aud=${payload.aud},nonce=${payload.nonce ? 'sí' : 'no'})`
+  } catch {
+    return `JWT-ilegible(len=${t.length})`
+  }
+}
+
 function randomNonce() {
   const bytes = new Uint8Array(16)
   crypto.getRandomValues(bytes)
@@ -72,6 +87,10 @@ export async function nativeSignIn(provider) {
         token,
         nonce: rawNonce
       })
+      if (error) {
+        const acc = res?.result?.accessToken?.token
+        error.message = `${error.message} | idToken: ${describeToken(token)} | accessToken: ${describeToken(acc)}`
+      }
       return { error }
     }
 
