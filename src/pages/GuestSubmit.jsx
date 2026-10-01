@@ -331,6 +331,9 @@ export default function GuestSubmit() {
     }
   }
 
+  const processing = aiStatus === 'uploading' || aiStatus === 'analyzing'
+  // Paso 1: solo el selector. Paso 2: "leyendo". Paso 3: campos ya llenos.
+  const showFields = aiStatus === 'done' || aiStatus === 'skipped' || (aiStatus === 'error' && Boolean(evidencePath))
   const inReviewMode = aiStatus === 'done' && Boolean(form.amount) && (extractionConfidence?.amount ?? 0) >= 0.6 && !manualOverride
 
   if (loadingDirectOrg) {
@@ -417,23 +420,45 @@ export default function GuestSubmit() {
             )}
             <form onSubmit={handleSubmit}>
               <div className="field">
-                <label htmlFor="file">Foto o captura de tu comprobante</label>
-                <input id="file" type="file" accept="image/*,application/pdf" onChange={handleFileChange} />
-                {aiMessage && (
-                  <p
-                    style={{
-                      fontSize: 13,
-                      marginTop: 6,
-                      color: aiStatus === 'error' ? '#A2483A' : aiStatus === 'done' ? '#2B6459' : 'inherit',
-                      opacity: aiStatus === 'uploading' || aiStatus === 'analyzing' ? 0.7 : 1
-                    }}
+                {!processing && !showFields && (
+                  <label
+                    htmlFor="file"
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '28px 16px', border: '2px dashed #2B6459', borderRadius: 14, background: 'rgba(43, 100, 89, 0.06)', cursor: 'pointer', textAlign: 'center', fontWeight: 600, color: '#2B6459' }}
                   >
-                    {(aiStatus === 'uploading' || aiStatus === 'analyzing') && '⏳ '}
-                    {aiStatus === 'done' && '✓ '}
+                    <span style={{ fontSize: 34, lineHeight: 1 }}>📷</span>
+                    <span style={{ fontSize: 16 }}>Subir o tomar foto del comprobante</span>
+                    <span style={{ fontSize: 12.5, fontWeight: 400, opacity: 0.75 }}>Nosotros leemos los datos por ti</span>
+                  </label>
+                )}
+                <input
+                  id="file"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleFileChange}
+                  style={{ position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden', pointerEvents: 'none' }}
+                  tabIndex={-1}
+                />
+                {processing && (
+                  <div style={{ textAlign: 'center', padding: '32px 16px', borderRadius: 14, background: 'rgba(43, 100, 89, 0.06)' }}>
+                    <Spinner />
+                    <p style={{ margin: '10px 0 0', fontWeight: 600 }}>
+                      {aiStatus === 'uploading' ? 'Subiendo tu comprobante...' : 'Leyendo tu comprobante...'}
+                    </p>
+                    <p style={{ margin: '4px 0 0', fontSize: 12.5, opacity: 0.65 }}>Solo toma unos segundos.</p>
+                  </div>
+                )}
+                {aiMessage && !processing && (
+                  <p style={{ fontSize: 13, marginTop: 8, color: aiStatus === 'error' ? '#A2483A' : aiStatus === 'done' ? '#2B6459' : 'inherit' }}>
                     {aiMessage}
                   </p>
                 )}
+                {showFields && (
+                  <label htmlFor="file" style={{ display: 'inline-block', marginTop: 6, fontSize: 12.5, textDecoration: 'underline', opacity: 0.75, cursor: 'pointer', fontWeight: 400 }}>
+                    Cambiar foto
+                  </label>
+                )}
               </div>
+              {showFields && (<>
               {inReviewMode ? (
                 <div className="field" style={{ background: 'rgba(43, 100, 89, 0.06)', borderRadius: 10, padding: 14, marginBottom: 4 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Esto es lo que detectamos:</div>
@@ -516,14 +541,17 @@ export default function GuestSubmit() {
                 <textarea id="notes" rows={2} value={form.notes} onChange={(e) => updateField('notes', e.target.value)} />
               </div>
               {error && <p className="error-text">{error}</p>}
-              <button
-                type="submit"
-                className="btn btn-primary"
-                style={{ width: '100%' }}
-                disabled={submitting || aiStatus === 'uploading' || aiStatus === 'analyzing'}
-              >
-                {submitting && <Spinner />}{submitting ? 'Enviando...' : inReviewMode ? 'Confirmar y enviar' : 'Enviar comprobante'}
-              </button>
+              <div style={{ position: 'sticky', bottom: 0, background: 'var(--card)', padding: '12px 0 calc(12px + env(safe-area-inset-bottom))', marginTop: 8, zIndex: 5 }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ width: '100%' }}
+                  disabled={submitting || processing}
+                >
+                  {submitting && <Spinner />}{submitting ? 'Enviando...' : inReviewMode ? 'Confirmar y enviar' : 'Enviar comprobante'}
+                </button>
+              </div>
+              </>)}
             </form>
           </>
         )}
