@@ -8,6 +8,9 @@
 // local, donde no existe cotejo.net.
 export function getCanonicalOrigin() {
   if (typeof window === 'undefined') return 'https://cotejo.net'
+  // En la app nativa la página corre en capacitor://localhost: los links que
+  // se comparten hacia afuera deben usar siempre el dominio real.
+  if (isNativeApp()) return 'https://cotejo.net'
   const host = window.location.hostname
   if (host === 'localhost' || host === '127.0.0.1') return window.location.origin
   return 'https://cotejo.net'

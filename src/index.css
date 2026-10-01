@@ -1144,3 +1144,8 @@ button.menu-link {
     font-size: 16px !important;
   }
 }
+
+/* Ningún campo ni selector debe ser más ancho que la pantalla: una opción
+   larga en un <select> empujaba la página hacia la derecha en el iPhone. */
+select, input, textarea { max-width: 100%; }
+html, body { overflow-x: hidden; }

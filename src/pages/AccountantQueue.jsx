@@ -622,12 +622,12 @@ export default function AccountantQueue() {
     <div className="container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ marginTop: 0, marginBottom: 0 }}>Cola de confirmación</h2>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}>
-          <span style={{ opacity: 0.6 }}>Ordenar por</span>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, maxWidth: '100%', minWidth: 0 }}>
+          <span style={{ opacity: 0.6, whiteSpace: 'nowrap' }}>Ordenar por</span>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            style={{ fontSize: 12.5, padding: '4px 6px', borderRadius: 6, border: '1px solid #e5e0d8' }}
+            style={{ fontSize: 12.5, padding: '4px 6px', borderRadius: 6, border: '1px solid #e5e0d8', minWidth: 0, maxWidth: '100%', flex: 1 }}
           >
             <option value="customer_waiting">Cliente esperando primero</option>
             <option value="transaction_date">Fecha del banco (más antigua primero)</option>
