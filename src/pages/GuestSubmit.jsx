@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { isPlausibleTransactionDate } from '../lib/dateSanity'
+import { isPlausibleTransactionDate, parseLocalDate } from '../lib/dateSanity'
 import PublicPageHeader from '../components/PublicPageHeader'
 import Spinner from '../components/Spinner'
 
@@ -100,7 +100,10 @@ export default function GuestSubmit() {
   const [perceptualHash, setPerceptualHash] = useState(null)
   const [aiStatus, setAiStatus] = useState('idle') // idle | uploading | analyzing | done | error | skipped
   const [aiMessage, setAiMessage] = useState(null)
+  // dateWarning: null | { kind: 'old', date, daysAgo } | { kind: 'unreadable', date }
   const [dateWarning, setDateWarning] = useState(null)
+  const [oldDateConfirmed, setOldDateConfirmed] = useState(false)
+  const [nameFromReceipt, setNameFromReceipt] = useState(false)
   // Cuando la IA lee el monto con buena confianza, no tiene sentido pedirle
   // al invitado que "llene" un formulario que ya está lleno -- se le muestra
   // un resumen para CONFIRMAR (revisar y enviar), no para completar. Si algo
@@ -178,6 +181,8 @@ export default function GuestSubmit() {
     setAiStatus('idle')
     setAiMessage(null)
     setDateWarning(null)
+    setOldDateConfirmed(false)
+    setNameFromReceipt(false)
     setExtractionConfidence(null)
     setManualOverride(false)
     setRawExtraction(null)
@@ -185,11 +190,20 @@ export default function GuestSubmit() {
 
   function applyExtraction(data) {
     if (!data) return
-    // Si la fecha que detectó la IA no es creíble (año equivocado, futura,
-    // etc.), mejor dejar el campo vacío que autocompletar algo mal.
+    // Fecha dudosa: si es antigua (pero válida) se conserva y se le pregunta a
+    // la persona si es correcta -- no se le pide "corregirla", porque un
+    // comprobante viejo real no tiene nada que corregir. Si es imposible
+    // (futura o ilegible) sí se descarta y se pide la fecha.
     if (data.transaction_date && !isPlausibleTransactionDate(data.transaction_date)) {
-      setDateWarning(`La IA detectó ${data.transaction_date} como fecha, pero no parece correcta — revísala y corrígela a mano.`)
-      data = { ...data, transaction_date: null }
+      const d = parseLocalDate(data.transaction_date)
+      const today = new Date(); today.setHours(0, 0, 0, 0)
+      const daysAgo = d ? Math.round((today.getTime() - d.getTime()) / 86400000) : null
+      if (d && daysAgo > 0) {
+        setDateWarning({ kind: 'old', date: data.transaction_date, daysAgo })
+      } else {
+        setDateWarning({ kind: 'unreadable', date: data.transaction_date })
+        data = { ...data, transaction_date: null }
+      }
     }
     setForm((prev) => {
       const next = { ...prev }
@@ -199,6 +213,10 @@ export default function GuestSubmit() {
       if (data.transaction_date && !prev.transactionDate) next.transactionDate = data.transaction_date
       if (data.origin_bank && !prev.originBank) next.originBank = data.origin_bank
       if (data.origin_account_holder && !prev.originAccountHolder) next.originAccountHolder = data.origin_account_holder
+      if (data.origin_account_holder && !prev.submitterName && !groupInfo?.member_id) {
+        next.submitterName = data.origin_account_holder.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase())
+        setNameFromReceipt(true)
+      }
       if (data.origin_account_number && !prev.originAccountNumber) next.originAccountNumber = data.origin_account_number
       return next
     })
@@ -295,6 +313,16 @@ export default function GuestSubmit() {
       return
     }
 
+    if (dateWarning?.kind === 'old' && form.transactionDate === dateWarning.date && !oldDateConfirmed) {
+      setError('Confirma si la fecha del comprobante es correcta.')
+      return
+    }
+
+    const confirmedOldNote = dateWarning?.kind === 'old' && oldDateConfirmed && form.transactionDate === dateWarning.date
+      ? `[Fecha antigua confirmada por quien envió: ${dateWarning.date}, hace ${dateWarning.daysAgo} días]`
+      : null
+    const finalNotes = [form.notes.trim(), confirmedOldNote].filter(Boolean).join('\n')
+
     setSubmitting(true)
     try {
       const { data, error: rpcError } = await supabase.rpc('submit_guest_payment', {
@@ -308,7 +336,7 @@ export default function GuestSubmit() {
         p_origin_bank: form.originBank.trim() || null,
         p_origin_account_holder: form.originAccountHolder.trim() || null,
         p_origin_account_number: form.originAccountNumber.trim() || null,
-        p_notes: form.notes.trim() || null,
+        p_notes: finalNotes || null,
         p_evidence_path: evidencePath,
         p_file_hash: fileHash,
         p_is_in_person: isInPerson,
@@ -343,6 +371,25 @@ export default function GuestSubmit() {
   // Paso 1: solo el selector. Paso 2: "leyendo". Paso 3: campos ya llenos.
   const showFields = aiStatus === 'done' || aiStatus === 'skipped' || (aiStatus === 'error' && Boolean(evidencePath))
   const inReviewMode = aiStatus === 'done' && Boolean(form.amount) && (extractionConfidence?.amount ?? 0) >= 0.6 && !manualOverride
+
+  const dateNotice = !dateWarning ? null : dateWarning.kind === 'old' ? (
+    <div style={{ background: 'rgba(176, 137, 0, 0.1)', borderRadius: 10, padding: 12, marginTop: 10, fontSize: 13.5 }}>
+      <div>
+        📅 Este comprobante es del <strong>{parseLocalDate(dateWarning.date)?.toLocaleDateString('es-HN', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>
+        {' '}(hace {dateWarning.daysAgo >= 60 ? `${Math.round(dateWarning.daysAgo / 30)} meses` : `${dateWarning.daysAgo} días`}).
+      </div>
+      {oldDateConfirmed && form.transactionDate === dateWarning.date ? (
+        <div style={{ marginTop: 6, color: '#2B6459' }}>✓ Fecha confirmada.</div>
+      ) : (
+        <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+          <button type="button" className="btn btn-primary" style={{ padding: '8px 12px', fontSize: 13 }} onClick={() => setOldDateConfirmed(true)}>Sí, es de esa fecha</button>
+          <button type="button" className="btn" style={{ padding: '8px 12px', fontSize: 13 }} onClick={() => { setManualOverride(true); setDateWarning(null) }}>La fecha está mal</button>
+        </div>
+      )}
+    </div>
+  ) : (
+    <p style={{ color: '#B08900', fontSize: 13, marginTop: 8 }}>⚠ No pudimos leer bien la fecha del comprobante. Escríbela abajo.</p>
+  )
 
   if (loadingDirectOrg) {
     return (
@@ -511,9 +558,7 @@ export default function GuestSubmit() {
                   <p style={{ fontSize: 11.5, opacity: 0.55, marginTop: 8, marginBottom: 0 }}>
                     Comparamos estos datos con el comprobante y con las cuentas registradas de {selectedOrg.name}.
                   </p>
-                  {dateWarning && (
-                    <p style={{ color: '#B08900', fontSize: 12.5, marginTop: 8, marginBottom: 0 }}>⚠ {dateWarning}</p>
-                  )}
+                  {dateNotice}
                   <button
                     type="button"
                     onClick={() => setManualOverride(true)}
@@ -545,19 +590,20 @@ export default function GuestSubmit() {
                       id="transactionDate"
                       type="date"
                       value={form.transactionDate}
-                      onChange={(e) => { updateField('transactionDate', e.target.value); setDateWarning(null) }}
+                      onChange={(e) => { updateField('transactionDate', e.target.value); setDateWarning(null); setOldDateConfirmed(false) }}
                     />
-                    {dateWarning && (
-                      <p style={{ color: '#B08900', fontSize: 12.5, marginTop: 4 }}>⚠ {dateWarning}</p>
-                    )}
+                    {dateNotice}
                   </div>
                 </>
               )}
               {!groupInfo?.member_id && (
                 <div className="field">
-                  <label htmlFor="submitterName">Tu nombre</label>
-                  <input id="submitterName" type="text" value={form.submitterName} onChange={(e) => updateField('submitterName', e.target.value)} required={isGroupLink} />
-                  {isGroupLink && (
+                  <label htmlFor="submitterName">Nombre de quien envía</label>
+                  <input id="submitterName" type="text" value={form.submitterName} onChange={(e) => { updateField('submitterName', e.target.value); setNameFromReceipt(false) }} required={isGroupLink} />
+                  {nameFromReceipt && (
+                    <p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>Lo tomamos del comprobante (titular de la cuenta). Si pagó otra persona por ti, como un familiar, escribe aquí tu nombre como aparece en la lista.</p>
+                  )}
+                  {isGroupLink && !nameFromReceipt && (
                     <p style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Escribe tu nombre igual que en la lista para que te encontremos más rápido.</p>
                   )}
                 </div>
