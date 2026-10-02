@@ -6,7 +6,7 @@ import { getCanonicalOrigin } from '../lib/appUrl'
 import { SkeletonPaymentList } from '../components/Skeleton'
 import { isPlausibleTransactionDate, parseLocalDate } from '../lib/dateSanity'
 import EvidenceViewer from '../components/EvidenceViewer'
-import { canonicalBank, bankColor, NO_BANK } from '../lib/banks'
+import { canonicalBank, bankColor, NO_BANK } from '../lib/bankGroups'
 
 function ViewEvidence({ path }) {
   const [open, setOpen] = useState(false)
