@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import EvidenceViewer from '../components/EvidenceViewer'
 import { IconShield } from '../components/icons'
 
 const METHOD_LABELS = {
@@ -8,20 +9,15 @@ const METHOD_LABELS = {
 }
 
 function DocLink({ path, label }) {
-  const [loading, setLoading] = useState(false)
-
-  async function open() {
-    setLoading(true)
-    const { data, error } = await supabase.storage.from('verification-docs').createSignedUrl(path, 300)
-    setLoading(false)
-    if (!error && data?.signedUrl) window.open(data.signedUrl, '_blank', 'noopener')
-  }
-
+  const [open, setOpen] = useState(false)
   if (!path) return null
   return (
-    <button type="button" className="btn btn-secondary" onClick={open} disabled={loading} style={{ fontSize: 13 }}>
-      {loading ? 'Abriendo...' : label}
-    </button>
+    <>
+      <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)} style={{ fontSize: 13 }}>
+        {label}
+      </button>
+      {open && <EvidenceViewer bucket="verification-docs" path={path} onClose={() => setOpen(false)} />}
+    </>
   )
 }
 

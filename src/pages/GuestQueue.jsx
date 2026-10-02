@@ -5,34 +5,18 @@ import { IconInbox } from '../components/icons'
 import { getCanonicalOrigin } from '../lib/appUrl'
 import { SkeletonPaymentList } from '../components/Skeleton'
 import { isPlausibleTransactionDate, parseLocalDate } from '../lib/dateSanity'
+import EvidenceViewer from '../components/EvidenceViewer'
+import { canonicalBank, bankColor, NO_BANK } from '../lib/banks'
 
 function ViewEvidence({ path }) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-
-  async function open() {
-    setLoading(true)
-    setError(null)
-    const { data, error: fetchError } = await supabase.storage.from('guest-evidence').createSignedUrl(path, 300)
-    setLoading(false)
-    if (fetchError || !data?.signedUrl) {
-      // Antes fallaba en silencio — el botón no hacía nada visible y parecía
-      // que el archivo no existiera. El archivo puede seguir ahí; solo falló
-      // cargarlo (conexión débil, por ejemplo), así que se avisa y se puede
-      // reintentar con el mismo botón.
-      setError(fetchError?.message || 'No se pudo abrir el comprobante. Intenta de nuevo.')
-      return
-    }
-    window.open(data.signedUrl, '_blank', 'noopener')
-  }
-
+  const [open, setOpen] = useState(false)
   if (!path) return null
   return (
     <span>
-      <button type="button" className="btn btn-secondary" onClick={open} disabled={loading} style={{ fontSize: 13 }}>
-        {loading ? 'Abriendo...' : 'Ver comprobante'}
+      <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)} style={{ fontSize: 13 }}>
+        Ver comprobante
       </button>
-      {error && <span style={{ marginLeft: 8, fontSize: 12, color: '#B91C1C' }}>{error}</span>}
+      {open && <EvidenceViewer bucket="guest-evidence" path={path} onClose={() => setOpen(false)} />}
     </span>
   )
 }
@@ -134,6 +118,7 @@ export default function GuestQueue() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [busyId, setBusyId] = useState(null)
+  const [bankFilter, setBankFilter] = useState('todos')
   const forensicsEnabled = Boolean(membership?.organizations?.forensics_addon_enabled)
 
   function applyForensicsResult(submissionId, result) {
@@ -182,6 +167,22 @@ export default function GuestQueue() {
     load()
   }
 
+  const bankOf = (s) => canonicalBank(s.detected_bank)
+  const bankCounts = items.reduce((acc, it) => {
+    const b = bankOf(it)
+    acc[b] = (acc[b] || 0) + 1
+    return acc
+  }, {})
+  const bankNames = Object.keys(bankCounts).sort((a, b) => (a === NO_BANK) - (b === NO_BANK) || bankCounts[b] - bankCounts[a] || a.localeCompare(b))
+  const activeFilter = bankFilter !== 'todos' && !bankCounts[bankFilter] ? 'todos' : bankFilter
+  const visibleItems = (activeFilter === 'todos' ? items : items.filter((it) => bankOf(it) === activeFilter))
+    .slice()
+    .sort((x, y) => {
+      if (activeFilter !== 'todos') return 0
+      const bx = bankOf(x), by = bankOf(y)
+      return bx === by ? 0 : (bx === NO_BANK) - (by === NO_BANK) || bankCounts[by] - bankCounts[bx] || bx.localeCompare(by)
+    })
+
   if (loading) {
     return (
       <div className="container">
@@ -208,12 +209,34 @@ export default function GuestQueue() {
           <div className="subtitle">No hay comprobantes de invitados pendientes de revisar.</div>
         </div>
       ) : (
+        <>
+        {bankNames.length > 1 && (
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, marginBottom: 8 }}>
+            {['todos', ...bankNames].map((b) => {
+              const selected = activeFilter === b
+              const color = b === 'todos' ? '#2B6459' : b === NO_BANK ? '#6B7280' : bankColor(b)
+              return (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => setBankFilter(b)}
+                  style={{ flex: '0 0 auto', whiteSpace: 'nowrap', padding: '6px 12px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${color}`, background: selected ? color : 'transparent', color: selected ? 'white' : color }}
+                >
+                  {b === 'todos' ? `Todos (${items.length})` : `${b} (${bankCounts[b]})`}
+                </button>
+              )
+            })}
+          </div>
+        )}
         <div className="payment-list">
-          {items.map((s) => (
+          {visibleItems.map((s) => (
             <div key={s.submission_id} className="payment-row" style={{ flexWrap: 'wrap', gap: 12 }}>
               <div>
                 <div className="amount">
                   {s.currency} {Number(s.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+                  <span style={{ marginLeft: 10, fontSize: 11.5, fontWeight: 700, color: 'white', background: bankOf(s) === NO_BANK ? '#6B7280' : bankColor(bankOf(s)), padding: '2px 8px', borderRadius: 6, verticalAlign: 'middle' }}>
+                    {bankOf(s)}
+                  </span>
                 </div>
                 <div className="meta">
                   {s.submitter_name || 'Sin nombre'}{s.submitter_contact ? ` · ${s.submitter_contact}` : ''}
@@ -330,6 +353,7 @@ export default function GuestQueue() {
             </div>
           ))}
         </div>
+        </>
       )}
 
       {membership && (
