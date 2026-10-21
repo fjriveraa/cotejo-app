@@ -63,41 +63,72 @@ function buildEmailHtml(opts: {
   orgName: string
   title: string
   body: string
+  when: string | null
   ctaPath: string
   ctaLabel: string
   preheader: string
   isAlert: boolean
 }) {
-  const { orgName, title, body, ctaPath, ctaLabel, preheader, isAlert } = opts
+  const { orgName, title, body, when, ctaPath, ctaLabel, preheader, isAlert } = opts
   const accent = isAlert ? "#A2483A" : "#2B6459"
+  const accentSoft = isAlert ? "#FBEFEC" : "#EAF3F0"
+
+  // El cuerpo viene como "HNL 300 · Nombre — Sin alertas, datos verificados."
+  // Separamos el dato concreto (monto, y persona/banco) de la evaluación para
+  // darle jerarquía visual en vez de un solo párrafo plano. Si el formato no
+  // calza (otros tipos de notificación), se muestra el texto completo.
+  const [head, ...rest] = body.split(" — ")
+  const assessment = rest.join(" — ").trim()
+  const [primary, ...secondaryParts] = (head ?? body).split(" · ")
+  const secondary = secondaryParts.join(" · ").trim()
+
+  const detail = `
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${accentSoft};border-left:4px solid ${accent};border-radius:6px;">
+                  <tr>
+                    <td style="padding:18px 20px;">
+                      <div style="font-size:28px;line-height:1.2;font-weight:700;color:#1f1b14;">${escapeHtml(primary.trim())}</div>
+                      ${secondary ? `<div style="margin-top:6px;font-size:16px;line-height:1.4;color:#4a4438;">${escapeHtml(secondary)}</div>` : ""}
+                      ${assessment ? `<div style="margin-top:12px;font-size:14px;line-height:1.5;color:${accent};font-weight:600;">${escapeHtml(assessment)}</div>` : ""}
+                    </td>
+                  </tr>
+                </table>`
+
   return `<!doctype html>
-<html>
-  <body style="margin:0;padding:0;background:#f5f1e8;font-family:-apple-system,Helvetica,Arial,sans-serif;">
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light only">
+    <meta name="supported-color-schemes" content="light only">
+    <title>${escapeHtml(title)}</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f5f1e8;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(preheader)}</div>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f1e8;padding:24px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f1e8;">
       <tr>
-        <td align="center">
-          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #e5e0d8;">
+        <td align="center" style="padding:16px 8px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e0d8;">
             <tr>
-              <td style="background:${accent};padding:18px 24px;">
-                <span style="color:#ffffff;font-size:15px;font-weight:700;letter-spacing:0.3px;">Cotejo</span>
-                <span style="color:rgba(255,255,255,0.85);font-size:13px;display:block;margin-top:2px;">${escapeHtml(orgName)}</span>
+              <td style="background:${accent};padding:24px 28px;">
+                <div style="color:#ffffff;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Cotejo</div>
+                <div style="color:rgba(255,255,255,0.9);font-size:16px;margin-top:6px;">${escapeHtml(orgName)}</div>
               </td>
             </tr>
             <tr>
-              <td style="padding:26px 24px 8px;">
-                <h1 style="margin:0 0 10px;font-size:18px;color:#1f1b14;">${escapeHtml(title)}</h1>
-                <p style="margin:0;font-size:14px;line-height:1.55;color:#4a4438;">${escapeHtml(body)}</p>
+              <td style="padding:32px 28px 8px;">
+                <h1 style="margin:0 0 20px;font-size:22px;line-height:1.3;color:#1f1b14;">${escapeHtml(title)}</h1>${detail}
+                ${when ? `<p style="margin:14px 0 0;font-size:13px;color:#9a9384;">Recibido ${escapeHtml(when)}</p>` : ""}
               </td>
             </tr>
             <tr>
-              <td style="padding:20px 24px 26px;">
-                <a href="${APP_URL}${ctaPath}" style="display:block;text-align:center;background:${accent};color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:13px 18px;border-radius:8px;">${escapeHtml(ctaLabel)}</a>
+              <td style="padding:24px 28px 32px;">
+                <a href="${APP_URL}${ctaPath}" style="display:block;text-align:center;background:${accent};color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;padding:16px 20px;border-radius:8px;">${escapeHtml(ctaLabel)}</a>
               </td>
             </tr>
             <tr>
-              <td style="padding:0 24px 22px;">
-                <p style="margin:0;font-size:11.5px;color:#9a9384;">Recibes esto porque tu rol en ${escapeHtml(orgName)} está autorizado para revisar pagos en Cotejo.</p>
+              <td style="padding:20px 28px 24px;border-top:1px solid #eee9e0;background:#faf8f4;">
+                <p style="margin:0 0 6px;font-size:12px;line-height:1.5;color:#7d7668;">Recibes esto porque tu rol en ${escapeHtml(orgName)} está autorizado para revisar pagos en Cotejo.</p>
+                <p style="margin:0;font-size:12px;color:#9a9384;">Cotejo · <a href="${APP_URL}" style="color:#9a9384;">cotejo.net</a></p>
               </td>
             </tr>
           </table>
@@ -185,7 +216,8 @@ Deno.serve(async (req) => {
   const html = buildEmailHtml({
     orgName: org?.name ?? "tu empresa",
     title: notification.title,
-    body: when ? `${body} (${when})` : body,
+    body,
+    when,
     ctaPath,
     ctaLabel,
     preheader,

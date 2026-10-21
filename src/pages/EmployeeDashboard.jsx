@@ -98,6 +98,43 @@ export default function EmployeeDashboard() {
       .trim()
   }
 
+  function bankMatches(registeredBank, detectedBank) {
+    const a = normalize(registeredBank)
+    const b = normalize(detectedBank)
+    if (!a || !b) return false
+    return a === b || a.includes(b) || b.includes(a)
+  }
+
+  // Decide a qué cuenta registrada corresponde el comprobante. Reglas:
+  // - Con últimos 4 dígitos: tienen que coincidir los 4 dígitos Y, si el
+  //   comprobante trae banco, también el banco (antes bastaba con uno de los
+  //   dos, y un pago a otra cuenta del mismo banco pasaba como válido).
+  // - Sin banco pero con últimos 4: si solo una cuenta registrada termina en
+  //   esos dígitos, se toma el banco de ese registro.
+  // - Solo banco: se elige únicamente si la empresa tiene una sola cuenta ahí;
+  //   con varias se deja que la persona escoja en vez de adivinar la primera.
+  function resolveReceivingAccount(data) {
+    const last4 = (data.account_last4 || '').trim()
+    const bank = (data.bank || '').trim()
+
+    if (last4) {
+      const byLast4 = accounts.filter((a) => a.last4 === last4)
+      const compatible = bank ? byLast4.filter((a) => bankMatches(a.bank, bank)) : byLast4
+      if (compatible.length === 1) return { match: compatible[0], conflict: false }
+      if (compatible.length > 1) return { match: null, conflict: false }
+      return { match: null, conflict: true }
+    }
+
+    if (bank) {
+      const byBank = accounts.filter((a) => bankMatches(a.bank, bank))
+      if (byBank.length === 1) return { match: byBank[0], conflict: false }
+      if (byBank.length > 1) return { match: null, conflict: false }
+      return { match: null, conflict: true }
+    }
+
+    return { match: null, conflict: false }
+  }
+
   function applyExtraction(data) {
     if (!data) return
     // Si la fecha que detectó la IA no es creíble (año equivocado, futura,
@@ -119,18 +156,16 @@ export default function EmployeeDashboard() {
       if (data.origin_account_number && !prev.origin_account_number) next.origin_account_number = data.origin_account_number
       if (data.destination_account_holder && !prev.destination_account_holder) next.destination_account_holder = data.destination_account_holder
 
-      if (data.bank) {
-        const match = accounts.find(
-          (a) =>
-            normalize(a.bank) === normalize(data.bank) ||
-            (data.account_last4 && a.last4 === data.account_last4 && normalize(a.bank).includes(normalize(data.bank)))
-        )
-        if (match) {
-          next.receiving_account_id = match.id
-        } else {
-          next.receiving_account_id = OTHER
-          next.manual_bank = data.bank
-        }
+      const resolved = resolveReceivingAccount(data)
+      if (resolved.match) {
+        // Si hay registro de la cuenta, el banco sale del registro aunque el
+        // comprobante no lo muestre (o lo muestre escrito distinto).
+        next.receiving_account_id = resolved.match.id
+      } else if (resolved.conflict && data.bank) {
+        // El comprobante apunta a una cuenta que no es de la empresa: o el
+        // banco no coincide con esos últimos 4 dígitos, o no existe.
+        next.receiving_account_id = OTHER
+        next.manual_bank = data.bank
       }
       return next
     })

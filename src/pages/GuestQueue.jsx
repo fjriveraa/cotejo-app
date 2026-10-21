@@ -112,9 +112,149 @@ function CustomerLinkCard({ organizationId, organizationName }) {
   )
 }
 
+const MONTH_FORMAT = { month: 'long', year: 'numeric' }
+const DAY_FORMAT = { weekday: 'long', day: '2-digit', month: 'long' }
+
+function capitalize(text) {
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : text
+}
+
+function pad(n) {
+  return String(n).padStart(2, '0')
+}
+
+function formatMoney(currency, amount) {
+  return `${currency} ${Number(amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}`
+}
+
+// Totales de lo confirmado por moneda -- "HNL 4,500.00 · USD 20.00". Solo
+// cuenta lo confirmado: sumar también lo rechazado inflaría el total del día.
+function confirmedTotals(rows) {
+  const totals = {}
+  for (const r of rows) {
+    if (r.status !== 'confirmed') continue
+    totals[r.currency] = (totals[r.currency] || 0) + Number(r.amount || 0)
+  }
+  const parts = Object.entries(totals).map(([cur, total]) => formatMoney(cur, total))
+  return parts.length ? parts.join(' · ') : null
+}
+
+// Agrupa por mes y, dentro de cada mes, por día, según la fecha en que llegó
+// el comprobante (la fecha del comprobante puede faltar o ser dudosa). El
+// orden es del más reciente al más antiguo.
+function groupByMonthAndDay(rows) {
+  const months = new Map()
+  for (const r of rows) {
+    const d = new Date(r.created_at)
+    const monthKey = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
+    const dayKey = `${monthKey}-${pad(d.getDate())}`
+    if (!months.has(monthKey)) {
+      months.set(monthKey, { key: monthKey, label: capitalize(d.toLocaleDateString('es-HN', MONTH_FORMAT)), days: new Map(), rows: [] })
+    }
+    const month = months.get(monthKey)
+    month.rows.push(r)
+    if (!month.days.has(dayKey)) {
+      month.days.set(dayKey, { key: dayKey, label: capitalize(d.toLocaleDateString('es-HN', DAY_FORMAT)), rows: [] })
+    }
+    month.days.get(dayKey).rows.push(r)
+  }
+  return [...months.values()]
+    .sort((a, b) => (a.key < b.key ? 1 : -1))
+    .map((m) => ({ ...m, days: [...m.days.values()].sort((a, b) => (a.key < b.key ? 1 : -1)) }))
+}
+
+const STATUS_BADGE = {
+  confirmed: { text: 'Confirmado', color: '#2B6459', bg: '#E6F4F1' },
+  not_confirmed: { text: 'No se pudo confirmar', color: '#92400E', bg: '#FEF3C7' }
+}
+
+const summaryStyle = { cursor: 'pointer', display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', listStyle: 'revert' }
+
+function GuestArchive({ rows, loading, error }) {
+  const months = groupByMonthAndDay(rows)
+  const now = new Date()
+  const currentMonthKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`
+  const todayKey = `${currentMonthKey}-${pad(now.getDate())}`
+
+  return (
+    <div style={{ marginTop: 32 }}>
+      <h3 style={{ margin: '0 0 4px' }}>Archivo de comprobantes</h3>
+      <p style={{ opacity: 0.7, fontSize: 13, margin: '0 0 16px' }}>
+        Los comprobantes ya revisados, guardados por mes y por día según cuándo llegaron.
+      </p>
+      {error && <p className="error-text">{error}</p>}
+      {loading ? (
+        <SkeletonPaymentList rows={2} />
+      ) : months.length === 0 ? (
+        <p style={{ opacity: 0.6, fontSize: 14 }}>Todavía no hay comprobantes revisados.</p>
+      ) : (
+        months.map((month) => {
+          const monthTotal = confirmedTotals(month.rows)
+          return (
+            <details key={month.key} open={month.key === currentMonthKey} className="card" style={{ marginBottom: 12, padding: 14 }}>
+              <summary style={summaryStyle}>
+                <span style={{ fontWeight: 700, fontSize: 15 }}>📁 {month.label}</span>
+                <span className="meta">
+                  {month.rows.length} comprobante{month.rows.length === 1 ? '' : 's'}
+                  {monthTotal ? ` · confirmado: ${monthTotal}` : ''}
+                </span>
+              </summary>
+              <div style={{ marginTop: 12 }}>
+                {month.days.map((day) => {
+                  const dayTotal = confirmedTotals(day.rows)
+                  return (
+                    <details key={day.key} open={day.key === todayKey} style={{ marginBottom: 8, paddingLeft: 12, borderLeft: '2px solid #E5E0D8' }}>
+                      <summary style={summaryStyle}>
+                        <span style={{ fontWeight: 600, fontSize: 14 }}>{day.label}</span>
+                        <span className="meta">
+                          {day.rows.length}{dayTotal ? ` · ${dayTotal}` : ''}
+                        </span>
+                      </summary>
+                      <div className="payment-list" style={{ marginTop: 8 }}>
+                        {day.rows.map((r) => {
+                          const badge = STATUS_BADGE[r.status]
+                          return (
+                            <div key={r.id} className="payment-row" style={{ flexWrap: 'wrap', gap: 12 }}>
+                              <div>
+                                <div className="amount">{formatMoney(r.currency, r.amount)}</div>
+                                <div className="meta">
+                                  {r.submitter_name || 'Sin nombre'}
+                                  {r.reference_raw ? ` · ref: ${r.reference_raw}` : ''}
+                                  {' · '}
+                                  {new Date(r.created_at).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                                {r.review_notes && <div className="meta">Motivo: {r.review_notes}</div>}
+                                {badge && (
+                                  <span style={{ display: 'inline-block', marginTop: 4, fontSize: 12, fontWeight: 700, color: badge.color, background: badge.bg, padding: '2px 8px', borderRadius: 6 }}>
+                                    {badge.text}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="actions-row">
+                                <ViewEvidence path={r.evidence_path} />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </details>
+                  )
+                })}
+              </div>
+            </details>
+          )
+        })
+      )}
+    </div>
+  )
+}
+
 export default function GuestQueue() {
   const { membership } = useAuth()
   const [items, setItems] = useState([])
+  const [archive, setArchive] = useState([])
+  const [archiveLoading, setArchiveLoading] = useState(true)
+  const [archiveError, setArchiveError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [busyId, setBusyId] = useState(null)
@@ -134,8 +274,27 @@ export default function GuestQueue() {
   useEffect(() => {
     if (!membership) return
     load()
+    loadArchive()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [membership?.organization_id])
+
+  // El archivo lee la tabla directo (la política de seguridad ya limita a los
+  // roles de revisión de esta empresa). Tope de 1000 para no cargar años de
+  // historial de golpe en un teléfono.
+  async function loadArchive() {
+    setArchiveLoading(true)
+    setArchiveError(null)
+    const { data, error: archiveFetchError } = await supabase
+      .from('guest_submissions')
+      .select('id, amount, currency, submitter_name, reference_raw, evidence_path, status, review_notes, created_at')
+      .eq('organization_id', membership.organization_id)
+      .in('status', ['confirmed', 'not_confirmed'])
+      .order('created_at', { ascending: false })
+      .limit(1000)
+    setArchiveLoading(false)
+    if (archiveFetchError) setArchiveError(archiveFetchError.message)
+    else setArchive(data || [])
+  }
 
   async function load() {
     setLoading(true)
@@ -165,6 +324,7 @@ export default function GuestQueue() {
       return
     }
     load()
+    loadArchive()
   }
 
   const bankOf = (s) => canonicalBank(s.detected_bank)
@@ -355,6 +515,8 @@ export default function GuestQueue() {
         </div>
         </>
       )}
+
+      <GuestArchive rows={archive} loading={archiveLoading} error={archiveError} />
 
       {membership && (
         <div style={{ marginTop: 28 }}>
