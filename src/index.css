@@ -313,6 +313,35 @@ button.menu-link {
 
 .tabbar-icon-wrap { position: relative; display: inline-flex; }
 
+/* Botón central de asistencia: círculo que sobresale de la barra. */
+.tabbar-mark {
+  flex: 0 0 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: transparent;
+  border: none;
+  padding: 0 0 4px;
+  color: var(--teal-text);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tabbar-mark-circle {
+  width: 54px;
+  height: 54px;
+  margin-top: -22px;
+  border-radius: 50%;
+  background: #2B6459;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  border: 3px solid var(--card);
+}
+
 .tabbar-icon-wrap .nav-count {
   position: absolute;
   top: -6px;

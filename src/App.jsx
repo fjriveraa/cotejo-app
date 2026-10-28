@@ -31,7 +31,7 @@ import TopBar from './components/TopBar'
 import OrgPicker from './components/OrgPicker'
 import CompanyHub from './pages/CompanyHub'
 import MyAttendance from './pages/MyAttendance'
-import AttendanceFab from './components/AttendanceFab'
+import QueueHub from './pages/QueueHub'
 import AttendanceKiosk from './pages/AttendanceKiosk'
 import AttendanceReports from './pages/AttendanceReports'
 import BiometricLockScreen from './components/BiometricLockScreen'
@@ -133,7 +133,6 @@ function ProtectedLayout({ children }) {
       <div className="app-shell">
         <TopBar />
         {children}
-        <AttendanceFab />
       </div>
     </BiometricLockScreen>
   )
@@ -239,7 +238,9 @@ export default function App() {
         path="/cola"
         element={
           <ProtectedLayout>
-            <AccountantQueue />
+            <RequireQueueAccess>
+              <QueueHub />
+            </RequireQueueAccess>
           </ProtectedLayout>
         }
       />
@@ -401,7 +402,7 @@ export default function App() {
         element={
           <ProtectedLayout>
             <RequireQueueAccess>
-              <GuestQueue />
+              <QueueHub />
             </RequireQueueAccess>
           </ProtectedLayout>
         }

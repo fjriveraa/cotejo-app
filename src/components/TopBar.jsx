@@ -6,10 +6,11 @@ import { useToast } from '../hooks/useToast'
 import {
   IconMenu, IconClose, IconDoc, IconCheckCircle, IconInbox,
   IconShield, IconIdCard, IconLink, IconSearch, IconLogout,
-  IconBuilding, IconShare, IconHome, IconBell, IconUsers, IconSettings
+  IconBuilding, IconShare, IconHome, IconBell, IconUsers, IconSettings, IconChart
 } from './icons'
 import { Capacitor } from '@capacitor/core'
 import NotificationBell from './NotificationBell'
+import AttendanceSheet from './AttendanceSheet'
 import {
   isPushSupported, needsInstallForPush, getExistingPushSubscription,
   subscribeToPush, unsubscribeFromPush
@@ -51,6 +52,7 @@ export default function TopBar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [pendingPayments, setPendingPayments] = useState(0)
   const [pendingGuests, setPendingGuests] = useState(0)
+  const [attendanceOpen, setAttendanceOpen] = useState(false)
   const [orgPendingCounts, setOrgPendingCounts] = useState({})
   const [installPromptEvent, setInstallPromptEvent] = useState(null)
   const [isStandalone, setIsStandalone] = useState(false)
@@ -330,13 +332,8 @@ export default function TopBar() {
           <IconDoc /> Registrar pago
         </NavLink>
         {canSeeQueue && (
-          <NavLink to="/cola" className={({ isActive }) => `nav-pill${isActive ? ' active' : ''}`}>
-            <IconCheckCircle /> Cola de confirmación <CountBadge count={pendingPayments} />
-          </NavLink>
-        )}
-        {canSeeQueue && (
-          <NavLink to="/comprobantes-invitados" className={({ isActive }) => `nav-pill${isActive ? ' active' : ''}`}>
-            <IconInbox /> Comprobantes de invitados <CountBadge count={pendingGuests} />
+          <NavLink to="/cola" className={({ isActive }) => `nav-pill${isActive || location.pathname === '/comprobantes-invitados' ? ' active' : ''}`}>
+            <IconCheckCircle /> Por confirmar <CountBadge count={pendingPayments + pendingGuests} />
           </NavLink>
         )}
         {canSeeQueue && (
@@ -344,6 +341,9 @@ export default function TopBar() {
             <IconUsers /> Grupos
           </NavLink>
         )}
+        <button type="button" className="nav-pill" onClick={() => setAttendanceOpen(true)}>
+          <IconCheckCircle /> Marcar asistencia
+        </button>
       </nav>
 
       {menuOpen && (
@@ -475,30 +475,47 @@ export default function TopBar() {
           <span>Registrar</span>
         </NavLink>
         {canSeeQueue && (
-          <NavLink to="/cola" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
+          <NavLink
+            to="/cola"
+            className={({ isActive }) => `tabbar-item${isActive || location.pathname === '/comprobantes-invitados' ? ' active' : ''}`}
+          >
             <span className="tabbar-icon-wrap">
               <IconCheckCircle width={21} height={21} />
-              <CountBadge count={pendingPayments} />
+              <CountBadge count={pendingPayments + pendingGuests} />
             </span>
-            <span>Cola</span>
+            <span>Por confirmar</span>
           </NavLink>
         )}
-        {canSeeQueue && (
-          <NavLink to="/comprobantes-invitados" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
-            <span className="tabbar-icon-wrap">
-              <IconInbox width={21} height={21} />
-              <CountBadge count={pendingGuests} />
-            </span>
-            <span>Invitados</span>
-          </NavLink>
-        )}
-        {canSeeQueue && (
-          <NavLink to="/grupos" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
-            <IconUsers width={21} height={21} />
-            <span>Grupos</span>
+        <button type="button" className="tabbar-mark" onClick={() => setAttendanceOpen(true)} aria-label="Marcar asistencia">
+          <span className="tabbar-mark-circle">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+            </svg>
+          </span>
+          <span>Marcar</span>
+        </button>
+        {canSeeQueue ? (
+          <>
+            <NavLink to="/grupos" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
+              <IconUsers width={21} height={21} />
+              <span>Grupos</span>
+            </NavLink>
+            <NavLink to="/asistencia" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
+              <IconChart width={21} height={21} />
+              <span>Asistencia</span>
+            </NavLink>
+          </>
+        ) : (
+          <NavLink to="/mi-asistencia" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
+            <IconChart width={21} height={21} />
+            <span>Mis marcas</span>
           </NavLink>
         )}
       </nav>
+
+      {attendanceOpen && membership && (
+        <AttendanceSheet orgId={membership.organization_id} onClose={() => setAttendanceOpen(false)} />
+      )}
     </header>
   )
 }
