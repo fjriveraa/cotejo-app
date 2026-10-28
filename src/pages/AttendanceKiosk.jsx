@@ -139,6 +139,11 @@ function Scanner({ orgId, device, onChangeDevice }) {
   const [result, setResult] = useState(null)
   const [message, setMessage] = useState(null)
   const [now, setNow] = useState(new Date())
+  // Frontal: lee el QR y toma la foto con la cara del empleado (evidencia).
+  // Trasera: lee el QR, pero la foto no mostrará a la persona.
+  const [facing, setFacing] = useState(() => {
+    try { return localStorage.getItem('cotejo_att_camera') === 'environment' ? 'environment' : 'user' } catch { return 'user' }
+  })
 
   function setState(s) {
     stateRef.current = s
@@ -155,7 +160,7 @@ function Scanner({ orgId, device, onChangeDevice }) {
     async function start() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+          video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false
         })
         if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return }
@@ -168,12 +173,18 @@ function Scanner({ orgId, device, onChangeDevice }) {
         setCamError('No se pudo abrir la cámara. Permite el acceso a la cámara en el navegador.')
       }
     }
+    setCamError(null)
     start()
     return () => {
       cancelled = true
       streamRef.current?.getTracks().forEach((t) => t.stop())
     }
-  }, [])
+  }, [facing])
+
+  function chooseFacing(next) {
+    try { localStorage.setItem('cotejo_att_camera', next) } catch { /* no-op */ }
+    setFacing(next)
+  }
 
   const grabPhoto = useCallback(() => {
     const video = videoRef.current
@@ -273,7 +284,7 @@ function Scanner({ orgId, device, onChangeDevice }) {
       </div>
 
       <div style={{ position: 'relative', width: '100%', maxWidth: 720, marginTop: 12, borderRadius: 16, overflow: 'hidden', background: '#000', aspectRatio: '4 / 3' }}>
-        <video ref={videoRef} playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
+        <video ref={videoRef} playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', transform: facing === 'user' ? 'scaleX(-1)' : 'none' }} />
         <canvas ref={canvasRef} style={{ display: 'none' }} />
         {camError && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: 24, textAlign: 'center' }}>{camError}</div>}
 
@@ -306,6 +317,16 @@ function Scanner({ orgId, device, onChangeDevice }) {
           </Overlay>
         )}
       </div>
+
+      <div style={{ marginTop: 14, display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
+        <span style={{ opacity: 0.7 }}>Cámara:</span>
+        {[['user', 'Frontal (con foto)'], ['environment', 'Trasera']].map(([id, label]) => (
+          <button key={id} type="button" onClick={() => chooseFacing(id)} className={`btn ${facing === id ? '' : 'btn-secondary'}`} style={{ fontSize: 13, padding: '4px 10px' }}>{label}</button>
+        ))}
+      </div>
+      {facing === 'environment' && (
+        <div style={{ marginTop: 6, fontSize: 12, opacity: 0.6, textAlign: 'center' }}>Con la cámara trasera la foto no mostrará la cara del empleado.</div>
+      )}
 
       <button type="button" onClick={onChangeDevice} style={{ marginTop: 16, background: 'transparent', border: 'none', color: '#fff', opacity: 0.45, fontSize: 12, textDecoration: 'underline' }}>
         Cambiar dispositivo
