@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import AttendanceQr from '../components/AttendanceQr'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -59,6 +60,8 @@ export default function MyAttendance() {
       <p style={{ opacity: 0.7, marginTop: 0 }}>
         Muestra este código en el dispositivo de tu sucursal para marcar entrada, almuerzo o salida.
       </p>
+
+      <p style={{ margin: '0 0 12px' }}><Link to="/mi-horario">Ver mi horario de la semana →</Link></p>
 
       <div className="card" style={{ textAlign: 'center' }}>
         <AttendanceQr orgId={orgId} />

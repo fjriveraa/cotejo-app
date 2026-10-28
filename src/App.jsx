@@ -31,6 +31,7 @@ import TopBar from './components/TopBar'
 import OrgPicker from './components/OrgPicker'
 import CompanyHub from './pages/CompanyHub'
 import MyAttendance from './pages/MyAttendance'
+import MySchedule from './pages/MySchedule'
 import QueueHub from './pages/QueueHub'
 import AttendanceKiosk from './pages/AttendanceKiosk'
 import AttendanceReports from './pages/AttendanceReports'
@@ -361,6 +362,14 @@ export default function App() {
         element={
           <ProtectedLayout>
             <MyAttendance />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/mi-horario"
+        element={
+          <ProtectedLayout>
+            <MySchedule />
           </ProtectedLayout>
         }
       />

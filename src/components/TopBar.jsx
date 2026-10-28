@@ -431,6 +431,7 @@ export default function TopBar() {
             <div className="menu-section">
               <div className="menu-section-title">Cuenta</div>
               <NavLink to="/mi-asistencia" className="menu-link"><IconCheckCircle /> Mi asistencia (QR)</NavLink>
+              <NavLink to="/mi-horario" className="menu-link"><IconCheckCircle /> Mi horario</NavLink>
               <NavLink to="/mi-identificacion" className="menu-link"><IconIdCard /> Mi identificación</NavLink>
               <NavLink to="/unirme" className="menu-link"><IconLink /> Unirme a otra empresa</NavLink>
               <NavLink to="/empresas" className="menu-link"><IconSearch /> Buscar empresas</NavLink>

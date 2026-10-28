@@ -461,6 +461,7 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
   const [profiles, setProfiles] = useState([])
   const [profileEdit, setProfileEdit] = useState(null) // { membership_id, name, current }
   const [importOpen, setImportOpen] = useState(false)
+  const [view, setView] = useState('grid') // grid | branch | person
 
   const load = useCallback(async () => {
     if (!orgId) return
@@ -508,9 +509,16 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
           </div>
         )}
       </div>
+      <div style={{ display: 'flex', gap: 6, margin: '10px 0 0', flexWrap: 'wrap' }}>
+        {[['grid', 'Cuadrícula'], ['branch', 'Por sucursal'], ['person', 'Por persona']].map(([k, l]) => (
+          <button key={k} type="button" className={`btn ${view === k ? '' : 'btn-secondary'}`} style={{ fontSize: 13 }} onClick={() => setView(k)}>{l}</button>
+        ))}
+      </div>
       {msg && <p style={{ color: '#2B6459' }}>{msg}</p>}
       {error && <p className="error-text">{error}</p>}
-      {loading ? <p style={{ opacity: 0.6 }}>Cargando...</p> : (
+      {!loading && view === 'branch' && <BranchView days={days} items={items} offs={offs} employees={employees} branches={branches} />}
+      {!loading && view === 'person' && <PersonView days={days} items={items} offs={offs} employees={employees} profiles={profiles} />}
+      {loading ? <p style={{ opacity: 0.6 }}>Cargando...</p> : view === 'grid' && (
         <div className="card" style={{ marginTop: 12, overflowX: 'auto', padding: 8 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
             <thead>
@@ -562,6 +570,86 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
 }
 
 const DAY_NAMES = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
+
+const hmShort = (t) => (t ? t.slice(0, 5) : '')
+
+// Como la hoja de papel: una tarjeta por sucursal, un renglón por día con quién entra y a qué hora.
+function BranchView({ days, items, offs, employees, branches }) {
+  const nameOf = (mid) => (employees.find((e) => e.membership_id === mid)?.display_name || '—').split(' ')[0]
+  const groups = [...branches.map((b) => ({ id: b.id, name: b.name })), { id: null, name: 'Sin sucursal' }]
+  return (
+    <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+      {groups.map((g) => {
+        const rows = items.filter((x) => (x.branch_id || null) === g.id)
+        if (rows.length === 0 && g.id === null) return null
+        return (
+          <div key={g.id || 'none'} className="card" style={{ overflowX: 'auto' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>{g.name}</h3>
+            {rows.length === 0 ? <p style={{ margin: 0, opacity: 0.6, fontSize: 13 }}>Sin turnos esta semana.</p> : days.map((d) => {
+              const todays = rows.filter((x) => x.work_date === d).sort((a, b) => (a.start_time < b.start_time ? -1 : 1))
+              if (todays.length === 0) return null
+              return (
+                <div key={d} style={{ display: 'flex', gap: 10, padding: '6px 0', borderTop: '1px solid rgba(0,0,0,0.06)', fontSize: 13 }}>
+                  <strong style={{ minWidth: 86, textTransform: 'capitalize' }}>{formatDateLong(d).split(',')[0]}</strong>
+                  <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {todays.map((x) => (
+                      <span key={x.membership_id} style={{ background: 'rgba(43,100,89,0.1)', borderRadius: 10, padding: '2px 8px', opacity: x.is_default ? 0.8 : 1 }}>
+                        {nameOf(x.membership_id)} <strong>{hmShort(x.start_time)}</strong>{x.end_time ? `–${hmShort(x.end_time)}` : ''}{x.lunch_start ? ` · 🍽${hmShort(x.lunch_start)}` : ''}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )
+      })}
+      {offs.length > 0 && (
+        <div className="card">
+          <h3 style={{ margin: '0 0 8px', fontSize: 16, color: '#A2483A' }}>Días libres</h3>
+          {days.map((d) => {
+            const o = offs.filter((x) => x.work_date === d)
+            if (o.length === 0) return null
+            return <div key={d} style={{ fontSize: 13, padding: '3px 0' }}><strong style={{ textTransform: 'capitalize' }}>{formatDateLong(d).split(',')[0]}:</strong> {o.map((x) => nameOf(x.membership_id)).join(', ')}</div>
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Un renglón por colaborador: tipo de horario, entradas, libres y sucursales.
+function PersonView({ days, items, offs, employees, profiles }) {
+  return (
+    <div className="card" style={{ marginTop: 12, overflowX: 'auto', padding: 8 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
+        <thead><tr><th style={th}>Colaborador</th><th style={th}>Tipo</th><th style={th}>Entrada</th><th style={th}>Salida</th><th style={th}>Libres esta semana</th><th style={th}>Sucursal</th></tr></thead>
+        <tbody>
+          {employees.map((e) => {
+            const mine = items.filter((x) => x.membership_id === e.membership_id)
+            const starts = [...new Set(mine.map((x) => hmShort(x.start_time)))].sort()
+            const ends = [...new Set(mine.filter((x) => x.end_time).map((x) => hmShort(x.end_time)))].sort()
+            const myOffs = offs.filter((x) => x.membership_id === e.membership_id).map((x) => formatDateLong(x.work_date).split(',')[0])
+            const brs = [...new Set(mine.map((x) => x.branch_name).filter(Boolean))]
+            const pr = profiles.find((x) => x.membership_id === e.membership_id)
+            const type = pr ? (pr.mode === 'variable' ? 'Variable' : 'Fijo') : mine.length ? (starts.length > 1 ? 'Rotativo' : 'Por turno') : '—'
+            return (
+              <tr key={e.membership_id} style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                <td style={td}><strong>{e.display_name}</strong></td>
+                <td style={td}>{type}</td>
+                <td style={td}>{pr?.mode === 'variable' ? 'Libre' : starts.length ? starts.join(' / ') : '—'}</td>
+                <td style={td}>{ends.length ? ends.join(' / ') : '—'}</td>
+                <td style={{ ...td, color: myOffs.length ? '#A2483A' : undefined, textTransform: 'capitalize' }}>{myOffs.length ? myOffs.join(', ') : '—'}</td>
+                <td style={td}>{brs.length ? brs.join(', ') : '—'}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+      <p style={{ margin: '8px 4px 0', fontSize: 12, opacity: 0.65 }}>{days.length ? 'Semana mostrada arriba.' : ''}</p>
+    </div>
+  )
+}
 
 function profileSummary(pr) {
   if (!pr) return 'Sin horario base (solo turnos de la cuadrícula)'

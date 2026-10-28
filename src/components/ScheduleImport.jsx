@@ -53,6 +53,7 @@ export default function ScheduleImport({ orgId, employees, branches, onClose, on
   const [empMap, setEmpMap] = useState({}) // nombre leído -> membership_id
   const [brMap, setBrMap] = useState({}) // sucursal leída -> branch_id
   const [savedCount, setSavedCount] = useState(0)
+  const [baseOn, setBaseOn] = useState({}) // nombre leído -> guardar como horario fijo base
 
   const empOptions = useMemo(() => employees.map((e) => ({ key: e.membership_id, name: e.display_name })), [employees])
   const brOptions = useMemo(() => branches.map((b) => ({ key: b.id, name: b.name })), [branches])
@@ -103,6 +104,23 @@ export default function ScheduleImport({ orgId, employees, branches, onClose, on
   const names = Object.keys(empMap)
   const ready = shifts.filter((s) => s.use && empMap[s.employee] && s.start_time)
   const offReady = daysOff.filter((d) => d.use && empMap[d.employee])
+  // Patrón detectado por persona: misma hora de entrada en 3+ turnos => propone horario fijo.
+  const patterns = useMemo(() => {
+    const out = {}
+    for (const n of Object.keys(empMap)) {
+      const mine = shifts.filter((s) => s.employee === n && s.start_time)
+      if (mine.length === 0) continue
+      const starts = [...new Set(mine.map((s) => s.start_time))]
+      const days = [...new Set(mine.map((s) => { const [y, m, d] = s.date.split('-').map(Number); return ((new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7) + 1 }))].sort()
+      const brCount = {}
+      for (const s of mine) if (s.branch) brCount[s.branch] = (brCount[s.branch] || 0) + 1
+      const topBranch = Object.entries(brCount).sort((a, b) => b[1] - a[1])[0]?.[0] || null
+      const offDays = daysOff.filter((d) => d.employee === n).length
+      out[n] = { starts, days, topBranch, count: mine.length, offDays, fixed: starts.length === 1 && mine.length >= 3 }
+    }
+    return out
+  }, [shifts, daysOff, empMap])
+
   const unmatched = names.filter((n) => !empMap[n] && shifts.some((s) => s.employee === n && s.use))
 
   async function save() {
@@ -115,6 +133,15 @@ export default function ScheduleImport({ orgId, employees, branches, onClose, on
     const offRows = offReady.map((d) => ({ membership_id: empMap[d.employee], work_date: d.date }))
     const { data, error: err } = await supabase.rpc('import_attendance_schedule', { p_organization_id: orgId, p_rows: rows, p_days_off: offRows })
     if (err) { setError(err.message); setStep('review'); return }
+    // Horario base opcional (solo las personas que el usuario marcó).
+    for (const [n, on] of Object.entries(baseOn)) {
+      const p = patterns[n]
+      if (!on || !p?.fixed || !empMap[n]) continue
+      await supabase.rpc('set_attendance_profile', {
+        p_organization_id: orgId, p_membership_id: empMap[n], p_mode: 'fijo', p_start_time: p.starts[0],
+        p_work_days: p.days, p_daily_hours: null, p_branch_id: (p.topBranch && brMap[p.topBranch]) || null
+      })
+    }
     setSavedCount(data)
     setStep('done')
   }
@@ -178,7 +205,27 @@ export default function ScheduleImport({ orgId, employees, branches, onClose, on
               ))}
             </div>
 
-            <h3 style={{ margin: '4px 0', fontSize: 15 }}>2. Turnos que voy a guardar</h3>
+            <h3 style={{ margin: '4px 0', fontSize: 15 }}>2. Lo que detecté de cada persona</h3>
+            <div style={{ display: 'grid', gap: 4, marginBottom: 10, fontSize: 13 }}>
+              {Object.entries(patterns).map(([n, p]) => (
+                <div key={n} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', borderBottom: '1px solid rgba(0,0,0,0.06)', paddingBottom: 4 }}>
+                  <strong style={{ minWidth: 90 }}>{n}</strong>
+                  <span>
+                    {p.fixed ? `Entra siempre a las ${p.starts[0]}` : `Entradas: ${p.starts.join(' / ')} (rotativo)`}
+                    {p.topBranch ? ` · ${p.topBranch}` : ''} · {p.count} turno{p.count === 1 ? '' : 's'}{p.offDays ? ` · ${p.offDays} libre${p.offDays === 1 ? '' : 's'}` : ''}
+                  </span>
+                  {p.fixed && (
+                    <label style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
+                      <input type="checkbox" checked={!!baseOn[n]} onChange={(e) => setBaseOn({ ...baseOn, [n]: e.target.checked })} />
+                      Dejarlo como horario fijo base
+                    </label>
+                  )}
+                </div>
+              ))}
+              <small style={{ opacity: 0.65 }}>El horario fijo base repite esa entrada cada semana en los mismos días. Úsalo solo si su horario no rota; si rota, déjalo sin marcar y se guardan solo estos turnos.</small>
+            </div>
+
+            <h3 style={{ margin: '4px 0', fontSize: 15 }}>3. Turnos que voy a guardar</h3>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
@@ -201,7 +248,7 @@ export default function ScheduleImport({ orgId, employees, branches, onClose, on
             </div>
             {daysOff.length > 0 && (
               <>
-                <h3 style={{ margin: '12px 0 4px', fontSize: 15 }}>3. Días libres</h3>
+                <h3 style={{ margin: '12px 0 4px', fontSize: 15 }}>4. Días libres</h3>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {[...daysOff].sort((a, b) => (a.date + a.employee < b.date + b.employee ? -1 : 1)).map((d) => (
                     <label key={d.id} style={{ display: 'flex', gap: 4, alignItems: 'center', border: '1px solid rgba(0,0,0,0.15)', borderRadius: 16, padding: '2px 10px', fontSize: 13, opacity: d.use ? 1 : 0.45 }}>
