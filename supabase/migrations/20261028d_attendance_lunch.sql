@@ -1,11 +1,207 @@
 -- Almuerzo con pausas, flujo de marcas simplificado e historial del empleado.
 -- Requiere a, b y c aplicadas antes.
 --
+-- Horario por colaborador (attendance_profiles): 'fijo' (hora de entrada y días
+-- base que se repiten cada semana; un turno puesto a mano en la cuadrícula tiene
+-- prioridad) o 'variable' (sin hora fija: solo se cuentan las horas entre que
+-- entra y sale, sin llegadas tarde ni ausencias). Sin perfil = solo cuadrícula.
+--
 -- Marcas nuevas: almuerzo_pausa / almuerzo_reanuda (interrupciones del almuerzo).
 -- Flujo: entrada -> almuerzo_inicio -> (pausa <-> reanuda)* -> almuerzo_fin -> salida.
 -- Un solo almuerzo por día. Las pausas y reanudaciones no piden foto.
 -- Almuerzo efectivo = (fin - inicio) - tiempo en pausa. "No cuadra" = el efectivo
 -- difiere del estipulado por más que la tolerancia.
+
+create table if not exists public.attendance_profiles (
+  membership_id uuid primary key references public.memberships(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  mode text not null check (mode in ('fijo', 'variable')),
+  start_time time,
+  work_days int[] not null default '{1,2,3,4,5}',
+  daily_hours numeric check (daily_hours is null or (daily_hours > 0 and daily_hours <= 24)),
+  branch_id uuid references public.branches(id) on delete set null,
+  updated_by uuid,
+  updated_at timestamptz not null default now(),
+  check (mode = 'variable' or start_time is not null)
+);
+alter table public.attendance_profiles enable row level security;
+
+-- Turnos efectivos: los de la cuadrícula + los que salen del horario fijo del
+-- colaborador en los días que no tienen turno puesto a mano.
+create or replace function public.attendance_effective_schedule(p_org uuid, p_from date, p_to date, p_membership uuid default null)
+returns table (organization_id uuid, membership_id uuid, work_date date, branch_id uuid, start_time time)
+language sql
+stable
+security definer
+set search_path to 'public'
+as $$
+  select s.organization_id, s.membership_id, s.work_date, s.branch_id, s.start_time
+  from attendance_schedules s
+  where s.organization_id = p_org and s.work_date between p_from and p_to
+    and (p_membership is null or s.membership_id = p_membership)
+  union all
+  select pr.organization_id, pr.membership_id, d::date, pr.branch_id, pr.start_time
+  from attendance_profiles pr
+  join memberships m on m.id = pr.membership_id and m.status = 'active'
+  cross join generate_series(p_from::timestamp, p_to::timestamp, interval '1 day') d
+  where pr.organization_id = p_org and pr.mode = 'fijo' and pr.start_time is not null
+    and (p_membership is null or pr.membership_id = p_membership)
+    and extract(isodow from d)::int = any (pr.work_days)
+    and not exists (select 1 from attendance_schedules s2 where s2.membership_id = pr.membership_id and s2.work_date = d::date);
+$$;
+
+create or replace function public.attendance_late_minutes(p_org uuid, p_membership uuid, p_at timestamptz)
+returns int
+language plpgsql
+stable
+security definer
+set search_path to 'public'
+as $$
+declare
+  v_start time;
+  v_tol int;
+  v_local_date date;
+  v_min int;
+begin
+  v_local_date := (p_at at time zone attendance_tz())::date;
+
+  select e.start_time into v_start
+  from attendance_effective_schedule(p_org, v_local_date, v_local_date, p_membership) e
+  limit 1;
+
+  if v_start is null then
+    return null;
+  end if;
+
+  select coalesce((select st.tolerance_minutes from attendance_settings st where st.organization_id = p_org), 5)
+  into v_tol;
+
+  v_min := floor(extract(epoch from (p_at - ((v_local_date + v_start) at time zone attendance_tz()))) / 60)::int;
+
+  if v_min > v_tol then
+    return v_min;
+  end if;
+  return 0;
+end;
+$$;
+
+create or replace function public.list_attendance_profiles(p_organization_id uuid)
+returns table (membership_id uuid, mode text, start_time time, work_days int[], daily_hours numeric, branch_id uuid)
+language plpgsql
+stable
+security definer
+set search_path to 'public'
+as $$
+#variable_conflict use_column
+declare
+  v_role text;
+begin
+  v_role := attendance_caller_role(p_organization_id);
+  if v_role is null or v_role not in ('propietario', 'admin', 'supervisor', 'contador', 'auditor') then
+    raise exception 'No autorizado';
+  end if;
+  return query
+    select pr.membership_id, pr.mode, pr.start_time, pr.work_days, pr.daily_hours, pr.branch_id
+    from attendance_profiles pr where pr.organization_id = p_organization_id;
+end;
+$$;
+
+create or replace function public.set_attendance_profile(
+  p_organization_id uuid,
+  p_membership_id uuid,
+  p_mode text,
+  p_start_time time default null,
+  p_work_days int[] default '{1,2,3,4,5}',
+  p_daily_hours numeric default null,
+  p_branch_id uuid default null
+)
+returns void
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+declare
+  v_role text;
+begin
+  v_role := attendance_caller_role(p_organization_id);
+  if v_role is null or v_role not in ('propietario', 'admin', 'supervisor') then
+    raise exception 'No autorizado';
+  end if;
+  if not exists (select 1 from memberships m where m.id = p_membership_id and m.organization_id = p_organization_id) then
+    raise exception 'Empleado no válido';
+  end if;
+  if p_mode not in ('fijo', 'variable') then
+    raise exception 'Tipo de horario no válido';
+  end if;
+  if p_mode = 'fijo' then
+    if p_start_time is null then
+      raise exception 'Indica la hora de entrada del horario fijo';
+    end if;
+    if p_work_days is null or cardinality(p_work_days) = 0 or exists (select 1 from unnest(p_work_days) x where x not between 1 and 7) then
+      raise exception 'Elige al menos un día de trabajo';
+    end if;
+  end if;
+  if p_daily_hours is not null and (p_daily_hours <= 0 or p_daily_hours > 24) then
+    raise exception 'Horas por día no válidas';
+  end if;
+  if p_branch_id is not null and not exists (select 1 from branches b where b.id = p_branch_id and b.organization_id = p_organization_id) then
+    raise exception 'Sucursal no válida';
+  end if;
+
+  insert into attendance_profiles (membership_id, organization_id, mode, start_time, work_days, daily_hours, branch_id, updated_by, updated_at)
+  values (p_membership_id, p_organization_id, p_mode,
+          case when p_mode = 'fijo' then p_start_time end,
+          case when p_mode = 'fijo' then p_work_days else '{}' end,
+          p_daily_hours, p_branch_id, auth.uid(), now())
+  on conflict (membership_id) do update
+    set mode = excluded.mode, start_time = excluded.start_time, work_days = excluded.work_days,
+        daily_hours = excluded.daily_hours, branch_id = excluded.branch_id, updated_by = auth.uid(), updated_at = now();
+end;
+$$;
+
+create or replace function public.clear_attendance_profile(p_organization_id uuid, p_membership_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+declare
+  v_role text;
+begin
+  v_role := attendance_caller_role(p_organization_id);
+  if v_role is null or v_role not in ('propietario', 'admin', 'supervisor') then
+    raise exception 'No autorizado';
+  end if;
+  delete from attendance_profiles where organization_id = p_organization_id and membership_id = p_membership_id;
+end;
+$$;
+
+-- La cuadrícula semanal muestra también el horario fijo (is_default = true).
+drop function if exists public.list_attendance_schedule(uuid, date, date);
+create or replace function public.list_attendance_schedule(p_organization_id uuid, p_from date, p_to date)
+returns table (membership_id uuid, work_date date, branch_id uuid, branch_name text, start_time time, end_time time, is_default boolean)
+language plpgsql
+stable
+security definer
+set search_path to 'public'
+as $$
+#variable_conflict use_column
+declare
+  v_role text;
+begin
+  v_role := attendance_caller_role(p_organization_id);
+  if v_role is null or v_role not in ('propietario', 'admin', 'supervisor', 'contador', 'auditor') then
+    raise exception 'No autorizado';
+  end if;
+
+  return query
+    select e.membership_id, e.work_date, e.branch_id, b.name, e.start_time, s.end_time,
+           (s.membership_id is null)
+    from attendance_effective_schedule(p_organization_id, p_from, p_to, null) e
+    left join attendance_schedules s on s.membership_id = e.membership_id and s.work_date = e.work_date
+    left join branches b on b.id = e.branch_id;
+end;
+$$;
 
 alter table public.attendance_punches drop constraint if exists attendance_punches_event_type_check;
 alter table public.attendance_punches
@@ -52,6 +248,7 @@ declare
   v_qr boolean;
   v_stip int;
   v_cap numeric;
+  v_prof_hours numeric;
   v_entry timestamptz;
   v_last record;
   v_ls timestamptz;
@@ -69,6 +266,8 @@ begin
   if v_membership is null then
     raise exception 'No autorizado';
   end if;
+
+  select coalesce((select pr.daily_hours from attendance_profiles pr where pr.membership_id = v_membership), null) into v_prof_hours;
 
   select coalesce((select st.allow_self_punch from attendance_settings st where st.organization_id = p_organization_id), false),
          coalesce((select st.method_qr from attendance_settings st where st.organization_id = p_organization_id), true),
@@ -132,8 +331,8 @@ begin
     'lunch', v_lunch,
     'stipulated_minutes', v_stip,
     'entry_at', v_entry,
-    'expected_out', case when v_entry is not null and v_cap < 24
-                         then v_entry + make_interval(mins => round(v_cap * 60)::int + v_stip) end
+    'expected_out', case when v_entry is not null and coalesce(v_prof_hours, case when v_cap < 24 then v_cap end) is not null
+                         then v_entry + make_interval(mins => round(coalesce(v_prof_hours, v_cap) * 60)::int + v_stip) end
   );
 end;
 $$;
@@ -299,7 +498,7 @@ begin
                 then greatest(0, round(extract(epoch from (a.le - a.ls)) / 60 - a.pause_min))::int else 0 end as lunch_eff
     from ent e
     left join agg a on a.t_in = e.t_in
-    left join attendance_schedules sc on sc.membership_id = v_membership and sc.work_date = e.d
+    left join attendance_effective_schedule(p_organization_id, p_from, p_to, v_membership) sc on sc.membership_id = v_membership and sc.work_date = e.d
   )
   select c.d, c.t_in, c.ls, c.le, c.so, c.sched,
          case when c.sched is null then 0
@@ -468,7 +667,7 @@ begin
       (d.cnt_le > 0 and abs(round(d.lunch_min)::int - v_lunch_max) > v_tol) as lunch_flag
     from daily d
     left join branches br on br.id = d.branch_id
-    left join attendance_schedules sc on sc.membership_id = d.membership_id and sc.work_date = d.work_date
+    left join attendance_effective_schedule(p_organization_id, p_from, p_to, p_membership_id) sc on sc.membership_id = d.membership_id and sc.work_date = d.work_date
     where (p_branch_id is null or d.branch_id = p_branch_id)
 
     union all
@@ -487,7 +686,7 @@ begin
       false,
       true,
       0, 0, false
-    from attendance_schedules sc
+    from attendance_effective_schedule(p_organization_id, p_from, p_to, p_membership_id) sc
     left join branches br on br.id = sc.branch_id
     where sc.organization_id = p_organization_id
       and sc.work_date between p_from and p_to
@@ -509,7 +708,7 @@ begin
     select p.oid::regprocedure as sig
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname = any (array['attendance_allowed_events', 'my_attendance_status', 'self_record_attendance', 'my_attendance_days', 'attendance_report'])
+      and p.proname = any (array['attendance_allowed_events', 'my_attendance_status', 'self_record_attendance', 'my_attendance_days', 'attendance_report', 'attendance_late_minutes', 'list_attendance_profiles', 'set_attendance_profile', 'clear_attendance_profile', 'list_attendance_schedule', 'attendance_effective_schedule'])
   loop
     execute format('revoke execute on function %s from public, anon', r.sig);
     execute format('grant execute on function %s to authenticated', r.sig);

@@ -456,13 +456,17 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
   const [error, setError] = useState(null)
   const [edit, setEdit] = useState(null) // { membership_id, name, date, current }
   const [msg, setMsg] = useState(null)
+  const [profiles, setProfiles] = useState([])
+  const [profileEdit, setProfileEdit] = useState(null) // { membership_id, name, current }
 
   const load = useCallback(async () => {
     if (!orgId) return
     setLoading(true)
-    const { data, error: err } = await supabase.rpc('list_attendance_schedule', {
-      p_organization_id: orgId, p_from: monday, p_to: addDays(monday, 6)
-    })
+    const [{ data, error: err }, { data: prof }] = await Promise.all([
+      supabase.rpc('list_attendance_schedule', { p_organization_id: orgId, p_from: monday, p_to: addDays(monday, 6) }),
+      supabase.rpc('list_attendance_profiles', { p_organization_id: orgId })
+    ])
+    setProfiles(prof || [])
     setLoading(false)
     if (err) { setError(err.message); return }
     setItems(data || [])
@@ -507,7 +511,16 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
             <tbody>
               {employees.map((e) => (
                 <tr key={e.membership_id} style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-                  <td style={td}><strong>{e.display_name}</strong></td>
+                  <td style={td}>
+                    <strong>{e.display_name}</strong>
+                    <div style={{ fontSize: 11, opacity: 0.65 }}>{profileSummary(profiles.find((x) => x.membership_id === e.membership_id))}</div>
+                    {canEdit && (
+                      <button type="button" className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', marginTop: 4 }}
+                        onClick={() => setProfileEdit({ membership_id: e.membership_id, name: e.display_name, current: profiles.find((x) => x.membership_id === e.membership_id) })}>
+                        Configurar horario
+                      </button>
+                    )}
+                  </td>
                   {days.map((d) => {
                     const c = cell(e.membership_id, d)
                     return (
@@ -516,7 +529,7 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
                           type="button"
                           disabled={!canEdit}
                           onClick={() => setEdit({ membership_id: e.membership_id, name: e.display_name, date: d, current: c })}
-                          style={{ width: '100%', minHeight: 44, border: '1px dashed rgba(0,0,0,0.15)', borderRadius: 6, background: c ? 'rgba(43,100,89,0.08)' : 'transparent', fontSize: 12, lineHeight: 1.3, cursor: canEdit ? 'pointer' : 'default' }}
+                          style={{ width: '100%', minHeight: 44, border: '1px dashed rgba(0,0,0,0.15)', borderRadius: 6, background: c ? (c.is_default ? 'rgba(43,100,89,0.04)' : 'rgba(43,100,89,0.12)') : 'transparent', fontSize: 12, lineHeight: 1.3, cursor: canEdit ? 'pointer' : 'default' }}
                         >
                           {c ? (<><strong>{c.start_time.slice(0, 5)}</strong>{c.end_time ? `–${c.end_time.slice(0, 5)}` : ''}<br /><span style={{ opacity: 0.6 }}>{c.branch_name || ''}</span></>) : <span style={{ opacity: 0.35 }}>libre</span>}
                         </button>
@@ -529,7 +542,96 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
           </table>
         </div>
       )}
+      {profileEdit && <ProfileEditor orgId={orgId} branches={branches} edit={profileEdit} onClose={() => setProfileEdit(null)} onSaved={() => { setProfileEdit(null); load() }} />}
       {edit && <ScheduleEditor orgId={orgId} branches={branches} edit={edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); load() }} />}
+    </div>
+  )
+}
+
+const DAY_NAMES = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
+
+function profileSummary(pr) {
+  if (!pr) return 'Sin horario base (solo turnos de la cuadrícula)'
+  if (pr.mode === 'variable') return `Variable${pr.daily_hours ? ` · ${pr.daily_hours} h` : ''}: cuenta de entrada a salida`
+  return `Fijo ${pr.start_time.slice(0, 5)} · ${(pr.work_days || []).map((d) => DAY_NAMES[d - 1]).join(' ')}`
+}
+
+function ProfileEditor({ orgId, branches, edit, onClose, onSaved }) {
+  const cur = edit.current
+  const [mode, setMode] = useState(cur?.mode || 'fijo')
+  const [start, setStart] = useState(cur?.start_time?.slice(0, 5) || '08:00')
+  const [days, setDays] = useState(cur?.work_days?.length ? cur.work_days : [1, 2, 3, 4, 5])
+  const [hours, setHours] = useState(cur?.daily_hours ?? '')
+  const [branchId, setBranchId] = useState(cur?.branch_id || branches[0]?.id || '')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+
+  const toggle = (d) => setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()))
+
+  async function save(e) {
+    e.preventDefault()
+    setBusy(true)
+    const { error: err } = await supabase.rpc('set_attendance_profile', {
+      p_organization_id: orgId, p_membership_id: edit.membership_id, p_mode: mode,
+      p_start_time: mode === 'fijo' ? start : null, p_work_days: mode === 'fijo' ? days : null,
+      p_daily_hours: hours === '' ? null : Number(hours), p_branch_id: branchId || null
+    })
+    setBusy(false)
+    if (err) { setError(err.message); return }
+    onSaved()
+  }
+
+  async function clear() {
+    setBusy(true)
+    const { error: err } = await supabase.rpc('clear_attendance_profile', { p_organization_id: orgId, p_membership_id: edit.membership_id })
+    setBusy(false)
+    if (err) { setError(err.message); return }
+    onSaved()
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 50, display: 'grid', placeItems: 'center', padding: 12 }} onClick={onClose}>
+      <form className="card" onSubmit={save} onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 400, display: 'grid', gap: 10, maxHeight: '92vh', overflowY: 'auto' }}>
+        <h2 style={{ margin: 0, fontSize: 18 }}>Horario de {edit.name}</h2>
+        <div style={{ display: 'grid', gap: 6 }}>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <input type="radio" checked={mode === 'fijo'} onChange={() => setMode('fijo')} />
+            <span><strong>Fijo</strong><small style={{ display: 'block', opacity: 0.65 }}>Misma hora de entrada los días elegidos; se avisa si llega tarde o no viene.</small></span>
+          </label>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <input type="radio" checked={mode === 'variable'} onChange={() => setMode('variable')} />
+            <span><strong>Variable</strong><small style={{ display: 'block', opacity: 0.65 }}>Sin hora fija: solo cuenta las horas desde que entra hasta que sale. No hay tarde ni ausencia.</small></span>
+          </label>
+        </div>
+        {mode === 'fijo' && (
+          <>
+            <label>Hora de entrada <input type="time" value={start} onChange={(e) => setStart(e.target.value)} required /></label>
+            <div>
+              <div style={{ fontSize: 14, marginBottom: 4 }}>Días de trabajo</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {DAY_NAMES.map((n, i) => (
+                  <button key={n} type="button" className={`btn ${days.includes(i + 1) ? '' : 'btn-secondary'}`} style={{ padding: '6px 0', flex: 1 }} onClick={() => toggle(i + 1)}>{n}</button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+        <label>Horas de trabajo por día (opcional)
+          <input type="number" min="1" max="24" step="0.5" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="Ej. 8" />
+          <small style={{ display: 'block', opacity: 0.65 }}>Con esto el empleado ve a qué hora le corresponde salir (entrada + horas + almuerzo).</small>
+        </label>
+        <label>Sucursal habitual
+          <select value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+            <option value="">—</option>
+            {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        </label>
+        <small style={{ opacity: 0.65 }}>Un turno puesto a mano en la cuadrícula siempre tiene prioridad sobre este horario.</small>
+        {error && <p className="error-text" style={{ margin: 0 }}>{error}</p>}
+        <button className="btn" disabled={busy}>Guardar horario</button>
+        {cur && <button type="button" className="btn btn-secondary" disabled={busy} onClick={clear}>Quitar horario base</button>}
+        <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+      </form>
     </div>
   )
 }
