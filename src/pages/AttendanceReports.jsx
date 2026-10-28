@@ -453,6 +453,7 @@ function AddPunch({ orgId, row, onDone }) {
 function ScheduleTab({ orgId, employees, branches, canEdit }) {
   const [monday, setMonday] = useState(() => mondayOf(hondurasDateStr()))
   const [items, setItems] = useState([])
+  const [offs, setOffs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [edit, setEdit] = useState(null) // { membership_id, name, date, current }
@@ -464,10 +465,12 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
   const load = useCallback(async () => {
     if (!orgId) return
     setLoading(true)
-    const [{ data, error: err }, { data: prof }] = await Promise.all([
+    const [{ data, error: err }, { data: prof }, { data: offData }] = await Promise.all([
       supabase.rpc('list_attendance_schedule', { p_organization_id: orgId, p_from: monday, p_to: addDays(monday, 6) }),
-      supabase.rpc('list_attendance_profiles', { p_organization_id: orgId })
+      supabase.rpc('list_attendance_profiles', { p_organization_id: orgId }),
+      supabase.rpc('list_attendance_days_off', { p_organization_id: orgId, p_from: monday, p_to: addDays(monday, 6) })
     ])
+    setOffs(offData || [])
     setProfiles(prof || [])
     setLoading(false)
     if (err) { setError(err.message); return }
@@ -478,6 +481,7 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i))
   const cell = (mid, d) => items.find((x) => x.membership_id === mid && x.work_date === d)
+  const isOff = (mid, d) => offs.some((x) => x.membership_id === mid && x.work_date === d)
 
   async function copyPrevious() {
     setMsg(null)
@@ -530,15 +534,16 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
                   </td>
                   {days.map((d) => {
                     const c = cell(e.membership_id, d)
+                    const off = isOff(e.membership_id, d)
                     return (
                       <td key={d} style={{ ...td, padding: 2 }}>
                         <button
                           type="button"
                           disabled={!canEdit}
-                          onClick={() => setEdit({ membership_id: e.membership_id, name: e.display_name, date: d, current: c })}
-                          style={{ width: '100%', minHeight: 44, border: '1px dashed rgba(0,0,0,0.15)', borderRadius: 6, background: c ? (c.is_default ? 'rgba(43,100,89,0.04)' : 'rgba(43,100,89,0.12)') : 'transparent', fontSize: 12, lineHeight: 1.3, cursor: canEdit ? 'pointer' : 'default' }}
+                          onClick={() => setEdit({ membership_id: e.membership_id, name: e.display_name, date: d, current: c, off })}
+                          style={{ width: '100%', minHeight: 44, border: '1px dashed rgba(0,0,0,0.15)', borderRadius: 6, background: off ? 'rgba(162,72,58,0.1)' : c ? (c.is_default ? 'rgba(43,100,89,0.04)' : 'rgba(43,100,89,0.12)') : 'transparent', fontSize: 12, lineHeight: 1.3, cursor: canEdit ? 'pointer' : 'default' }}
                         >
-                          {c ? (<><strong>{c.start_time.slice(0, 5)}</strong>{c.end_time ? `–${c.end_time.slice(0, 5)}` : ''}<br />{c.lunch_start && <span style={{ opacity: 0.75 }}>🍽 {c.lunch_start.slice(0, 5)}<br /></span>}<span style={{ opacity: 0.6 }}>{c.branch_name || ''}</span></>) : <span style={{ opacity: 0.35 }}>libre</span>}
+                          {off ? <strong style={{ color: '#A2483A' }}>LIBRE</strong> : c ? (<><strong>{c.start_time.slice(0, 5)}</strong>{c.end_time ? `–${c.end_time.slice(0, 5)}` : ''}<br />{c.lunch_start && <span style={{ opacity: 0.75 }}>🍽 {c.lunch_start.slice(0, 5)}<br /></span>}<span style={{ opacity: 0.6 }}>{c.branch_name || ''}</span></>) : <span style={{ opacity: 0.35 }}>—</span>}
                         </button>
                       </td>
                     )
@@ -665,6 +670,16 @@ function ScheduleEditor({ orgId, branches, edit, onClose, onSaved }) {
     onSaved()
   }
 
+  async function setOff(value) {
+    setBusy(true)
+    const { error: err } = await supabase.rpc('set_attendance_day_off', {
+      p_organization_id: orgId, p_membership_id: edit.membership_id, p_work_date: edit.date, p_off: value
+    })
+    setBusy(false)
+    if (err) { setError(err.message); return }
+    onSaved()
+  }
+
   async function clear() {
     setBusy(true)
     const { error: err } = await supabase.rpc('clear_attendance_schedule', {
@@ -680,6 +695,7 @@ function ScheduleEditor({ orgId, branches, edit, onClose, onSaved }) {
       <form className="card" onSubmit={save} onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 380, display: 'grid', gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>{edit.name}</h2>
         <div style={{ opacity: 0.65, textTransform: 'capitalize' }}>{formatDateLong(edit.date)}</div>
+        {edit.off && <p style={{ margin: 0, color: '#A2483A', fontWeight: 700 }}>Este día está marcado como libre. Si guardas un turno, deja de serlo.</p>}
         <label>Hora de entrada <input type="time" value={start} onChange={(e) => setStart(e.target.value)} required /></label>
         <label>Hora de almuerzo asignada (opcional) <input type="time" value={lunch} onChange={(e) => setLunch(e.target.value)} /></label>
         <label>Hora de salida (opcional) <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} /></label>
@@ -690,7 +706,8 @@ function ScheduleEditor({ orgId, branches, edit, onClose, onSaved }) {
         </label>
         {error && <p className="error-text" style={{ margin: 0 }}>{error}</p>}
         <button className="btn" disabled={busy}>Guardar</button>
-        {cur && <button type="button" className="btn btn-secondary" disabled={busy} onClick={clear}>Dejar libre</button>}
+        {cur && <button type="button" className="btn btn-secondary" disabled={busy} onClick={clear}>Quitar turno</button>}
+        <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => setOff(!edit.off)}>{edit.off ? 'Quitar día libre' : 'Marcar día libre'}</button>
         <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
       </form>
     </div>

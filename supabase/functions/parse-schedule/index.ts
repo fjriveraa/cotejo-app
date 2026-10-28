@@ -54,7 +54,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después:
 Reglas:
 - Un turno por persona por día en el que trabaja. Los días marcados como libre/descanso van en "days_off", no en "shifts".
 - Convierte todas las horas a formato 24 h (1:00 PM = 13:00; 9:00 a. m. = 09:00).
-- "start_time" es la hora de ingreso de ESA persona ese día. Si la hora de ingreso está en una columna o fila aparte, asócia la con la persona de forma lógica y, si no es claro a quién corresponde, baja "confidence" a 0.5 o menos y explícalo en "note" y en "warnings".
+- "start_time" es la hora de ingreso de ESA persona ese día. Si la hora de ingreso está en una columna o fila aparte, asócialo con la persona de forma lógica y, si no es claro a quién corresponde, baja "confidence" a 0.5 o menos y explícalo en "note" y en "warnings".
 - "lunch_start" es la hora a la que ESA persona sale a almorzar, si el horario la asigna.
 - "end_time" es la hora de salida/cierre solo si el horario la asigna a esa persona o si es la hora de cierre de su sucursal ese día; si no, null.
 - Las fechas deben ser reales: deduce cada fecha de los encabezados (día de la semana + número). Verifica que el día de la semana coincida con la fecha.

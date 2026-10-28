@@ -47,7 +47,7 @@ export default function ScheduleImport({ orgId, employees, branches, onClose, on
   const [hint, setHint] = useState('')
   const [error, setError] = useState(null)
   const [shifts, setShifts] = useState([])
-  const [daysOff, setDaysOff] = useState([])
+  const [daysOff, setDaysOff] = useState([]) // { employee, date, use }
   const [warnings, setWarnings] = useState([])
   const [truncated, setTruncated] = useState(false)
   const [empMap, setEmpMap] = useState({}) // nombre leído -> membership_id
@@ -76,7 +76,7 @@ export default function ScheduleImport({ orgId, employees, branches, onClose, on
       }
       if (data?.error) throw new Error(data.error)
       const list = (data.shifts || []).filter((s) => s.employee && s.date).map((s, i) => ({ ...s, id: i, use: !!s.start_time }))
-      if (list.length === 0) throw new Error('No encontré turnos en ese archivo. Prueba con una imagen más nítida o indica de qué semana es.')
+      if (list.length === 0 && !(data.days_off || []).length) throw new Error('No encontré turnos en ese archivo. Prueba con una imagen más nítida o indica de qué semana es.')
       const em = {}
       const bm = {}
       for (const s of list) {
@@ -86,7 +86,10 @@ export default function ScheduleImport({ orgId, employees, branches, onClose, on
       setEmpMap(em)
       setBrMap(bm)
       setShifts(list)
-      setDaysOff(data.days_off || [])
+      const offList = (data.days_off || []).filter((d) => d.employee && d.date).map((d, i) => ({ ...d, id: i, use: true }))
+      for (const d of offList) if (!(d.employee in em)) em[d.employee] = bestMatch(d.employee, empOptions, (o) => o.name)
+      setEmpMap(em)
+      setDaysOff(offList)
       setWarnings(data.warnings || [])
       setTruncated(!!data.truncated)
       setStep('review')
@@ -99,6 +102,7 @@ export default function ScheduleImport({ orgId, employees, branches, onClose, on
   const update = (id, patch) => setShifts((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)))
   const names = Object.keys(empMap)
   const ready = shifts.filter((s) => s.use && empMap[s.employee] && s.start_time)
+  const offReady = daysOff.filter((d) => d.use && empMap[d.employee])
   const unmatched = names.filter((n) => !empMap[n] && shifts.some((s) => s.employee === n && s.use))
 
   async function save() {
@@ -108,7 +112,8 @@ export default function ScheduleImport({ orgId, employees, branches, onClose, on
       membership_id: empMap[s.employee], work_date: s.date, branch_id: (s.branch && brMap[s.branch]) || null,
       start_time: s.start_time, lunch_start: s.lunch_start || null, end_time: s.end_time || null
     }))
-    const { data, error: err } = await supabase.rpc('import_attendance_schedule', { p_organization_id: orgId, p_rows: rows })
+    const offRows = offReady.map((d) => ({ membership_id: empMap[d.employee], work_date: d.date }))
+    const { data, error: err } = await supabase.rpc('import_attendance_schedule', { p_organization_id: orgId, p_rows: rows, p_days_off: offRows })
     if (err) { setError(err.message); setStep('review'); return }
     setSavedCount(data)
     setStep('done')
@@ -195,14 +200,23 @@ export default function ScheduleImport({ orgId, employees, branches, onClose, on
               </table>
             </div>
             {daysOff.length > 0 && (
-              <p style={{ fontSize: 12, opacity: 0.7 }}>
-                Días libres leídos ({daysOff.length}): no se guardan como turno. Un día sin turno no cuenta como ausencia, salvo que el colaborador tenga un horario fijo base.
-              </p>
+              <>
+                <h3 style={{ margin: '12px 0 4px', fontSize: 15 }}>3. Días libres</h3>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {[...daysOff].sort((a, b) => (a.date + a.employee < b.date + b.employee ? -1 : 1)).map((d) => (
+                    <label key={d.id} style={{ display: 'flex', gap: 4, alignItems: 'center', border: '1px solid rgba(0,0,0,0.15)', borderRadius: 16, padding: '2px 10px', fontSize: 13, opacity: d.use ? 1 : 0.45 }}>
+                      <input type="checkbox" checked={d.use} onChange={(e) => setDaysOff((prev) => prev.map((x) => (x.id === d.id ? { ...x, use: e.target.checked } : x)))} />
+                      <span style={{ textTransform: 'capitalize' }}>{d.employee} · {formatDateLong(d.date)}</span>
+                    </label>
+                  ))}
+                </div>
+                <p style={{ fontSize: 12, opacity: 0.7 }}>Un día libre no cuenta como ausencia, aunque el colaborador tenga horario fijo.</p>
+              </>
             )}
             {unmatched.length > 0 && <p className="error-text" style={{ fontSize: 13 }}>Sin asignar: {unmatched.join(', ')}. Sus turnos se omitirán.</p>}
             {error && <p className="error-text">{error}</p>}
             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-              <button type="button" className="btn" disabled={ready.length === 0} onClick={save}>Guardar {ready.length} turno{ready.length === 1 ? '' : 's'}</button>
+              <button type="button" className="btn" disabled={ready.length + offReady.length === 0} onClick={save}>Guardar {ready.length} turno{ready.length === 1 ? '' : 's'}{offReady.length > 0 ? ` y ${offReady.length} día${offReady.length === 1 ? '' : 's'} libre${offReady.length === 1 ? '' : 's'}` : ''}</button>
               <button type="button" className="btn btn-secondary" onClick={() => setStep('pick')}>Subir otro archivo</button>
             </div>
             <p style={{ fontSize: 12, opacity: 0.65 }}>Si ya había un turno ese día para la misma persona, se reemplaza.</p>
@@ -212,7 +226,7 @@ export default function ScheduleImport({ orgId, employees, branches, onClose, on
         {step === 'done' && (
           <div style={{ textAlign: 'center', marginTop: 16 }}>
             <div style={{ fontSize: 40 }}>✓</div>
-            <p>Se guardaron {savedCount} turnos.</p>
+            <p>Se guardaron {savedCount} registros (turnos y días libres).</p>
             <button type="button" className="btn" onClick={onSaved}>Ver horarios</button>
           </div>
         )}
