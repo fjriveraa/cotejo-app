@@ -38,7 +38,10 @@ export default function AttendanceReports() {
     <div className="container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <h1 className="page-title" style={{ margin: 0 }}>Asistencia</h1>
-        {canSupervise && <Link to="/asistencia/marcar" className="btn btn-secondary">Abrir modo marcación</Link>}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {isOwner && <Link to="/invitar" className="btn btn-secondary">+ Invitar empleado</Link>}
+          {canSupervise && <Link to="/asistencia/marcar" className="btn btn-secondary">Abrir modo marcación</Link>}
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 6, margin: '16px 0', flexWrap: 'wrap' }}>

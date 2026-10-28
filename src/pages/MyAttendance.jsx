@@ -1,21 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import QRCode from 'qrcode'
+import { useCallback, useEffect, useState } from 'react'
+import AttendanceQr from '../components/AttendanceQr'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { EVENT_LABELS, TZ, hondurasDateStr, formatTime, formatDateLong, addDays } from '../lib/attendance'
 
-// El QR es un código de un solo uso que dura ~45 s. Se renueva a los 35 s
-// para que nunca se muestre uno a punto de vencer. Una captura de pantalla
-// compartida con un compañero no sirve: ya venció o ya se gastó.
-const REFRESH_MS = 35000
-
 export default function MyAttendance() {
   const { membership } = useAuth()
   const orgId = membership?.organization_id
-  const canvasRef = useRef(null)
-  const [codeInfo, setCodeInfo] = useState(null)
-  const [qrError, setQrError] = useState(null)
-  const [secondsLeft, setSecondsLeft] = useState(0)
   const [punches, setPunches] = useState([])
   const [loadingPunches, setLoadingPunches] = useState(true)
   const [showCorrection, setShowCorrection] = useState(false)
@@ -32,49 +23,12 @@ export default function MyAttendance() {
     if (!error) setPunches(data || [])
   }, [orgId])
 
-  const issue = useCallback(async () => {
-    if (!orgId) return
-    const { data, error } = await supabase.rpc('issue_attendance_code', { p_organization_id: orgId })
-    if (error) {
-      setQrError(error.message)
-      return
-    }
-    setQrError(null)
-    setCodeInfo(data)
-  }, [orgId])
-
   useEffect(() => {
-    issue()
     loadPunches()
-    const id = setInterval(() => {
-      if (document.visibilityState === 'visible') issue()
-    }, REFRESH_MS)
-    // Al volver a la app (desde otra pestaña) se pide uno fresco de inmediato.
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') {
-        issue()
-        loadPunches()
-      }
-    }
+    const onVisible = () => { if (document.visibilityState === 'visible') loadPunches() }
     document.addEventListener('visibilitychange', onVisible)
-    return () => {
-      clearInterval(id)
-      document.removeEventListener('visibilitychange', onVisible)
-    }
-  }, [issue, loadPunches])
-
-  useEffect(() => {
-    if (!codeInfo?.code || !canvasRef.current) return
-    QRCode.toCanvas(canvasRef.current, codeInfo.code, { width: 260, margin: 1, errorCorrectionLevel: 'M' }, () => {})
-  }, [codeInfo])
-
-  useEffect(() => {
-    if (!codeInfo?.expires_at) return
-    const tick = () => setSecondsLeft(Math.max(0, Math.round((new Date(codeInfo.expires_at).getTime() - Date.now()) / 1000)))
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [codeInfo])
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [loadPunches])
 
   const byDay = {}
   for (const p of punches) {
@@ -84,7 +38,6 @@ export default function MyAttendance() {
     byDay[d].push(p)
   }
   const days = Object.keys(byDay).sort().reverse()
-  const expired = secondsLeft === 0 && codeInfo
 
   return (
     <div className="container" style={{ maxWidth: 560 }}>
@@ -94,21 +47,7 @@ export default function MyAttendance() {
       </p>
 
       <div className="card" style={{ textAlign: 'center' }}>
-        {qrError ? (
-          <p className="error-text">{qrError}</p>
-        ) : (
-          <>
-            <div style={{ position: 'relative', display: 'inline-block', opacity: expired ? 0.15 : 1 }}>
-              <canvas ref={canvasRef} width={260} height={260} style={{ width: 260, height: 260, background: '#fff', borderRadius: 8 }} />
-            </div>
-            <div style={{ marginTop: 8, fontSize: 14, opacity: 0.7 }}>
-              {expired ? 'Código vencido' : `Se renueva en ${secondsLeft} s`}
-            </div>
-            <button type="button" className="btn btn-secondary" style={{ marginTop: 8 }} onClick={issue}>
-              Actualizar código
-            </button>
-          </>
-        )}
+        <AttendanceQr orgId={orgId} />
         <p style={{ fontSize: 12, opacity: 0.55, margin: '12px 0 0' }}>
           Es de un solo uso y dura menos de un minuto: no sirve compartirlo ni tomarle captura.
         </p>

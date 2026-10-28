@@ -31,6 +31,7 @@ import TopBar from './components/TopBar'
 import OrgPicker from './components/OrgPicker'
 import CompanyHub from './pages/CompanyHub'
 import MyAttendance from './pages/MyAttendance'
+import AttendanceFab from './components/AttendanceFab'
 import AttendanceKiosk from './pages/AttendanceKiosk'
 import AttendanceReports from './pages/AttendanceReports'
 import BiometricLockScreen from './components/BiometricLockScreen'
@@ -132,6 +133,7 @@ function ProtectedLayout({ children }) {
       <div className="app-shell">
         <TopBar />
         {children}
+        <AttendanceFab />
       </div>
     </BiometricLockScreen>
   )
