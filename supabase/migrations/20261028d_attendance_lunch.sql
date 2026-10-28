@@ -51,6 +51,8 @@ declare
   v_allow boolean;
   v_qr boolean;
   v_stip int;
+  v_cap numeric;
+  v_entry timestamptz;
   v_last record;
   v_ls timestamptz;
   v_open boolean := false;
@@ -70,14 +72,23 @@ begin
 
   select coalesce((select st.allow_self_punch from attendance_settings st where st.organization_id = p_organization_id), false),
          coalesce((select st.method_qr from attendance_settings st where st.organization_id = p_organization_id), true),
-         coalesce((select st.lunch_max_minutes from attendance_settings st where st.organization_id = p_organization_id), 60)
-  into v_allow, v_qr, v_stip;
+         coalesce((select st.lunch_max_minutes from attendance_settings st where st.organization_id = p_organization_id), 60),
+         coalesce((select st.daily_hours_cap from attendance_settings st where st.organization_id = p_organization_id), 8)
+  into v_allow, v_qr, v_stip, v_cap;
 
   select p.event_type, p.punched_at into v_last
   from attendance_punches p
   where p.membership_id = v_membership and p.voided_at is null and p.punched_at > now() - interval '18 hours'
   order by p.punched_at desc
   limit 1;
+
+  -- Entrada de la jornada en curso (sin salida posterior).
+  if v_last.event_type is not null and v_last.event_type <> 'salida' then
+    select max(p.punched_at) into v_entry
+    from attendance_punches p
+    where p.membership_id = v_membership and p.voided_at is null and p.event_type = 'entrada'
+      and p.punched_at > now() - interval '18 hours';
+  end if;
 
   -- Almuerzo en curso: desde el último inicio, sin fin posterior.
   select max(p.punched_at) into v_ls
@@ -119,7 +130,10 @@ begin
     'last_event', v_last.event_type,
     'last_at', v_last.punched_at,
     'lunch', v_lunch,
-    'stipulated_minutes', v_stip
+    'stipulated_minutes', v_stip,
+    'entry_at', v_entry,
+    'expected_out', case when v_entry is not null and v_cap < 24
+                         then v_entry + make_interval(mins => round(v_cap * 60)::int + v_stip) end
   );
 end;
 $$;

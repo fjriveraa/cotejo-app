@@ -71,6 +71,11 @@ export default function AttendanceSheet({ orgId, onClose }) {
             <p style={{ margin: '0 0 14px', opacity: 0.65, fontSize: 14 }}>
               {status.last_event ? `Última marca: ${EVENT_LABELS[status.last_event]} · ${formatTime(status.last_at)}` : 'Aún no has marcado hoy.'}
             </p>
+            {status.expected_out && (
+              <p style={{ margin: '0 0 12px', fontSize: 14 }}>
+                Entraste a las <strong>{formatTime(status.entry_at)}</strong> · tu salida corresponde a las <strong>{formatTime(status.expected_out)}</strong>
+              </p>
+            )}
             {status.lunch && <LunchCountdown lunch={status.lunch} />}
             <div style={{ display: 'grid', gap: 10 }}>
               {status.allowed.map((ev, i) => (
