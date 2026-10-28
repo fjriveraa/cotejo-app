@@ -419,6 +419,7 @@ export default function TopBar() {
                     como links sueltos acá -- ahora son una sola pantalla que
                     junta todo lo que le pertenece a esta empresa. */}
                 <NavLink to="/empresa" className="menu-link"><IconBuilding /> Mi empresa</NavLink>
+                <NavLink to="/asistencia" className="menu-link"><IconUsers /> Asistencia del personal</NavLink>
                 {/* Una vez verificada, este paso ya se hizo — no tiene sentido seguir
                     mostrándolo junto a las tareas recurrentes del día a día. */}
                 {canVerify && verificationStatus !== 'verified' && (
@@ -429,6 +430,7 @@ export default function TopBar() {
 
             <div className="menu-section">
               <div className="menu-section-title">Cuenta</div>
+              <NavLink to="/mi-asistencia" className="menu-link"><IconCheckCircle /> Mi asistencia (QR)</NavLink>
               <NavLink to="/mi-identificacion" className="menu-link"><IconIdCard /> Mi identificación</NavLink>
               <NavLink to="/unirme" className="menu-link"><IconLink /> Unirme a otra empresa</NavLink>
               <NavLink to="/empresas" className="menu-link"><IconSearch /> Buscar empresas</NavLink>

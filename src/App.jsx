@@ -30,6 +30,9 @@ import Landing from './pages/Landing'
 import TopBar from './components/TopBar'
 import OrgPicker from './components/OrgPicker'
 import CompanyHub from './pages/CompanyHub'
+import MyAttendance from './pages/MyAttendance'
+import AttendanceKiosk from './pages/AttendanceKiosk'
+import AttendanceReports from './pages/AttendanceReports'
 import BiometricLockScreen from './components/BiometricLockScreen'
 import { IconBuilding, IconBriefcase, IconLink, IconSearch } from './components/icons'
 
@@ -145,6 +148,14 @@ function RequireOwner({ children }) {
 function RequireQueueAccess({ children }) {
   const { membership } = useAuth()
   if (!membership || !QUEUE_ROLES.includes(membership.role)) {
+    return <Navigate to="/" replace />
+  }
+  return children
+}
+
+function RequireSupervisor({ children }) {
+  const { membership } = useAuth()
+  if (!membership || !['propietario', 'admin', 'supervisor'].includes(membership.role)) {
     return <Navigate to="/" replace />
   }
   return children
@@ -339,6 +350,34 @@ export default function App() {
         element={
           <ProtectedLayout>
             <MyIdentification />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/mi-asistencia"
+        element={
+          <ProtectedLayout>
+            <MyAttendance />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/asistencia"
+        element={
+          <ProtectedLayout>
+            <RequireQueueAccess>
+              <AttendanceReports />
+            </RequireQueueAccess>
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/asistencia/marcar"
+        element={
+          <ProtectedLayout>
+            <RequireSupervisor>
+              <AttendanceKiosk />
+            </RequireSupervisor>
           </ProtectedLayout>
         }
       />

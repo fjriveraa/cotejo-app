@@ -20,6 +20,8 @@
     "@capgo/capacitor-native-biometric": "^6.0.0",
     "@capgo/capacitor-social-login": "lts-v6",
     "@supabase/supabase-js": "^2.45.4",
+    "jsqr": "^1.4.0",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2",
