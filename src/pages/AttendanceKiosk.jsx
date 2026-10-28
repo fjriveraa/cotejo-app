@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import jsQR from 'jsqr'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { EVENT_LABELS, formatTime, hondurasDateStr, formatMinutes } from '../lib/attendance'
+import { EVENT_LABELS, BUTTON_LABELS, formatTime, hondurasDateStr, formatMinutes } from '../lib/attendance'
 
 // Pantalla del dispositivo de la sucursal (tableta o teléfono fijo). El
 // empleado muestra su QR frente a la cámara; en el mismo instante se guarda
@@ -321,7 +321,7 @@ function Scanner({ orgId, device, settings, onChangeDevice }) {
             <div style={{ display: 'grid', gap: 10, width: '100%', maxWidth: 360 }}>
               {pending.allowed.map((ev) => (
                 <button key={ev} type="button" className="btn" style={{ fontSize: 20, padding: '16px 12px' }} onClick={() => commit(pending.code, ev, pending.photo)}>
-                  {EVENT_LABELS[ev]}
+                  {BUTTON_LABELS[ev]}
                 </button>
               ))}
               <button type="button" className="btn btn-secondary" onClick={reset}>Cancelar</button>

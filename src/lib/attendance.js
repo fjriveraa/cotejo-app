@@ -3,11 +3,48 @@
 
 export const TZ = 'America/Tegucigalpa'
 
+// Nombre de cada marca ya registrada.
 export const EVENT_LABELS = {
   entrada: 'Entrada',
-  almuerzo_inicio: 'Salida a almuerzo',
-  almuerzo_fin: 'Regreso de almuerzo',
+  almuerzo_inicio: 'Inicio de almuerzo',
+  almuerzo_pausa: 'Pausa del almuerzo',
+  almuerzo_reanuda: 'Almuerzo reanudado',
+  almuerzo_fin: 'Reingreso de labores',
   salida: 'Salida'
+}
+
+// Texto de los botones que ve el empleado.
+export const BUTTON_LABELS = {
+  entrada: 'Marcar entrada',
+  almuerzo_inicio: 'Marcar almuerzo',
+  almuerzo_pausa: 'Pausar almuerzo',
+  almuerzo_reanuda: 'Continuar almuerzo',
+  almuerzo_fin: 'Marcar reingreso de labores',
+  salida: 'Marcar salida'
+}
+
+// Las pausas no llevan foto: son interrupciones dentro del almuerzo.
+export const NO_PHOTO_EVENTS = ['almuerzo_pausa', 'almuerzo_reanuda']
+
+// Marcas que se pueden olvidar y pedir corregir.
+export const CORRECTABLE_EVENTS = ['entrada', 'almuerzo_inicio', 'almuerzo_fin', 'salida']
+
+// Segundos que le quedan al almuerzo (negativo = excedido). lunch viene de my_attendance_status.
+export function lunchRemainingSeconds(lunch, nowMs = Date.now()) {
+  if (!lunch) return 0
+  const start = new Date(lunch.started_at).getTime()
+  let paused = (lunch.paused_seconds || 0) * 1000
+  if (lunch.paused_since) paused += nowMs - new Date(lunch.paused_since).getTime()
+  const used = nowMs - start - paused
+  return Math.round((lunch.stipulated_minutes * 60000 - used) / 1000)
+}
+
+export function formatClock(totalSeconds) {
+  const sign = totalSeconds < 0 ? '-' : ''
+  const t = Math.abs(totalSeconds)
+  const m = Math.floor(t / 60)
+  const s = t % 60
+  return `${sign}${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
 export function hondurasDateStr(date = new Date()) {
@@ -73,7 +110,7 @@ export function weekLabel(mondayStr) {
 
 // Suma las filas del reporte por empleado: totales para encabezados de carpeta.
 export function summarize(rows) {
-  const s = { days: 0, worked: 0, late: 0, lateDays: 0, overtime: 0, absences: 0, incomplete: 0, lunchOver: 0 }
+  const s = { days: 0, worked: 0, late: 0, lateDays: 0, overtime: 0, absences: 0, incomplete: 0, lunchOver: 0, pauses: 0, lunchFlags: 0 }
   for (const r of rows) {
     if (r.absent) {
       s.absences += 1
@@ -85,6 +122,8 @@ export function summarize(rows) {
     if ((r.late_minutes || 0) > 0) s.lateDays += 1
     s.overtime += r.overtime_minutes || 0
     s.lunchOver += r.lunch_over_minutes || 0
+    s.pauses += r.lunch_pause_minutes || 0
+    if (r.lunch_flag) s.lunchFlags += 1
     if (r.incomplete) s.incomplete += 1
   }
   return s

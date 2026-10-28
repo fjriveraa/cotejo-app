@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import AttendanceQr from './AttendanceQr'
-import { EVENT_LABELS, formatTime, hondurasDateStr, formatMinutes } from '../lib/attendance'
+import { EVENT_LABELS, BUTTON_LABELS, NO_PHOTO_EVENTS, lunchRemainingSeconds, formatClock, formatTime, hondurasDateStr, formatMinutes } from '../lib/attendance'
 
 // Hoja inferior del botón "Marcar".
 //  - Si la empresa habilitó la marcación directa: botones de lo que toca
@@ -15,6 +15,26 @@ export default function AttendanceSheet({ orgId, onClose }) {
   const [pendingEvent, setPendingEvent] = useState(null)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
+  const [, setTick] = useState(0)
+
+  // Cuenta regresiva del almuerzo: se refresca cada segundo mientras esté abierto.
+  useEffect(() => {
+    if (!status?.lunch) return undefined
+    const id = setInterval(() => setTick((n) => n + 1), 1000)
+    return () => clearInterval(id)
+  }, [status?.lunch])
+
+  // Pausar y continuar no piden foto: se registran con un toque.
+  async function quickPunch(ev) {
+    setError(null)
+    setMode('saving')
+    const { error: err } = await supabase.rpc('self_record_attendance', {
+      p_organization_id: orgId, p_event_type: ev, p_photo_path: null
+    })
+    if (err) { setError(err.message); setMode('buttons'); loadStatus(); return }
+    setMode('buttons')
+    await loadStatus()
+  }
 
   async function loadStatus() {
     const { data, error: err } = await supabase.rpc('my_attendance_status', { p_organization_id: orgId })
@@ -51,6 +71,7 @@ export default function AttendanceSheet({ orgId, onClose }) {
             <p style={{ margin: '0 0 14px', opacity: 0.65, fontSize: 14 }}>
               {status.last_event ? `Última marca: ${EVENT_LABELS[status.last_event]} · ${formatTime(status.last_at)}` : 'Aún no has marcado hoy.'}
             </p>
+            {status.lunch && <LunchCountdown lunch={status.lunch} />}
             <div style={{ display: 'grid', gap: 10 }}>
               {status.allowed.map((ev, i) => (
                 <button
@@ -58,9 +79,12 @@ export default function AttendanceSheet({ orgId, onClose }) {
                   type="button"
                   className={`btn ${i === 0 ? '' : 'btn-secondary'}`}
                   style={{ fontSize: 20, padding: '16px 12px' }}
-                  onClick={() => { setPendingEvent(ev); setError(null); setMode('camera') }}
+                  onClick={() => {
+                    if (NO_PHOTO_EVENTS.includes(ev)) { quickPunch(ev); return }
+                    setPendingEvent(ev); setError(null); setMode('camera')
+                  }}
                 >
-                  {EVENT_LABELS[ev]}
+                  {BUTTON_LABELS[ev]}
                 </button>
               ))}
             </div>
@@ -75,7 +99,7 @@ export default function AttendanceSheet({ orgId, onClose }) {
 
         {view === 'camera' && (
           <SelfieStep
-            label={EVENT_LABELS[pendingEvent]}
+            label={BUTTON_LABELS[pendingEvent]}
             onCancel={() => setMode('buttons')}
             onCaptured={async (blob, geo) => {
               setMode('saving')
@@ -113,7 +137,8 @@ export default function AttendanceSheet({ orgId, onClose }) {
         {view === 'done' && result && (
           <>
             <div style={{ fontSize: 44 }}>✓</div>
-            <h2 style={{ margin: '4px 0', fontSize: 22 }}>{EVENT_LABELS[result.event_type]} registrada</h2>
+            <h2 style={{ margin: '4px 0', fontSize: 22 }}>Marca registrada</h2>
+            <p style={{ margin: 0, fontSize: 16, opacity: 0.75 }}>{EVENT_LABELS[result.event_type]}</p>
             <p style={{ margin: 0, fontSize: 18 }}>{formatTime(result.punched_at)}</p>
             {result.event_type === 'entrada' && result.late_minutes > 0 && (
               <p style={{ color: '#A2483A', fontWeight: 700 }}>Llegaste {formatMinutes(result.late_minutes)} tarde</p>
@@ -140,6 +165,21 @@ export default function AttendanceSheet({ orgId, onClose }) {
 
         {error && view === 'buttons' && <p className="error-text" style={{ marginTop: 10 }}>{error}</p>}
       </div>
+    </div>
+  )
+}
+
+function LunchCountdown({ lunch }) {
+  const left = lunchRemainingSeconds(lunch)
+  const paused = !!lunch.paused_since
+  const over = left < 0
+  return (
+    <div style={{ margin: '0 0 14px', padding: 12, borderRadius: 12, background: over ? 'rgba(162,72,58,0.1)' : 'rgba(43,100,89,0.08)' }}>
+      <div style={{ fontSize: 13, opacity: 0.7 }}>
+        {paused ? 'Almuerzo en pausa' : over ? 'Tiempo de almuerzo excedido' : 'Te queda de almuerzo'}
+      </div>
+      <div style={{ fontSize: 40, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: over ? '#A2483A' : 'inherit' }}>{formatClock(left)}</div>
+      <div style={{ fontSize: 12, opacity: 0.6 }}>Almuerzo estipulado: {formatMinutes(lunch.stipulated_minutes)}. Si te interrumpen, toca “Pausar”.</div>
     </div>
   )
 }

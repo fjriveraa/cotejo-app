@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import EvidenceViewer from '../components/EvidenceViewer'
 import {
-  EVENT_LABELS, hondurasDateStr, formatTime, formatDateLong, addDays, mondayOf,
+  EVENT_LABELS, CORRECTABLE_EVENTS, hondurasDateStr, formatTime, formatDateLong, addDays, mondayOf,
   monthKey, monthLabel, weekKey, weekLabel, formatMinutes, summarize
 } from '../lib/attendance'
 
@@ -132,9 +132,12 @@ function ReportTab({ orgId, employees, branches, canSupervise }) {
       'Hora de entrada asignada': r.scheduled_start ? r.scheduled_start.slice(0, 5) : '',
       'Entrada real': r.first_in ? formatTime(r.first_in) : '',
       'Salida real': r.last_out ? formatTime(r.last_out) : '',
-      'Almuerzo (min)': r.lunch_minutes,
+      'Almuerzo efectivo (min)': r.lunch_minutes,
+      'Pausas en almuerzo (min)': r.lunch_pause_minutes || 0,
+      'Diferencia vs estipulado (min)': r.absent ? '' : r.lunch_diff_minutes,
+      'Almuerzo no cuadra (revisar cámaras)': r.lunch_flag ? 'SÍ' : '',
       'Almuerzo excedido (min)': r.lunch_over_minutes,
-      'Horas trabajadas': Number(((r.worked_minutes || 0) / 60).toFixed(2)),
+      'Horas efectivas (sin almuerzo)': Number(((r.worked_minutes || 0) / 60).toFixed(2)),
       'Minutos tarde': r.late_minutes,
       'Horas extra': Number(((r.overtime_minutes || 0) / 60).toFixed(2)),
       Estado: r.absent ? 'Ausente' : r.incomplete ? 'Incompleto' : 'Completo'
@@ -232,9 +235,11 @@ function ReportTab({ orgId, employees, branches, canSupervise }) {
 function Totals({ s }) {
   return (
     <span style={{ fontSize: 12, opacity: 0.75, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-      <span>{formatMinutes(s.worked)} trabajadas</span>
+      <span>{formatMinutes(s.worked)} efectivas</span>
       <span style={{ color: s.late > 0 ? '#A2483A' : undefined }}>{s.late} min tarde{s.lateDays ? ` (${s.lateDays} d)` : ''}</span>
       {s.overtime > 0 && <span>{formatMinutes(s.overtime)} extra</span>}
+      {s.pauses > 0 && <span>{formatMinutes(s.pauses)} en pausas de almuerzo</span>}
+      {s.lunchFlags > 0 && <span style={{ color: '#A2483A' }}>{s.lunchFlags} almuerzo{s.lunchFlags > 1 ? 's' : ''} no cuadra{s.lunchFlags > 1 ? 'n' : ''}</span>}
       {s.absences > 0 && <span style={{ color: '#A2483A' }}>{s.absences} ausencia{s.absences > 1 ? 's' : ''}</span>}
       {s.incomplete > 0 && <span>{s.incomplete} incompleto{s.incomplete > 1 ? 's' : ''}</span>}
     </span>
@@ -263,7 +268,7 @@ function DayRows({ rows, onOpenDetail }) {
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
       <thead>
-        <tr><th style={th}>Empleado</th><th style={th}>Entrada</th><th style={th}>Salida</th><th style={th}>Almuerzo</th><th style={th}>Trabajadas</th><th style={th}>Tarde</th><th style={th}>Extra</th><th style={th}></th></tr>
+        <tr><th style={th}>Empleado</th><th style={th}>Entrada</th><th style={th}>Salida</th><th style={th}>Almuerzo</th><th style={th}>Efectivas</th><th style={th}>Tarde</th><th style={th}>Extra</th><th style={th}></th></tr>
       </thead>
       <tbody>
         {rows.map((r) => (
@@ -275,7 +280,11 @@ function DayRows({ rows, onOpenDetail }) {
               <>
                 <td style={td}>{formatTime(r.first_in)}{r.scheduled_start && <span style={{ opacity: 0.5 }}> / {r.scheduled_start.slice(0, 5)}</span>}</td>
                 <td style={td}>{r.last_out ? formatTime(r.last_out) : <span style={{ color: '#A2483A' }}>sin salida</span>}</td>
-                <td style={td}>{r.lunch_minutes ? `${r.lunch_minutes} min` : '—'}{r.lunch_over_minutes > 0 && <span style={{ color: '#A2483A' }}> (+{r.lunch_over_minutes})</span>}</td>
+                <td style={td}>
+                  {r.lunch_minutes ? `${r.lunch_minutes} min` : '—'}
+                  {r.lunch_pause_minutes > 0 && <span style={{ opacity: 0.6 }}> · {r.lunch_pause_minutes} min pausa</span>}
+                  {r.lunch_flag && <div style={{ color: '#A2483A', fontWeight: 700, fontSize: 12 }}>⚠ No cuadra ({r.lunch_diff_minutes > 0 ? '+' : ''}{r.lunch_diff_minutes} min) · revisar cámaras</div>}
+                </td>
                 <td style={td}>{formatMinutes(r.worked_minutes)}</td>
                 <td style={{ ...td, color: r.late_minutes > 0 ? '#A2483A' : undefined, fontWeight: r.late_minutes > 0 ? 700 : 400 }}>{r.late_minutes > 0 ? `${r.late_minutes} min` : '—'}</td>
                 <td style={td}>{r.overtime_minutes > 0 ? formatMinutes(r.overtime_minutes) : '—'}</td>
@@ -426,7 +435,7 @@ function AddPunch({ orgId, row, onDone }) {
   return (
     <form onSubmit={submit} style={{ display: 'grid', gap: 8 }}>
       <select value={type} onChange={(e) => setType(e.target.value)}>
-        {Object.entries(EVENT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        {CORRECTABLE_EVENTS.map((k) => <option key={k} value={k}>{EVENT_LABELS[k]}</option>)}
       </select>
       <input type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
       <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Motivo (obligatorio)" required />

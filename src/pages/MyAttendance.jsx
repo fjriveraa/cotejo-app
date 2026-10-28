@@ -2,25 +2,28 @@ import { useCallback, useEffect, useState } from 'react'
 import AttendanceQr from '../components/AttendanceQr'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { EVENT_LABELS, TZ, hondurasDateStr, formatTime, formatDateLong, addDays } from '../lib/attendance'
+import { EVENT_LABELS, CORRECTABLE_EVENTS, TZ, hondurasDateStr, formatTime, formatDateLong, addDays, monthKey, monthLabel, formatMinutes } from '../lib/attendance'
 
 export default function MyAttendance() {
   const { membership } = useAuth()
   const orgId = membership?.organization_id
   const [punches, setPunches] = useState([])
+  const [dayRows, setDayRows] = useState([])
+  const [openDay, setOpenDay] = useState(null)
   const [loadingPunches, setLoadingPunches] = useState(true)
   const [showCorrection, setShowCorrection] = useState(false)
 
   const loadPunches = useCallback(async () => {
     if (!orgId) return
     const today = hondurasDateStr()
-    const { data, error } = await supabase.rpc('my_attendance', {
-      p_organization_id: orgId,
-      p_from: addDays(today, -6),
-      p_to: today
-    })
+    const from = addDays(today, -92)
+    const [{ data, error }, { data: dd }] = await Promise.all([
+      supabase.rpc('my_attendance', { p_organization_id: orgId, p_from: from, p_to: today }),
+      supabase.rpc('my_attendance_days', { p_organization_id: orgId, p_from: from, p_to: today })
+    ])
     setLoadingPunches(false)
     if (!error) setPunches(data || [])
+    setDayRows(dd || [])
   }, [orgId])
 
   useEffect(() => {
@@ -38,6 +41,17 @@ export default function MyAttendance() {
     byDay[d].push(p)
   }
   const days = Object.keys(byDay).sort().reverse()
+  const summaryByDay = {}
+  for (const r of dayRows) summaryByDay[r.work_date] = r
+  const months = []
+  for (const d of days) {
+    const k = monthKey(d)
+    let m = months.find((x) => x.key === k)
+    if (!m) { m = { key: k, days: [], worked: 0, late: 0 }; months.push(m) }
+    m.days.push(d)
+    const sr = summaryByDay[d]
+    if (sr) { m.worked += sr.worked_minutes || 0; m.late += sr.late_minutes || 0 }
+  }
 
   return (
     <div className="container" style={{ maxWidth: 560 }}>
@@ -55,7 +69,7 @@ export default function MyAttendance() {
 
       <div className="card" style={{ marginTop: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>Mis marcas (últimos 7 días)</h2>
+          <h2 style={{ margin: 0, fontSize: 18 }}>Mi historial</h2>
           <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} onClick={() => setShowCorrection((v) => !v)}>
             {showCorrection ? 'Cerrar' : 'Olvidé marcar'}
           </button>
@@ -73,21 +87,46 @@ export default function MyAttendance() {
         {loadingPunches ? (
           <p style={{ opacity: 0.6 }}>Cargando...</p>
         ) : days.length === 0 ? (
-          <p style={{ opacity: 0.6 }}>Todavía no hay marcas esta semana.</p>
+          <p style={{ opacity: 0.6 }}>Todavía no hay marcas.</p>
         ) : (
-          days.map((d) => (
-            <div key={d} style={{ marginTop: 14 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, textTransform: 'capitalize' }}>{formatDateLong(d)}</div>
-              {[...byDay[d]].reverse().map((p) => (
-                <div key={p.punch_id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 14 }}>
-                  <span>
-                    {EVENT_LABELS[p.event_type]}
-                    {p.source === 'correccion' && <span style={{ opacity: 0.6 }}> · corregida</span>}
-                    {p.branch_name && <span style={{ opacity: 0.6 }}> · {p.branch_name}</span>}
-                  </span>
-                  <strong>{formatTime(p.punched_at)}</strong>
-                </div>
-              ))}
+          months.map((m) => (
+            <div key={m.key} style={{ marginTop: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderBottom: '2px solid rgba(43,100,89,0.25)', paddingBottom: 4 }}>
+                <strong style={{ textTransform: 'capitalize', fontSize: 16 }}>{monthLabel(m.key)}</strong>
+                <span style={{ fontSize: 12, opacity: 0.7 }}>{m.days.length} día{m.days.length === 1 ? '' : 's'} · {formatMinutes(m.worked)} efectivas{m.late > 0 ? ` · ${m.late} min tarde` : ''}</span>
+              </div>
+              {m.days.map((d) => {
+                const sr = summaryByDay[d]
+                const open = openDay === d
+                return (
+                  <div key={d} style={{ marginTop: 10 }}>
+                    <button type="button" onClick={() => setOpenDay(open ? null : d)} style={{ all: 'unset', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', width: '100%', gap: 8 }}>
+                      <span style={{ fontWeight: 700, fontSize: 14, textTransform: 'capitalize' }}>{formatDateLong(d)}</span>
+                      <span style={{ fontSize: 13, opacity: 0.75 }}>
+                        {sr?.last_out ? `${formatMinutes(sr.worked_minutes)} efectivas` : 'en curso'} {open ? '▴' : '▾'}
+                      </span>
+                    </button>
+                    {sr && (
+                      <div style={{ fontSize: 12, opacity: 0.65, marginTop: 2 }}>
+                        {formatTime(sr.first_in)} – {sr.last_out ? formatTime(sr.last_out) : '…'}
+                        {sr.lunch_minutes > 0 && ` · almuerzo ${sr.lunch_minutes} min`}
+                        {sr.lunch_pause_minutes > 0 && ` (pausa ${sr.lunch_pause_minutes} min)`}
+                        {sr.late_minutes > 0 && <span style={{ color: '#A2483A' }}> · tarde {sr.late_minutes} min</span>}
+                      </div>
+                    )}
+                    {open && [...byDay[d]].reverse().map((p) => (
+                      <div key={p.punch_id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 14 }}>
+                        <span>
+                          {EVENT_LABELS[p.event_type]}
+                          {p.source === 'correccion' && <span style={{ opacity: 0.6 }}> · corregida</span>}
+                          {p.branch_name && <span style={{ opacity: 0.6 }}> · {p.branch_name}</span>}
+                        </span>
+                        <strong>{formatTime(p.punched_at)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
             </div>
           ))
         )}
@@ -132,7 +171,7 @@ function CorrectionForm({ orgId, onDone }) {
       </label>
       <label>Qué olvidaste marcar
         <select value={type} onChange={(e) => setType(e.target.value)}>
-          {Object.entries(EVENT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          {CORRECTABLE_EVENTS.map((k) => <option key={k} value={k}>{EVENT_LABELS[k]}</option>)}
         </select>
       </label>
       <label>Hora real ({TZ === 'America/Tegucigalpa' ? 'hora de Honduras' : TZ})
