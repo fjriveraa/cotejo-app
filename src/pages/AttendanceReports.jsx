@@ -375,6 +375,14 @@ function DayDetail({ orgId, row, canEdit, onClose, onChanged }) {
                   </span>
                 </div>
                 {p.source === 'correccion' && <div style={{ fontSize: 12, opacity: 0.65 }}>{p.note}</div>}
+                {p.source === 'telefono' && (
+                  <div style={{ fontSize: 12, opacity: 0.75 }}>
+                    Marcada desde teléfono
+                    {p.geo?.lat != null ? (
+                      <> · <a href={`https://www.google.com/maps?q=${p.geo.lat},${p.geo.lng}`} target="_blank" rel="noreferrer">ver ubicación</a>{p.geo.accuracy ? ` (±${Math.round(p.geo.accuracy)} m)` : ''}</>
+                    ) : ' · sin ubicación'}
+                  </div>
+                )}
                 {p.voided_at && <div style={{ fontSize: 12, color: '#A2483A' }}>Anulada: {p.void_reason}</div>}
               </div>
             ))}
@@ -662,7 +670,8 @@ function ConfigTab({ orgId, branches }) {
       p_organization_id: orgId,
       p_tolerance_minutes: Number(settings.tolerance_minutes),
       p_daily_hours_cap: Number(settings.daily_hours_cap),
-      p_lunch_max_minutes: Number(settings.lunch_max_minutes)
+      p_lunch_max_minutes: Number(settings.lunch_max_minutes),
+      p_allow_self_punch: !!settings.allow_self_punch
     })
     setBusy(false)
     if (err) { setError(err.message); return }
@@ -692,6 +701,13 @@ function ConfigTab({ orgId, branches }) {
           </label>
           <label>Máximo de almuerzo (minutos)
             <input type="number" min="0" max="240" value={settings.lunch_max_minutes} onChange={(e) => setSettings({ ...settings, lunch_max_minutes: e.target.value })} />
+          </label>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <input type="checkbox" checked={!!settings.allow_self_punch} onChange={(e) => setSettings({ ...settings, allow_self_punch: e.target.checked })} style={{ marginTop: 4 }} />
+            <span>
+              Permitir que los empleados marquen desde su teléfono
+              <small style={{ display: 'block', opacity: 0.65 }}>Piden foto selfie y guardan la ubicación como evidencia; quedan etiquetadas “desde teléfono” para que las revises. Apagado: solo marcan con QR en el dispositivo de la sucursal.</small>
+            </span>
           </label>
           {msg && <p style={{ color: '#2B6459', margin: 0 }}>{msg}</p>}
           <button className="btn" disabled={busy}>Guardar reglas</button>
