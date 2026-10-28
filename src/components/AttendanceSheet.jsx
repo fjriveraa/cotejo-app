@@ -30,7 +30,8 @@ export default function AttendanceSheet({ orgId, onClose }) {
   useEffect(() => { loadStatus() }, [orgId])
 
   const direct = status?.allow_self_punch && (status.allowed || []).length > 0
-  const view = loading ? 'loading' : mode === 'buttons' && !direct ? 'qr' : mode
+  const qrOn = status?.method_qr !== false
+  const view = loading ? 'loading' : mode === 'buttons' && !direct ? (qrOn ? 'qr' : 'none') : mode
 
   return (
     <div
@@ -63,9 +64,11 @@ export default function AttendanceSheet({ orgId, onClose }) {
                 </button>
               ))}
             </div>
-            <button type="button" className="btn btn-secondary" style={{ marginTop: 14, fontSize: 13 }} onClick={() => setMode('qr')}>
-              Usar código QR en la sucursal
-            </button>
+            {qrOn && (
+              <button type="button" className="btn btn-secondary" style={{ marginTop: 14, fontSize: 13 }} onClick={() => setMode('qr')}>
+                Usar código QR en la sucursal
+              </button>
+            )}
             <button type="button" className="btn btn-secondary" style={{ marginTop: 8, marginLeft: 8, fontSize: 13 }} onClick={onClose}>Cerrar</button>
           </>
         )}
@@ -93,6 +96,16 @@ export default function AttendanceSheet({ orgId, onClose }) {
             }}
             error={error}
           />
+        )}
+
+        {view === 'none' && (
+          <>
+            <h2 style={{ margin: '0 0 8px', fontSize: 20 }}>Marcar asistencia</h2>
+            <p style={{ opacity: 0.7 }}>
+              {status?.allow_self_punch ? 'Ya registraste todo lo que corresponde por ahora.' : 'Tu empresa no tiene un método de marcación disponible. Consulta con tu administrador.'}
+            </p>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>Cerrar</button>
+          </>
         )}
 
         {view === 'saving' && <p style={{ margin: '24px 0' }}>Registrando...</p>}

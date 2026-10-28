@@ -671,7 +671,9 @@ function ConfigTab({ orgId, branches }) {
       p_tolerance_minutes: Number(settings.tolerance_minutes),
       p_daily_hours_cap: Number(settings.daily_hours_cap),
       p_lunch_max_minutes: Number(settings.lunch_max_minutes),
-      p_allow_self_punch: !!settings.allow_self_punch
+      p_allow_self_punch: !!settings.allow_self_punch,
+      p_method_qr: settings.method_qr !== false,
+      p_photo_kiosk: settings.photo_kiosk !== false
     })
     setBusy(false)
     if (err) { setError(err.message); return }
@@ -690,27 +692,68 @@ function ConfigTab({ orgId, branches }) {
     <div style={{ display: 'grid', gap: 16 }}>
       {error && <p className="error-text">{error}</p>}
       {settings && (
-        <form onSubmit={save} className="card" style={{ display: 'grid', gap: 8, maxWidth: 480 }}>
-          <h2 style={{ margin: 0, fontSize: 18 }}>Reglas de cálculo</h2>
-          <label>Tolerancia de entrada (minutos)
-            <input type="number" min="0" max="120" value={settings.tolerance_minutes} onChange={(e) => setSettings({ ...settings, tolerance_minutes: e.target.value })} />
+        <form onSubmit={save} className="card" style={{ display: 'grid', gap: 10, maxWidth: 520 }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>Cómo marcan tus empleados</h2>
+          <small style={{ opacity: 0.65, marginTop: -6 }}>Activa solo lo que tu negocio necesita y lo que permita la ley de tu país.</small>
+
+          <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <input type="checkbox" checked={!!settings.method_qr} onChange={(e) => setSettings({ ...settings, method_qr: e.target.checked })} style={{ marginTop: 4 }} />
+            <span>
+              Código QR en el dispositivo de la sucursal
+              <small style={{ display: 'block', opacity: 0.65 }}>El empleado muestra su QR (de un solo uso, vale menos de un minuto) y el dispositivo de la sucursal lo lee. Solo se marca estando en el lugar.</small>
+            </span>
           </label>
-          <small style={{ opacity: 0.65, marginTop: -4 }}>Si llega dentro de la tolerancia no cuenta como tarde; si la pasa, se cuentan todos los minutos desde la hora de entrada.</small>
-          <label>Horas por día antes de horas extra
-            <input type="number" min="1" max="24" step="0.5" value={settings.daily_hours_cap} onChange={(e) => setSettings({ ...settings, daily_hours_cap: e.target.value })} />
-          </label>
-          <label>Máximo de almuerzo (minutos)
-            <input type="number" min="0" max="240" value={settings.lunch_max_minutes} onChange={(e) => setSettings({ ...settings, lunch_max_minutes: e.target.value })} />
-          </label>
+          {settings.method_qr && (
+            <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginLeft: 24 }}>
+              <input type="checkbox" checked={!!settings.photo_kiosk} onChange={(e) => setSettings({ ...settings, photo_kiosk: e.target.checked })} style={{ marginTop: 4 }} />
+              <span>
+                Tomar foto de evidencia en cada marca
+                <small style={{ display: 'block', opacity: 0.65 }}>Ayuda a comprobar quién marcó. Revisa que tu país permita guardar la imagen del empleado y avísale.</small>
+              </span>
+            </label>
+          )}
+
           <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
             <input type="checkbox" checked={!!settings.allow_self_punch} onChange={(e) => setSettings({ ...settings, allow_self_punch: e.target.checked })} style={{ marginTop: 4 }} />
             <span>
-              Permitir que los empleados marquen desde su teléfono
-              <small style={{ display: 'block', opacity: 0.65 }}>Piden foto selfie y guardan la ubicación como evidencia; quedan etiquetadas “desde teléfono” para que las revises. Apagado: solo marcan con QR en el dispositivo de la sucursal.</small>
+              Marcar desde su teléfono, con selfie y ubicación
+              <small style={{ display: 'block', opacity: 0.65 }}>Más cómodo, pero se puede marcar sin estar en el lugar. Cada marca queda etiquetada “desde teléfono” con su foto y ubicación para que la revises.</small>
             </span>
           </label>
+
+          <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', opacity: 0.5 }}>
+            <input type="checkbox" disabled style={{ marginTop: 4 }} />
+            <span>
+              Reconocimiento facial <em>(próximamente)</em>
+              <small style={{ display: 'block' }}>Verificará que quien marca es el empleado. Requiere consentimiento por escrito y revisar la ley de tu país.</small>
+            </span>
+          </label>
+
+          <h2 style={{ margin: '8px 0 0', fontSize: 18 }}>Reglas de tiempo</h2>
+          <label>Almuerzo estipulado (minutos)
+            <input type="number" min="0" max="240" value={settings.lunch_max_minutes} onChange={(e) => setSettings({ ...settings, lunch_max_minutes: e.target.value })} />
+          </label>
+          <small style={{ opacity: 0.65, marginTop: -6 }}>Si se pasa de este tiempo, el reporte muestra los minutos de más.</small>
+          <label>Tolerancia de entrada (minutos)
+            <input type="number" min="0" max="120" value={settings.tolerance_minutes} onChange={(e) => setSettings({ ...settings, tolerance_minutes: e.target.value })} />
+          </label>
+          <small style={{ opacity: 0.65, marginTop: -6 }}>Si llega dentro de la tolerancia no cuenta como tarde; si la pasa, se cuentan todos los minutos desde su hora de entrada.</small>
+
+          <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <input type="checkbox" checked={Number(settings.daily_hours_cap) < 24} onChange={(e) => setSettings({ ...settings, daily_hours_cap: e.target.checked ? 8 : 24 })} style={{ marginTop: 4 }} />
+            <span>
+              Calcular horas extras
+              <small style={{ display: 'block', opacity: 0.65 }}>Apagado: el reporte solo muestra entrada, salida, almuerzo y minutos tarde.</small>
+            </span>
+          </label>
+          {Number(settings.daily_hours_cap) < 24 && (
+            <label style={{ marginLeft: 24 }}>Horas por día antes de contar horas extras
+              <input type="number" min="1" max="23.5" step="0.5" value={settings.daily_hours_cap} onChange={(e) => setSettings({ ...settings, daily_hours_cap: e.target.value })} />
+            </label>
+          )}
+
           {msg && <p style={{ color: '#2B6459', margin: 0 }}>{msg}</p>}
-          <button className="btn" disabled={busy}>Guardar reglas</button>
+          <button className="btn" disabled={busy}>Guardar</button>
         </form>
       )}
 

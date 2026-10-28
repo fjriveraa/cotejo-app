@@ -28,6 +28,7 @@ export default function AttendanceKiosk() {
   })
   const [loadingDevices, setLoadingDevices] = useState(true)
   const [setupError, setSetupError] = useState(null)
+  const [settings, setSettings] = useState({ method_qr: true, photo_kiosk: true })
 
   const loadDevices = useCallback(async () => {
     if (!orgId) return
@@ -35,6 +36,8 @@ export default function AttendanceKiosk() {
     setLoadingDevices(false)
     if (error) { setSetupError(error.message); return }
     setDevices((data || []).filter((d) => d.active))
+    const { data: st } = await supabase.rpc('get_attendance_settings', { p_organization_id: orgId })
+    if (st) setSettings(st)
     const { data: br } = await supabase.from('branches').select('id, name').eq('organization_id', orgId).eq('active', true)
     setBranches(br || [])
   }, [orgId])
@@ -68,7 +71,16 @@ export default function AttendanceKiosk() {
     return <DeviceSetup orgId={orgId} devices={devices} branches={branches} isOwner={isOwner} onChoose={chooseDevice} onCreated={loadDevices} />
   }
 
-  return <Scanner orgId={orgId} device={device} onChangeDevice={forgetDevice} />
+  if (settings.method_qr === false) {
+    return (
+      <div className="container" style={{ maxWidth: 520 }}>
+        <h1 className="page-title">Marcación</h1>
+        <p>La empresa tiene desactivada la marcación con QR. Puedes activarla en Asistencia → Dispositivos y reglas.</p>
+      </div>
+    )
+  }
+
+  return <Scanner orgId={orgId} device={device} settings={settings} onChangeDevice={forgetDevice} />
 }
 
 function DeviceSetup({ orgId, devices, branches, isOwner, onChoose, onCreated }) {
@@ -128,7 +140,7 @@ function DeviceSetup({ orgId, devices, branches, isOwner, onChoose, onCreated })
   )
 }
 
-function Scanner({ orgId, device, onChangeDevice }) {
+function Scanner({ orgId, device, settings, onChangeDevice }) {
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
@@ -221,14 +233,14 @@ function Scanner({ orgId, device, onChangeDevice }) {
       setTimeout(reset, 4500)
       return
     }
-    setResult({ ...data, noPhoto: !photoPath })
+    setResult({ ...data, noPhoto: settings?.photo_kiosk !== false && !photoPath })
     setState('done')
     setTimeout(reset, 4000)
-  }, [orgId, device.device_id, reset])
+  }, [orgId, device.device_id, reset, settings])
 
   const handleCode = useCallback(async (code) => {
     setState('saving')
-    const photo = await grabPhoto()
+    const photo = settings?.photo_kiosk === false ? null : await grabPhoto()
     const { data, error } = await supabase.rpc('peek_attendance_code', { p_device_id: device.device_id, p_code: code })
     if (error) {
       setMessage(error.message)
@@ -246,7 +258,7 @@ function Scanner({ orgId, device, onChangeDevice }) {
     setState('choose')
     // El código vive 45 s: si nadie elige, se descarta antes de que venza.
     setTimeout(() => { if (stateRef.current === 'choose') reset() }, 35000)
-  }, [device.device_id, grabPhoto, commit, reset])
+  }, [device.device_id, grabPhoto, commit, reset, settings])
 
   // Bucle de lectura del QR (~4 veces por segundo).
   useEffect(() => {
