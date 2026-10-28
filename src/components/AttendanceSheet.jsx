@@ -16,6 +16,7 @@ export default function AttendanceSheet({ orgId, onClose }) {
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [, setTick] = useState(0)
+  const [today, setToday] = useState(null)
 
   // Cuenta regresiva del almuerzo: se refresca cada segundo mientras esté abierto.
   useEffect(() => {
@@ -48,6 +49,9 @@ export default function AttendanceSheet({ orgId, onClose }) {
   }
 
   useEffect(() => { loadStatus() }, [orgId])
+  useEffect(() => {
+    supabase.rpc('my_today_schedule', { p_organization_id: orgId }).then(({ data }) => setToday(data?.[0] || null))
+  }, [orgId])
 
   const direct = status?.allow_self_punch && (status.allowed || []).length > 0
   const qrOn = status?.method_qr !== false
@@ -75,6 +79,9 @@ export default function AttendanceSheet({ orgId, onClose }) {
               <p style={{ margin: '0 0 12px', fontSize: 14 }}>
                 Entraste a las <strong>{formatTime(status.entry_at)}</strong> · tu salida corresponde a las <strong>{formatTime(status.expected_out)}</strong>
               </p>
+            )}
+            {today?.lunch_start && !status.lunch && (
+              <p style={{ margin: '0 0 12px', fontSize: 14 }}>Tu almuerzo hoy: <strong>{formatTime(`${hondurasDateStr()}T${today.lunch_start}-06:00`)}</strong></p>
             )}
             {status.lunch && <LunchCountdown lunch={status.lunch} />}
             <div style={{ display: 'grid', gap: 10 }}>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import * as XLSX from 'xlsx'
+import ScheduleImport from '../components/ScheduleImport'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import EvidenceViewer from '../components/EvidenceViewer'
@@ -458,6 +459,7 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
   const [msg, setMsg] = useState(null)
   const [profiles, setProfiles] = useState([])
   const [profileEdit, setProfileEdit] = useState(null) // { membership_id, name, current }
+  const [importOpen, setImportOpen] = useState(false)
 
   const load = useCallback(async () => {
     if (!orgId) return
@@ -495,7 +497,12 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
           <strong>{weekLabel(monday)}</strong>
           <button type="button" className="btn btn-secondary" onClick={() => setMonday(addDays(monday, 7))}>→</button>
         </div>
-        {canEdit && <button type="button" className="btn btn-secondary" onClick={copyPrevious}>Copiar semana anterior</button>}
+        {canEdit && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="btn" onClick={() => setImportOpen(true)}>Importar horario</button>
+            <button type="button" className="btn btn-secondary" onClick={copyPrevious}>Copiar semana anterior</button>
+          </div>
+        )}
       </div>
       {msg && <p style={{ color: '#2B6459' }}>{msg}</p>}
       {error && <p className="error-text">{error}</p>}
@@ -531,7 +538,7 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
                           onClick={() => setEdit({ membership_id: e.membership_id, name: e.display_name, date: d, current: c })}
                           style={{ width: '100%', minHeight: 44, border: '1px dashed rgba(0,0,0,0.15)', borderRadius: 6, background: c ? (c.is_default ? 'rgba(43,100,89,0.04)' : 'rgba(43,100,89,0.12)') : 'transparent', fontSize: 12, lineHeight: 1.3, cursor: canEdit ? 'pointer' : 'default' }}
                         >
-                          {c ? (<><strong>{c.start_time.slice(0, 5)}</strong>{c.end_time ? `–${c.end_time.slice(0, 5)}` : ''}<br /><span style={{ opacity: 0.6 }}>{c.branch_name || ''}</span></>) : <span style={{ opacity: 0.35 }}>libre</span>}
+                          {c ? (<><strong>{c.start_time.slice(0, 5)}</strong>{c.end_time ? `–${c.end_time.slice(0, 5)}` : ''}<br />{c.lunch_start && <span style={{ opacity: 0.75 }}>🍽 {c.lunch_start.slice(0, 5)}<br /></span>}<span style={{ opacity: 0.6 }}>{c.branch_name || ''}</span></>) : <span style={{ opacity: 0.35 }}>libre</span>}
                         </button>
                       </td>
                     )
@@ -542,6 +549,7 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
           </table>
         </div>
       )}
+      {importOpen && <ScheduleImport orgId={orgId} employees={employees} branches={branches} onClose={() => setImportOpen(false)} onSaved={() => { setImportOpen(false); load() }} />}
       {profileEdit && <ProfileEditor orgId={orgId} branches={branches} edit={profileEdit} onClose={() => setProfileEdit(null)} onSaved={() => { setProfileEdit(null); load() }} />}
       {edit && <ScheduleEditor orgId={orgId} branches={branches} edit={edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); load() }} />}
     </div>
@@ -640,6 +648,7 @@ function ScheduleEditor({ orgId, branches, edit, onClose, onSaved }) {
   const cur = edit.current
   const [start, setStart] = useState(cur?.start_time?.slice(0, 5) || '08:00')
   const [end, setEnd] = useState(cur?.end_time?.slice(0, 5) || '')
+  const [lunch, setLunch] = useState(cur?.lunch_start?.slice(0, 5) || '')
   const [branchId, setBranchId] = useState(cur?.branch_id || branches[0]?.id || '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -649,7 +658,7 @@ function ScheduleEditor({ orgId, branches, edit, onClose, onSaved }) {
     setBusy(true)
     const { error: err } = await supabase.rpc('set_attendance_schedule', {
       p_organization_id: orgId, p_membership_id: edit.membership_id, p_work_date: edit.date,
-      p_branch_id: branchId || null, p_start_time: start, p_end_time: end || null
+      p_branch_id: branchId || null, p_start_time: start, p_end_time: end || null, p_lunch_start: lunch || null
     })
     setBusy(false)
     if (err) { setError(err.message); return }
@@ -672,6 +681,7 @@ function ScheduleEditor({ orgId, branches, edit, onClose, onSaved }) {
         <h2 style={{ margin: 0, fontSize: 18 }}>{edit.name}</h2>
         <div style={{ opacity: 0.65, textTransform: 'capitalize' }}>{formatDateLong(edit.date)}</div>
         <label>Hora de entrada <input type="time" value={start} onChange={(e) => setStart(e.target.value)} required /></label>
+        <label>Hora de almuerzo asignada (opcional) <input type="time" value={lunch} onChange={(e) => setLunch(e.target.value)} /></label>
         <label>Hora de salida (opcional) <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} /></label>
         <label>Sucursal
           <select value={branchId} onChange={(e) => setBranchId(e.target.value)}>
