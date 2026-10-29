@@ -305,6 +305,17 @@ export default function TopBar() {
     setMenuOpen(false)
   }
 
+  // Barra inferior de la Sucursal: Registrar y Reloj, pegados y al centro, en todas las pantallas.
+  const marcadorNav = (
+    <nav className="bottom-tabbar" style={{ justifyContent: 'center', gap: 6 }}>
+      <NavLink to="/registrar" className={({ isActive }) => `tabbar-item tabbar-item-primary${isActive ? ' active' : ''}`} style={{ flex: '0 0 72px' }}>
+        <IconDoc width={21} height={21} />
+        <span>Registrar</span>
+      </NavLink>
+      {relojButton}
+    </nav>
+  )
+
   // Dentro del reloj, la cuenta Sucursal ve una barra mínima (el reloj tiene su propio Atrás/Salir)
   // con un acceso al menú; fuera del reloj tiene el encabezado normal.
   if (isMarcador && location.pathname === '/asistencia/marcar') {
@@ -316,6 +327,7 @@ export default function TopBar() {
             <IconMenu /> Menú
           </button>
         </div>
+        {marcadorNav}
       </header>
     )
   }
@@ -529,6 +541,7 @@ export default function TopBar() {
         </>
       )}
 
+      {isMarcador ? marcadorNav : (
       <nav className="bottom-tabbar">
         <NavLink to="/registrar" className={({ isActive }) => `tabbar-item tabbar-item-primary${isActive ? ' active' : ''}`}>
           <IconDoc width={21} height={21} />
@@ -567,9 +580,10 @@ export default function TopBar() {
             </NavLink>
           </>
         )}
-        {(canSeeQueue || isMarcador) && relojButton}
+        {canSeeQueue && relojButton}
         {canSeeQueue && !canOperateKiosk && markButton}
       </nav>
+      )}
 
       {attendanceOpen && membership && (
         <AttendanceSheet orgId={membership.organization_id} onClose={() => setAttendanceOpen(false)} />

@@ -346,7 +346,7 @@ function Scanner({ orgId, device, settings, onChangeDevice }) {
     : null
 
   return (
-    <div style={{ minHeight: '100vh', background: '#14211e', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 16 }}>
+    <div style={{ minHeight: '100vh', background: '#14211e', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 16, paddingBottom: 110 }}>
       <KioskBar dark onBack={onChangeDevice} backLabel="← Cambiar dispositivo" />
       <div style={{ width: '100%', maxWidth: 720, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
         <div>
