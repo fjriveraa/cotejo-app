@@ -199,6 +199,17 @@ export default function TopBar() {
   }
 
   const canSeeQueue = membership && QUEUE_ROLES.includes(membership.role)
+  const canOperateKiosk = membership && ['propietario', 'admin', 'supervisor'].includes(membership.role)
+  const markButton = (
+    <button type="button" className="tabbar-mark" onClick={() => setAttendanceOpen(true)} aria-label="Marcar asistencia">
+      <span className="tabbar-mark-circle">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+        </svg>
+      </span>
+      <span>Marcar</span>
+    </button>
+  )
   // Solo el propietario puede certificar legalmente la empresa — un admin
   // que solo la configuró no debería ver esta opción como si pudiera usarla.
   const canVerify = membership && membership.role === 'propietario'
@@ -420,6 +431,9 @@ export default function TopBar() {
                     junta todo lo que le pertenece a esta empresa. */}
                 <NavLink to="/empresa" className="menu-link"><IconBuilding /> Mi empresa</NavLink>
                 <NavLink to="/asistencia" className="menu-link"><IconUsers /> Asistencia del personal</NavLink>
+                {canOperateKiosk && (
+                  <NavLink to="/asistencia/marcar" className="menu-link"><IconCheckCircle /> Modo marcador (reloj de la sucursal)</NavLink>
+                )}
                 {/* Una vez verificada, este paso ya se hizo — no tiene sentido seguir
                     mostrándolo junto a las tareas recurrentes del día a día. */}
                 {canVerify && verificationStatus !== 'verified' && (
@@ -499,19 +513,16 @@ export default function TopBar() {
             </NavLink>
           </>
         ) : (
-          <NavLink to="/mi-asistencia" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
-            <IconChart width={21} height={21} />
-            <span>Mis marcas</span>
-          </NavLink>
+          <>
+            {/* Empleados: Marcar va al centro, entre Registrar y Mis marcas. */}
+            {markButton}
+            <NavLink to="/mi-asistencia" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
+              <IconChart width={21} height={21} />
+              <span>Mis marcas</span>
+            </NavLink>
+          </>
         )}
-        <button type="button" className="tabbar-mark" onClick={() => setAttendanceOpen(true)} aria-label="Marcar asistencia">
-          <span className="tabbar-mark-circle">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
-            </svg>
-          </span>
-          <span>Marcar</span>
-        </button>
+        {canSeeQueue && markButton}
       </nav>
 
       {attendanceOpen && membership && (
