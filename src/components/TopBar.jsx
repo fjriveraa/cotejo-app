@@ -203,7 +203,7 @@ export default function TopBar() {
   const isMarcador = membership?.role === 'marcador'
   const canOperateKiosk = membership && ['propietario', 'admin', 'supervisor'].includes(membership.role)
   // Rojo: abre el modo reloj (el dispositivo donde los colaboradores marcan).
-  const relojButton = canOperateKiosk ? (
+  const relojButton = (canOperateKiosk || isMarcador) ? (
     <NavLink to="/asistencia/marcar" className="tabbar-mark tabbar-mark-reloj" aria-label="Modo reloj">
       <span className="tabbar-mark-circle">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -315,6 +315,12 @@ export default function TopBar() {
             <IconLogout /> Salir
           </button>
         </div>
+        {/* La cuenta Sucursal tiene un solo botón, rojo: abre la cámara del reloj. */}
+        {location.pathname !== '/asistencia/marcar' && (
+          <nav className="bottom-tabbar" style={{ justifyContent: 'center' }}>
+            {relojButton}
+          </nav>
+        )}
       </header>
     )
   }
