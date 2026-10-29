@@ -191,7 +191,8 @@ function Scanner({ orgId, device, settings, onChangeDevice }) {
   // Frontal: lee el QR y toma la foto con la cara del empleado (evidencia).
   // Trasera: lee el QR, pero la foto no mostrará a la persona.
   const [facing, setFacing] = useState(() => {
-    try { return localStorage.getItem('cotejo_att_camera') === 'environment' ? 'environment' : 'user' } catch { return 'user' }
+    // Por defecto la cámara trasera (la que mejor lee el QR); se recuerda si alguien cambia a la frontal.
+    try { return localStorage.getItem('cotejo_att_camera') === 'user' ? 'user' : 'environment' } catch { return 'environment' }
   })
 
   function setState(s) {
