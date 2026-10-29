@@ -57,7 +57,7 @@ function EmailInviteSection({ organizationId }) {
     setError(null)
     setMessage(null)
     if (!email.trim()) return
-    if (role === 'marcador' && !branchId) { setError('Elige la sucursal de este reloj'); return }
+    if (role === 'marcador' && !branchId) { setError('Elige la sucursal de esta cuenta'); return }
     setSubmitting(true)
     const { data, error } = await supabase.rpc('invite_by_email', {
       p_organization_id: organizationId,
@@ -95,7 +95,7 @@ function EmailInviteSection({ organizationId }) {
     <div className="card" style={{ marginBottom: 32 }}>
       <h3 style={{ marginTop: 0, fontSize: 16 }}>Invitar por correo</h3>
       <p style={{ fontSize: 13, opacity: 0.7, marginTop: -6, marginBottom: 16 }}>
-        Para el propietario y los relojes de sucursal, que no se pueden repartir por enlace.
+        Para el propietario y las cuentas de sucursal, que no se pueden repartir por enlace.
         Solo el correo que escribas puede activar esa invitación.
       </p>
 
@@ -114,7 +114,7 @@ function EmailInviteSection({ organizationId }) {
           ))}
         </select>
         {role === 'marcador' && (
-          <select value={branchId} onChange={(e) => setBranchId(e.target.value)} style={{ flex: '0 0 auto' }} aria-label="Sucursal del reloj">
+          <select value={branchId} onChange={(e) => setBranchId(e.target.value)} style={{ flex: '0 0 auto' }} aria-label="Sucursal de la cuenta">
             {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         )}

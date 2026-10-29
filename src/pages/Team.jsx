@@ -180,7 +180,7 @@ export default function Team() {
                         <select value={pendingReloj.branchId} onChange={(e) => setPendingReloj({ ...pendingReloj, branchId: e.target.value })} style={{ fontSize: 12.5, padding: '4px 6px' }}>
                           {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                         </select>
-                        <button type="button" className="btn btn-secondary" style={{ fontSize: 12.5 }} onClick={() => handleRoleChange(m, 'marcador', pendingReloj.branchId)}>Confirmar reloj</button>
+                        <button type="button" className="btn btn-secondary" style={{ fontSize: 12.5 }} onClick={() => handleRoleChange(m, 'marcador', pendingReloj.branchId)}>Confirmar sucursal</button>
                       </span>
                     )}
                     </>

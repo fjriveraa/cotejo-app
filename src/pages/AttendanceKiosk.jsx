@@ -27,7 +27,7 @@ function KioskBar({ dark, onBack, backLabel = '← Atrás' }) {
   }
   function exit() {
     if (isReloj) {
-      if (window.confirm('¿Cerrar sesión de este reloj? Dejará de detectar entradas hasta que vuelvan a entrar.')) signOut()
+      if (window.confirm('¿Cerrar sesión de esta sucursal? Dejará de detectar entradas hasta que vuelvan a entrar.')) signOut()
     } else {
       navigate('/')
     }
