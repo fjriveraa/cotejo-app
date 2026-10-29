@@ -199,6 +199,7 @@ export default function TopBar() {
   }
 
   const canSeeQueue = membership && QUEUE_ROLES.includes(membership.role)
+  const isMarcador = membership?.role === 'marcador'
   const canOperateKiosk = membership && ['propietario', 'admin', 'supervisor'].includes(membership.role)
   const markButton = (
     <button type="button" className="tabbar-mark" onClick={() => setAttendanceOpen(true)} aria-label="Marcar asistencia">
@@ -290,6 +291,20 @@ export default function TopBar() {
     if (orgId !== membership?.organization_id) switchOrg(orgId)
     navigate('/cola')
     setMenuOpen(false)
+  }
+
+  // Cuenta del reloj de la sucursal: sin menú, sin pagos, sin barra inferior.
+  if (isMarcador) {
+    return (
+      <header className="topbar">
+        <div className="topbar-top">
+          <img src="/logo.png" alt="Cotejo" className="brand" style={{ height: 24, width: 'auto' }} />
+          <button type="button" className="menu-toggle" onClick={signOut}>
+            <IconLogout /> Salir
+          </button>
+        </div>
+      </header>
+    )
   }
 
   return (

@@ -20,7 +20,8 @@ const EMAIL_ROLE_LABELS = {
   contador: 'Contador',
   propietario: 'Propietario',
   admin: 'Administrador',
-  auditor: 'Auditor'
+  auditor: 'Auditor',
+  marcador: 'Marcador (reloj de sucursal)'
 }
 
 const EMAIL_INVITE_STATUS_LABELS = {

@@ -407,7 +407,7 @@ begin
   end if;
 
   v_role := attendance_caller_role(v_dev.organization_id);
-  if v_role is null or v_role not in ('propietario', 'admin', 'supervisor') then
+  if v_role is null or v_role not in ('propietario', 'admin', 'supervisor', 'marcador') then
     raise exception 'No autorizado';
   end if;
 
@@ -461,7 +461,7 @@ begin
   end if;
 
   v_role := attendance_caller_role(v_dev.organization_id);
-  if v_role is null or v_role not in ('propietario', 'admin', 'supervisor') then
+  if v_role is null or v_role not in ('propietario', 'admin', 'supervisor', 'marcador') then
     raise exception 'No autorizado';
   end if;
 
@@ -1131,7 +1131,7 @@ create policy "Dispositivo sube fotos de asistencia de su empresa"
     bucket_id = 'attendance-photos'
     and ((storage.foldername(name))[1])::uuid in (
       select m.organization_id from memberships m
-      where m.user_id = auth.uid() and m.status = 'active' and m.role in ('propietario', 'admin', 'supervisor')
+      where m.user_id = auth.uid() and m.status = 'active' and m.role in ('propietario', 'admin', 'supervisor', 'marcador')
     )
   );
 

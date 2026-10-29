@@ -59,6 +59,8 @@ function RoleHome() {
   // directo a esa pantalla. Los roles que navegan entre varias áreas (cola,
   // comprobantes de invitados, reportes) ven primero un resumen del día en
   // vez de aterrizar directo en una bandeja de pendientes sin contexto.
+  // La cuenta del reloj de la sucursal solo hace una cosa: marcar a los empleados.
+  if (membership.role === 'marcador') return <Navigate to="/asistencia/marcar" replace />
   if (membership.role === 'empleado') return <Navigate to="/registrar" replace />
   if (['contador', 'propietario', 'supervisor', 'admin', 'auditor'].includes(membership.role)) {
     return <Dashboard />
@@ -157,7 +159,7 @@ function RequireQueueAccess({ children }) {
 
 function RequireSupervisor({ children }) {
   const { membership } = useAuth()
-  if (!membership || !['propietario', 'admin', 'supervisor'].includes(membership.role)) {
+  if (!membership || !['propietario', 'admin', 'supervisor', 'marcador'].includes(membership.role)) {
     return <Navigate to="/" replace />
   }
   return children

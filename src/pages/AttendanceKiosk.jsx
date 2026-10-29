@@ -36,7 +36,9 @@ export default function AttendanceKiosk() {
     setLoadingDevices(false)
     if (error) { setSetupError(error.message); return }
     setDevices((data || []).filter((d) => d.active))
-    const { data: st } = await supabase.rpc('get_attendance_settings', { p_organization_id: orgId })
+    // El marcador (cuenta del reloj) solo puede leer los ajustes del modo marcador.
+    let { data: st, error: stErr } = await supabase.rpc('get_kiosk_settings', { p_organization_id: orgId })
+    if (stErr) ({ data: st } = await supabase.rpc('get_attendance_settings', { p_organization_id: orgId }))
     if (st) setSettings(st)
     const { data: br } = await supabase.from('branches').select('id, name').eq('organization_id', orgId).eq('active', true)
     setBranches(br || [])
