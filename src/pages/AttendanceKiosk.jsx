@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import jsQR from 'jsqr'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -11,6 +12,35 @@ import { EVENT_LABELS, BUTTON_LABELS, formatTime, hondurasDateStr, formatMinutes
 
 const CODE_RE = /^[A-F0-9]{10}$/
 const OWNER_ROLES = ['propietario', 'admin']
+
+// Barra de salida del modo marcador: ir atrás y salir. Un propietario vuelve a
+// la app; la cuenta de reloj (que no tiene otra pantalla) cierra sesión.
+function KioskBar({ dark, onBack, backLabel = '← Atrás' }) {
+  const { membership, signOut } = useAuth()
+  const navigate = useNavigate()
+  const isReloj = membership?.role === 'marcador'
+  const style = {
+    background: dark ? 'rgba(255,255,255,0.12)' : 'transparent',
+    color: dark ? '#fff' : 'inherit',
+    border: dark ? 'none' : '1px solid rgba(0,0,0,0.2)',
+    borderRadius: 10, padding: '8px 14px', fontSize: 14, fontWeight: 600, cursor: 'pointer'
+  }
+  function exit() {
+    if (isReloj) {
+      if (window.confirm('¿Cerrar sesión de este reloj? Dejará de detectar entradas hasta que vuelvan a entrar.')) signOut()
+    } else {
+      navigate('/')
+    }
+  }
+  return (
+    <div style={{ width: '100%', maxWidth: 720, display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+      {onBack || !isReloj ? (
+        <button type="button" style={style} onClick={onBack || (() => (window.history.length > 1 ? navigate(-1) : navigate('/asistencia')))}>{backLabel}</button>
+      ) : <span />}
+      <button type="button" style={style} onClick={exit}>{isReloj ? 'Salir (cerrar sesión)' : 'Salir del modo marcador'}</button>
+    </div>
+  )
+}
 
 function deviceKey(orgId) {
   return `cotejo_att_device_${orgId}`
@@ -65,6 +95,7 @@ export default function AttendanceKiosk() {
   if (setupError) {
     return (
       <div className="container">
+        <KioskBar />
         <h1 className="page-title">Marcación</h1>
         <p className="error-text">{setupError}</p>
       </div>
@@ -78,6 +109,7 @@ export default function AttendanceKiosk() {
   if (settings.method_qr === false) {
     return (
       <div className="container" style={{ maxWidth: 520 }}>
+        <KioskBar />
         <h1 className="page-title">Marcación</h1>
         <p>La empresa tiene desactivada la marcación con QR. Puedes activarla en Asistencia → Dispositivos y reglas.</p>
       </div>
@@ -110,6 +142,7 @@ function DeviceSetup({ orgId, devices, branches, isOwner, onChoose, onCreated })
 
   return (
     <div className="container" style={{ maxWidth: 520 }}>
+      <KioskBar />
       <h1 className="page-title">Dispositivo de marcación</h1>
       <p style={{ opacity: 0.7, marginTop: 0 }}>Elige qué dispositivo es este (queda guardado en este equipo).</p>
 
@@ -291,6 +324,7 @@ function Scanner({ orgId, device, settings, onChangeDevice }) {
 
   return (
     <div style={{ minHeight: '100vh', background: '#14211e', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 16 }}>
+      <KioskBar dark onBack={onChangeDevice} backLabel="← Cambiar dispositivo" />
       <div style={{ width: '100%', maxWidth: 720, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
         <div>
           <div style={{ fontSize: 13, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.7 }}>Cotejo · Marcación</div>
