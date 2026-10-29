@@ -305,24 +305,17 @@ export default function TopBar() {
     setMenuOpen(false)
   }
 
-  // Cuenta del reloj de la sucursal: sin menú, sin pagos, sin barra inferior.
-  if (isMarcador) {
+  // Dentro del reloj, la cuenta Sucursal ve una barra mínima (el reloj tiene su propio Atrás/Salir)
+  // con un acceso al menú; fuera del reloj tiene el encabezado normal.
+  if (isMarcador && location.pathname === '/asistencia/marcar') {
     return (
       <header className="topbar">
         <div className="topbar-top">
           <img src="/logo.png" alt="Cotejo" className="brand" style={{ height: 24, width: 'auto' }} />
-          {location.pathname !== '/asistencia/marcar' && (
-            <button type="button" className="menu-toggle" onClick={signOut}>
-              <IconLogout /> Salir
-            </button>
-          )}
+          <button type="button" className="menu-toggle" onClick={() => navigate('/registrar')}>
+            <IconMenu /> Menú
+          </button>
         </div>
-        {/* La cuenta Sucursal tiene un solo botón, rojo: abre la cámara del reloj. */}
-        {location.pathname !== '/asistencia/marcar' && (
-          <nav className="bottom-tabbar" style={{ justifyContent: 'center' }}>
-            {relojButton}
-          </nav>
-        )}
       </header>
     )
   }
@@ -482,13 +475,25 @@ export default function TopBar() {
               </div>
             )}
 
+            {isMarcador && (
+              <div className="menu-section">
+                <div className="menu-section-title">Sucursal</div>
+                <NavLink to="/asistencia/marcar" className="menu-link"><IconCheckCircle /> Reloj de la sucursal</NavLink>
+                <NavLink to="/registrar" className="menu-link"><IconDoc /> Registrar pago</NavLink>
+              </div>
+            )}
+
             <div className="menu-section">
               <div className="menu-section-title">Cuenta</div>
-              <NavLink to="/mi-asistencia" className="menu-link"><IconCheckCircle /> Mi asistencia (QR)</NavLink>
-              <NavLink to="/mi-horario" className="menu-link"><IconCheckCircle /> Mi horario</NavLink>
-              <NavLink to="/mi-identificacion" className="menu-link"><IconIdCard /> Mi identificación</NavLink>
-              <NavLink to="/unirme" className="menu-link"><IconLink /> Unirme a otra empresa</NavLink>
-              <NavLink to="/empresas" className="menu-link"><IconSearch /> Buscar empresas</NavLink>
+              {!isMarcador && (
+                <>
+                  <NavLink to="/mi-asistencia" className="menu-link"><IconCheckCircle /> Mi asistencia (QR)</NavLink>
+                  <NavLink to="/mi-horario" className="menu-link"><IconCheckCircle /> Mi horario</NavLink>
+                  <NavLink to="/mi-identificacion" className="menu-link"><IconIdCard /> Mi identificación</NavLink>
+                  <NavLink to="/unirme" className="menu-link"><IconLink /> Unirme a otra empresa</NavLink>
+                  <NavLink to="/empresas" className="menu-link"><IconSearch /> Buscar empresas</NavLink>
+                </>
+              )}
               <NavLink to="/ajustes" className="menu-link"><IconSettings /> Ajustes</NavLink>
             </div>
 
@@ -552,7 +557,7 @@ export default function TopBar() {
               <span>Asistencia</span>
             </NavLink>
           </>
-        ) : (
+        ) : isMarcador ? null : (
           <>
             {/* Empleados: Marcar va al centro, entre Registrar y Mis marcas. */}
             {markButton}
@@ -562,7 +567,7 @@ export default function TopBar() {
             </NavLink>
           </>
         )}
-        {canSeeQueue && relojButton}
+        {(canSeeQueue || isMarcador) && relojButton}
         {canSeeQueue && !canOperateKiosk && markButton}
       </nav>
 
