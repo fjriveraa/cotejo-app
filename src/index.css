@@ -315,7 +315,7 @@ button.menu-link {
 
 /* Botón central de asistencia: círculo que sobresale de la barra. */
 .tabbar-mark {
-  flex: 0 0 76px;
+  flex: 0 0 66px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -323,7 +323,7 @@ button.menu-link {
   background: transparent;
   border: none;
   padding: 0 0 4px;
-  color: #B94A2F; /* complemento cálido del verde de la marca */
+  color: var(--teal-text);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -333,12 +333,12 @@ button.menu-link {
   height: 54px;
   margin-top: -22px;
   border-radius: 50%;
-  background: #C8553D;
+  background: #2B6459;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(200, 85, 61, 0.45);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
   border: 3px solid var(--card);
 }
 
@@ -1180,5 +1180,8 @@ button.menu-link {
 select, input, textarea { max-width: 100%; }
 html, body { overflow-x: hidden; }
 
-/* Botón Marcar de escritorio: mismo color complementario que el círculo del teléfono. */
-.topbar-primary .nav-pill:last-child { background: #C8553D; color: #fff; border-color: #C8553D; }
+/* Verde = mi propia marca (QR o selfie). Rojo = modo reloj: el dispositivo donde
+   los colaboradores marcan. Dos botones distintos, dos colores. */
+.tabbar-mark-reloj { color: #B94A2F; flex-basis: 66px; text-decoration: none; }
+.tabbar-mark-reloj .tabbar-mark-circle { background: #C8553D; box-shadow: 0 4px 14px rgba(200, 85, 61, 0.45); }
+.nav-pill-reloj { background: #C8553D; color: #fff; border-color: #C8553D; }
