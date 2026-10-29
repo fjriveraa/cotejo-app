@@ -470,7 +470,6 @@ export default function TopBar() {
                     como links sueltos acá -- ahora son una sola pantalla que
                     junta todo lo que le pertenece a esta empresa. */}
                 <NavLink to="/empresa" className="menu-link"><IconBuilding /> Mi empresa</NavLink>
-                {canOperateKiosk && <NavLink to="/grupos" className="menu-link"><IconUsers /> Grupos de cobro</NavLink>}
                 <NavLink to="/asistencia" className="menu-link"><IconUsers /> Asistencia del personal</NavLink>
                 {canOperateKiosk && (
                   <NavLink to="/asistencia/marcar" className="menu-link"><IconCheckCircle /> Modo marcador (reloj de la sucursal)</NavLink>
@@ -544,13 +543,10 @@ export default function TopBar() {
         )}
         {canSeeQueue ? (
           <>
-            {/* Con los dos botones circulares no cabe Grupos: queda en el menú para quien opera el reloj. */}
-            {!canOperateKiosk && (
-              <NavLink to="/grupos" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
-                <IconUsers width={21} height={21} />
-                <span>Grupos</span>
-              </NavLink>
-            )}
+            <NavLink to="/grupos" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
+              <IconUsers width={21} height={21} />
+              <span>Grupos</span>
+            </NavLink>
             <NavLink to="/asistencia" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
               <IconChart width={21} height={21} />
               <span>Asistencia</span>
@@ -567,7 +563,7 @@ export default function TopBar() {
           </>
         )}
         {canSeeQueue && relojButton}
-        {canSeeQueue && markButton}
+        {canSeeQueue && !canOperateKiosk && markButton}
       </nav>
 
       {attendanceOpen && membership && (
