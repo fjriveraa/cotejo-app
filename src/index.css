@@ -442,6 +442,7 @@ button.menu-link {
 .badge-propietario { background: var(--teal-strong); color: white; }
 .badge-admin { background: rgba(30, 74, 66, 0.85); color: white; }
 .badge-auditor { background: rgba(42, 38, 32, 0.1); color: var(--ink); }
+.badge-marcador { background: rgba(185, 129, 47, 0.18); color: var(--amber); }
 
 /* El indicador de "en qué empresa estás" -- antes era un detalle chico al
    fondo de la barra, fácil de pasar por alto justo cuando más importa
