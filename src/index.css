@@ -323,7 +323,7 @@ button.menu-link {
   background: transparent;
   border: none;
   padding: 0 0 4px;
-  color: var(--teal-text);
+  color: #B94A2F; /* complemento cálido del verde de la marca */
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -333,12 +333,12 @@ button.menu-link {
   height: 54px;
   margin-top: -22px;
   border-radius: 50%;
-  background: #2B6459;
+  background: #C8553D;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 4px 14px rgba(200, 85, 61, 0.45);
   border: 3px solid var(--card);
 }
 
@@ -1179,3 +1179,6 @@ button.menu-link {
    larga en un <select> empujaba la página hacia la derecha en el iPhone. */
 select, input, textarea { max-width: 100%; }
 html, body { overflow-x: hidden; }
+
+/* Botón Marcar de escritorio: mismo color complementario que el círculo del teléfono. */
+.topbar-primary .nav-pill:last-child { background: #C8553D; color: #fff; border-color: #C8553D; }
