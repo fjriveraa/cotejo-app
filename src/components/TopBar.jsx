@@ -311,9 +311,11 @@ export default function TopBar() {
       <header className="topbar">
         <div className="topbar-top">
           <img src="/logo.png" alt="Cotejo" className="brand" style={{ height: 24, width: 'auto' }} />
-          <button type="button" className="menu-toggle" onClick={signOut}>
-            <IconLogout /> Salir
-          </button>
+          {location.pathname !== '/asistencia/marcar' && (
+            <button type="button" className="menu-toggle" onClick={signOut}>
+              <IconLogout /> Salir
+            </button>
+          )}
         </div>
         {/* La cuenta Sucursal tiene un solo botón, rojo: abre la cámara del reloj. */}
         {location.pathname !== '/asistencia/marcar' && (

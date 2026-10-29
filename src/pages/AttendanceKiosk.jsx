@@ -188,6 +188,28 @@ function Scanner({ orgId, device, settings, onChangeDevice }) {
   const [result, setResult] = useState(null)
   const [message, setMessage] = useState(null)
   const [now, setNow] = useState(new Date())
+
+  // El reloj de la tienda debe quedar siempre encendido: se pide que la pantalla no se apague
+  // (y se vuelve a pedir al regresar a la pestaña, porque el navegador la suelta al ocultarla).
+  useEffect(() => {
+    let lock = null
+    let cancelled = false
+    async function request() {
+      try {
+        if (!cancelled && 'wakeLock' in navigator && document.visibilityState === 'visible') {
+          lock = await navigator.wakeLock.request('screen')
+        }
+      } catch { /* sin soporte o sin permiso: la pantalla se apagará como siempre */ }
+    }
+    request()
+    const onVisible = () => { if (document.visibilityState === 'visible') request() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisible)
+      try { lock?.release() } catch { /* no-op */ }
+    }
+  }, [])
   // Frontal: lee el QR y toma la foto con la cara del empleado (evidencia).
   // Trasera: lee el QR, pero la foto no mostrará a la persona.
   const [facing, setFacing] = useState(() => {
@@ -379,9 +401,6 @@ function Scanner({ orgId, device, settings, onChangeDevice }) {
         <div style={{ marginTop: 6, fontSize: 12, opacity: 0.6, textAlign: 'center' }}>Con la cámara trasera la foto no mostrará la cara del empleado.</div>
       )}
 
-      <button type="button" onClick={onChangeDevice} style={{ marginTop: 16, background: 'transparent', border: 'none', color: '#fff', opacity: 0.45, fontSize: 12, textDecoration: 'underline' }}>
-        Cambiar dispositivo
-      </button>
     </div>
   )
 }
