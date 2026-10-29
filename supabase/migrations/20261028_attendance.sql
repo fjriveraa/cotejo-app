@@ -134,8 +134,15 @@ stable
 security definer
 set search_path to 'public'
 as $$
-  select coalesce(pr.display_name, 'Sin nombre')
+  select coalesce(
+    nullif(trim(pr.display_name), ''),
+    nullif(trim(u.raw_user_meta_data->>'full_name'), ''),
+    nullif(trim(u.raw_user_meta_data->>'name'), ''),
+    nullif(split_part(u.email, '@', 1), ''),
+    'Sin nombre'
+  )
   from memberships m
+  join auth.users u on u.id = m.user_id
   left join profiles pr on pr.id = m.user_id
   where m.id = p_membership
 $$;
@@ -567,11 +574,10 @@ begin
   end if;
 
   return query
-    select m.id, coalesce(pr.display_name, 'Sin nombre'), m.role
+    select m.id, attendance_member_name(m.id), m.role
     from memberships m
-    left join profiles pr on pr.id = m.user_id
     where m.organization_id = p_organization_id and m.status = 'active'
-    order by coalesce(pr.display_name, 'Sin nombre');
+    order by attendance_member_name(m.id);
 end;
 $$;
 
