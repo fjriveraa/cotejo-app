@@ -23,8 +23,8 @@ function ViewIdDoc({ path }) {
   )
 }
 
-export default function Team() {
-  const { membership: myMembership, refreshMemberships } = useAuth()
+function OrgTeam({ membership: myMembership }) {
+  const { refreshMemberships } = useAuth()
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -102,16 +102,12 @@ export default function Team() {
   }
 
   if (loading) {
-    return <div className="container"><p style={{ opacity: 0.6 }}>Cargando equipo...</p></div>
+    return <p style={{ opacity: 0.6 }}>Cargando equipo...</p>
   }
 
   return (
-    <div className="container">
-      <h2 style={{ marginTop: 0 }}>Mi equipo</h2>
-      <p style={{ opacity: 0.7, fontSize: 14, marginTop: -8, marginBottom: 24 }}>
-        Todas las personas vinculadas a tu empresa. Puedes quitar a alguien sin borrar su cuenta — solo pierde
-        acceso, y lo puedes reactivar cuando quieras.
-      </p>
+    <div style={{ marginBottom: 40 }}>
+      <h3 style={{ margin: '0 0 12px', fontSize: 18 }}>{myMembership?.organizations?.name}</h3>
 
       {error && <p className="error-text">{error}</p>}
 
@@ -200,6 +196,28 @@ export default function Team() {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+export default function Team() {
+  const { membership, memberships } = useAuth()
+  // Todas las empresas donde esta persona puede administrar el equipo; la activa va primero.
+  const owned = (memberships || []).filter((m) => ['propietario', 'admin'].includes(m.role))
+  const list = [
+    ...owned.filter((m) => m.id === membership?.id),
+    ...owned.filter((m) => m.id !== membership?.id)
+  ]
+  const shown = list.length ? list : (membership ? [membership] : [])
+
+  return (
+    <div className="container">
+      <h2 style={{ marginTop: 0 }}>Mi equipo</h2>
+      <p style={{ opacity: 0.7, fontSize: 14, marginTop: -8, marginBottom: 24 }}>
+        Las personas de cada una de tus empresas. Aquí cambias el rol de cada quien. Puedes quitar a alguien sin
+        borrar su cuenta — solo pierde acceso, y lo puedes reactivar cuando quieras.
+      </p>
+      {shown.map((m) => <OrgTeam key={m.id} membership={m} />)}
     </div>
   )
 }
