@@ -2,15 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { IconUsers } from '../components/icons'
+import { INVITE_ROLES, roleLabel } from '../lib/roles'
 
-const ROLE_LABELS = {
-  empleado: 'Colaborador',
-  contador: 'Contador',
-  supervisor: 'Supervisor',
-  propietario: 'Dueño',
-  admin: 'Admin',
-  auditor: 'Auditor'
-}
 
 function ViewIdDoc({ path }) {
   const [loading, setLoading] = useState(false)
@@ -36,10 +29,16 @@ export default function Team() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [busyId, setBusyId] = useState(null)
+  const [branches, setBranches] = useState([])
+  const [pendingReloj, setPendingReloj] = useState(null)
   const [visibilityBusy, setVisibilityBusy] = useState(false)
 
   useEffect(() => {
     loadMembers()
+    if (myMembership?.organization_id) {
+      supabase.from('branches').select('id, name').eq('organization_id', myMembership.organization_id).eq('active', true)
+        .then(({ data }) => setBranches(data || []))
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myMembership?.organization_id])
 
@@ -86,11 +85,17 @@ export default function Team() {
     else loadMembers()
   }
 
-  async function handleRoleChange(m, newRole) {
-    if (newRole === m.role) return
+  async function handleRoleChange(m, newRole, branchId = null) {
+    if (newRole === m.role && !branchId) return
+    // Un reloj necesita su sucursal: si hay varias, se pregunta antes de guardar.
+    if (newRole === 'marcador' && !branchId && branches.length > 1) {
+      setPendingReloj({ m, branchId: m.branch_scope?.[0] || branches[0].id })
+      return
+    }
     setBusyId(m.membership_id)
     setError(null)
-    const { error } = await supabase.rpc('update_member_role', { p_membership_id: m.membership_id, p_new_role: newRole })
+    setPendingReloj(null)
+    const { error } = await supabase.rpc('update_member_role', { p_membership_id: m.membership_id, p_new_role: newRole, p_branch_id: newRole === 'marcador' ? (branchId || branches[0]?.id || null) : null })
     setBusyId(null)
     if (error) setError(error.message)
     else loadMembers()
@@ -144,7 +149,7 @@ export default function Team() {
                   {m.membership_id === myMembership?.id && <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.7 }}>(tú)</span>}
                 </div>
                 <div className="meta">
-                  {m.status === 'disabled' ? ROLE_LABELS[m.role] || m.role : null}
+                  {m.status === 'disabled' ? roleLabel(m.role) : null}
                   {m.status === 'disabled' && <span style={{ marginLeft: 8 }}>· fuera del equipo</span>}
                   {' · desde '}{new Date(m.created_at).toLocaleDateString('es-HN')}
                   {' · '}
@@ -157,16 +162,28 @@ export default function Team() {
                 <div className="actions-row" style={{ alignItems: 'center' }}>
                   {m.id_doc_path && <ViewIdDoc path={m.id_doc_path} />}
                   {m.status !== 'disabled' && (
+                    <>
                     <select
                       value={m.role}
                       disabled={busyId === m.membership_id}
                       onChange={(e) => handleRoleChange(m, e.target.value)}
                       style={{ fontSize: 12.5, padding: '4px 6px' }}
                     >
-                      {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
+                      {/* Quien ya tiene un rol anterior lo conserva en la lista; para los demás solo hay tres. */}
+                      {!INVITE_ROLES.some((r) => r.value === m.role) && <option value={m.role}>{roleLabel(m.role)}</option>}
+                      {INVITE_ROLES.map((r) => (
+                        <option key={r.value} value={r.value}>{r.label}</option>
                       ))}
                     </select>
+                    {pendingReloj?.m.membership_id === m.membership_id && (
+                      <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <select value={pendingReloj.branchId} onChange={(e) => setPendingReloj({ ...pendingReloj, branchId: e.target.value })} style={{ fontSize: 12.5, padding: '4px 6px' }}>
+                          {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        </select>
+                        <button type="button" className="btn btn-secondary" style={{ fontSize: 12.5 }} onClick={() => handleRoleChange(m, 'marcador', pendingReloj.branchId)}>Confirmar reloj</button>
+                      </span>
+                    )}
+                    </>
                   )}
                   {m.status === 'disabled' ? (
                     <button className="btn btn-secondary" disabled={busyId === m.membership_id} onClick={() => handleReactivate(m)}>

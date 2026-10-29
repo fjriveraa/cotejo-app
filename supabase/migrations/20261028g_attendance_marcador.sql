@@ -129,6 +129,75 @@ begin
 end;
 $$;
 
+-- Cambiar el rol de alguien del equipo (pantalla Mi equipo): ahora admite Reloj
+-- de sucursal, que necesita una sucursal asignada.
+drop function if exists public.update_member_role(uuid, text);
+create or replace function public.update_member_role(p_membership_id uuid, p_new_role text, p_branch_id uuid default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+declare
+  v_target record;
+  v_caller_role text;
+  v_caller_membership_id uuid;
+  v_valid_roles text[] := array['empleado', 'contador', 'supervisor', 'propietario', 'admin', 'auditor', 'marcador'];
+  v_scope uuid[];
+  v_only uuid;
+begin
+  if p_new_role is null or not (p_new_role = any(v_valid_roles)) then
+    raise exception 'Rol inválido';
+  end if;
+
+  select * into v_target from memberships where id = p_membership_id;
+  if not found then
+    raise exception 'No se encontró a esa persona en tu equipo';
+  end if;
+
+  select id, role into v_caller_membership_id, v_caller_role
+  from memberships
+  where organization_id = v_target.organization_id and user_id = auth.uid() and status = 'active';
+
+  if v_caller_role is null or v_caller_role not in ('propietario', 'admin') then
+    raise exception 'No autorizado';
+  end if;
+
+  if p_membership_id = v_caller_membership_id then
+    raise exception 'No puedes cambiar tu propio rol desde aquí';
+  end if;
+
+  -- Solo un propietario (no un admin) puede tocar el rol de otro propietario,
+  -- o convertir a alguien en propietario.
+  if (v_target.role = 'propietario' or p_new_role = 'propietario') and v_caller_role != 'propietario' then
+    raise exception 'Solo el propietario puede cambiar ese rol';
+  end if;
+
+  v_scope := v_target.branch_scope;
+  if p_new_role = 'marcador' then
+    if p_branch_id is not null then
+      if not exists (select 1 from branches b where b.id = p_branch_id and b.organization_id = v_target.organization_id and b.active) then
+        raise exception 'Sucursal no válida';
+      end if;
+      v_scope := array[p_branch_id];
+    elsif v_scope is null or cardinality(v_scope) = 0 then
+      -- Sin sucursal asignada: si la empresa tiene una sola, se usa esa.
+      select (array_agg(b.id))[1] into v_only from branches b
+        where b.organization_id = v_target.organization_id and b.active
+        having count(*) = 1;
+      if v_only is null then
+        raise exception 'Elige la sucursal de este reloj';
+      end if;
+      v_scope := array[v_only];
+    end if;
+  end if;
+
+  update memberships set role = p_new_role, branch_scope = v_scope where id = p_membership_id;
+
+  return jsonb_build_object('membership_id', p_membership_id, 'role', p_new_role);
+end;
+$$;
+
 do $$
 declare
   r record;
@@ -137,7 +206,7 @@ begin
     select p.oid::regprocedure as sig
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname = any (array['invite_by_email', 'list_attendance_devices', 'get_kiosk_settings'])
+      and p.proname = any (array['invite_by_email', 'list_attendance_devices', 'get_kiosk_settings', 'update_member_role'])
   loop
     execute format('revoke execute on function %s from public, anon', r.sig);
     execute format('grant execute on function %s to authenticated', r.sig);
