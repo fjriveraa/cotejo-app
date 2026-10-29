@@ -3,26 +3,18 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { getCanonicalOrigin } from '../lib/appUrl'
 import { IconLink } from '../components/icons'
+import { INVITE_ROLES, roleLabel } from '../lib/roles'
 
+// Por enlace solo se invita a colaboradores.
 const ROLE_LABELS = {
-  empleado: 'Colaborador',
-  contador: 'Contador',
-  supervisor: 'Supervisor'
+  empleado: 'Colaborador'
 }
 
 // El enlace genérico de arriba está bloqueado a nivel de base de datos para
 // estos tres roles — cualquiera con el link se activa solo, así que no es
 // seguro para un rol de dueño. Para esos, la única vía es invitar a un
 // correo puntual, que solo esa persona puede reclamar.
-const EMAIL_ROLE_LABELS = {
-  empleado: 'Colaborador',
-  supervisor: 'Supervisor',
-  contador: 'Contador',
-  propietario: 'Propietario',
-  admin: 'Administrador',
-  auditor: 'Auditor',
-  marcador: 'Marcador (reloj de sucursal)'
-}
+const EMAIL_ROLE_LABELS = new Proxy({}, { get: (_t, role) => roleLabel(String(role)) })
 
 const EMAIL_INVITE_STATUS_LABELS = {
   pending: 'Esperando que entre a Cotejo',
@@ -35,6 +27,8 @@ function EmailInviteSection({ organizationId }) {
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('empleado')
+  const [branches, setBranches] = useState([])
+  const [branchId, setBranchId] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [message, setMessage] = useState(null)
@@ -42,6 +36,10 @@ function EmailInviteSection({ organizationId }) {
 
   useEffect(() => {
     if (!organizationId) return
+    supabase.from('branches').select('id, name').eq('organization_id', organizationId).eq('active', true).then(({ data }) => {
+      setBranches(data || [])
+      if (data?.[0]) setBranchId((prev) => prev || data[0].id)
+    })
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [organizationId])
@@ -59,11 +57,13 @@ function EmailInviteSection({ organizationId }) {
     setError(null)
     setMessage(null)
     if (!email.trim()) return
+    if (role === 'marcador' && !branchId) { setError('Elige la sucursal de este reloj'); return }
     setSubmitting(true)
     const { data, error } = await supabase.rpc('invite_by_email', {
       p_organization_id: organizationId,
       p_email: email.trim(),
-      p_role: role
+      p_role: role,
+      p_branch_id: role === 'marcador' ? branchId : null
     })
     setSubmitting(false)
     if (error) {
@@ -95,7 +95,7 @@ function EmailInviteSection({ organizationId }) {
     <div className="card" style={{ marginBottom: 32 }}>
       <h3 style={{ marginTop: 0, fontSize: 16 }}>Invitar por correo</h3>
       <p style={{ fontSize: 13, opacity: 0.7, marginTop: -6, marginBottom: 16 }}>
-        Para roles de confianza (propietario, administrador, auditor) que no se pueden repartir por enlace.
+        Para el propietario y los relojes de sucursal, que no se pueden repartir por enlace.
         Solo el correo que escribas puede activar esa invitación.
       </p>
 
@@ -109,14 +109,21 @@ function EmailInviteSection({ organizationId }) {
           style={{ flex: '1 1 220px' }}
         />
         <select value={role} onChange={(e) => setRole(e.target.value)} style={{ flex: '0 0 auto' }}>
-          {Object.entries(EMAIL_ROLE_LABELS).map(([r, label]) => (
-            <option key={r} value={r}>{label}</option>
+          {INVITE_ROLES.map((r) => (
+            <option key={r.value} value={r.value}>{r.label}</option>
           ))}
         </select>
+        {role === 'marcador' && (
+          <select value={branchId} onChange={(e) => setBranchId(e.target.value)} style={{ flex: '0 0 auto' }} aria-label="Sucursal del reloj">
+            {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        )}
         <button type="submit" className="btn btn-primary" disabled={submitting}>
           {submitting ? 'Enviando...' : 'Invitar'}
         </button>
       </form>
+
+      <p style={{ fontSize: 12.5, opacity: 0.7, marginTop: -8 }}>{INVITE_ROLES.find((r) => r.value === role)?.help}</p>
 
       {error && <p className="error-text">{error}</p>}
       {message && <p style={{ color: '#2B6459', fontSize: 13, marginBottom: 12 }}>{message}</p>}
@@ -214,7 +221,7 @@ export default function InviteTeam() {
 
   function whatsappShareUrl(link) {
     const url = buildJoinUrl(link.token)
-    const text = `Únete a nuestro equipo en Cotejo (${membership?.organizations?.name || ''}) como ${ROLE_LABELS[link.role] || link.role}: ${url}`
+    const text = `Únete a nuestro equipo en Cotejo (${membership?.organizations?.name || ''}) como ${roleLabel(link.role)}: ${url}`
     return `https://wa.me/?text=${encodeURIComponent(text)}`
   }
 
@@ -270,7 +277,7 @@ export default function InviteTeam() {
             <div key={link.id} className="payment-row" style={{ flexWrap: 'wrap', gap: 12, opacity: link.active ? 1 : 0.5 }}>
               <div>
                 <div className="amount" style={{ fontSize: 14 }}>
-                  {ROLE_LABELS[link.role] || link.role}
+                  {roleLabel(link.role)}
                   {!link.active && <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.7 }}>(desactivado)</span>}
                 </div>
                 <div className="meta mono" style={{ wordBreak: 'break-all' }}>{buildJoinUrl(link.token)}</div>
@@ -303,7 +310,7 @@ export default function InviteTeam() {
 
       {Object.keys(activeByRole).length > 0 && (
         <p style={{ fontSize: 12, opacity: 0.6, marginTop: 24 }}>
-          Enlaces activos: {Object.entries(activeByRole).map(([role, count]) => `${ROLE_LABELS[role] || role} (${count})`).join(', ')}
+          Enlaces activos: {Object.entries(activeByRole).map(([role, count]) => `${roleLabel(role)} (${count})`).join(', ')}
         </p>
       )}
     </div>

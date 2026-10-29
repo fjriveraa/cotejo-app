@@ -1,3 +1,4 @@
+import { roleLabel } from '../lib/roles'
 import { useAuth } from '../hooks/useAuth'
 import { IconBuilding, IconChevronRight } from './icons'
 
@@ -43,7 +44,7 @@ export default function OrgPicker() {
                   {m.organizations?.name || 'Empresa'}
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span className={`badge badge-${m.role}`}>{m.role}</span>
+                  <span className={`badge badge-${m.role}`}>{roleLabel(m.role)}</span>
                   {!QUEUE_ROLES.includes(m.role) && (
                     <span className="choice-subtitle">no revisa pagos</span>
                   )}

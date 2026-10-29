@@ -35,7 +35,9 @@ export default function AttendanceKiosk() {
     const { data, error } = await supabase.rpc('list_attendance_devices', { p_organization_id: orgId })
     setLoadingDevices(false)
     if (error) { setSetupError(error.message); return }
-    setDevices((data || []).filter((d) => d.active))
+    // Un reloj de sucursal solo ve los dispositivos de su propia sucursal.
+    const scope = membership?.role === 'marcador' ? membership?.branch_scope : null
+    setDevices((data || []).filter((d) => d.active && (!scope?.length || scope.includes(d.branch_id))))
     // El marcador (cuenta del reloj) solo puede leer los ajustes del modo marcador.
     let { data: st, error: stErr } = await supabase.rpc('get_kiosk_settings', { p_organization_id: orgId })
     if (stErr) ({ data: st } = await supabase.rpc('get_attendance_settings', { p_organization_id: orgId }))

@@ -95,6 +95,12 @@ begin
     from attendance_devices d
     join branches b on b.id = d.branch_id
     where d.organization_id = p_organization_id
+      -- Un reloj de sucursal solo ve los dispositivos de la sucursal que se le asignó.
+      and (v_role <> 'marcador' or not exists (
+             select 1 from memberships mm
+             where mm.organization_id = p_organization_id and mm.user_id = auth.uid() and mm.status = 'active'
+               and mm.branch_scope is not null and cardinality(mm.branch_scope) > 0
+               and not (d.branch_id = any (mm.branch_scope))))
     order by d.created_at desc;
 end;
 $$;

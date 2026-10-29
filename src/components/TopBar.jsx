@@ -1,3 +1,4 @@
+import { roleLabel } from '../lib/roles'
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -349,7 +350,7 @@ export default function TopBar() {
           ) : (
             <strong className="org-name">{membership.organizations?.name}</strong>
           )}
-          <span className={`badge badge-${membership.role}`}>{membership.role}</span>
+          <span className={`badge badge-${membership.role}`}>{roleLabel(membership.role)}</span>
         </div>
       )}
 
