@@ -188,6 +188,19 @@ function Scanner({ orgId, device, settings, onChangeDevice }) {
   const [result, setResult] = useState(null)
   const [message, setMessage] = useState(null)
   const [now, setNow] = useState(new Date())
+  const [dueSoon, setDueSoon] = useState([]) // quién debe marcar en los próximos minutos
+
+  // Aviso en la tablet: nombres de quienes deben marcar entrada o salida pronto.
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      const { data, error } = await supabase.rpc('attendance_due_soon', { p_device_id: device.device_id })
+      if (!cancelled && !error && Array.isArray(data)) setDueSoon(data)
+    }
+    load()
+    const t = setInterval(load, 30000)
+    return () => { cancelled = true; clearInterval(t) }
+  }, [device.device_id])
 
   // El reloj de la tienda debe quedar siempre encendido: se pide que la pantalla no se apague
   // (y se vuelve a pedir al regresar a la pestaña, porque el navegador la suelta al ocultarla).
@@ -355,6 +368,15 @@ function Scanner({ orgId, device, settings, onChangeDevice }) {
         </div>
         <div style={{ fontSize: 40, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{formatTime(now)}</div>
       </div>
+
+      {dueSoon.length > 0 && (
+        <div style={{ width: '100%', maxWidth: 720, marginTop: 10, padding: '10px 14px', borderRadius: 12, background: 'rgba(200,85,61,0.18)', border: '1px solid rgba(200,85,61,0.6)', fontSize: 15 }}>
+          <strong>⏰ Por marcar pronto:</strong>{' '}
+          {dueSoon.map((d, i) => (
+            <span key={i}>{i > 0 && ' · '}{d.name} ({d.kind === 'entrada' ? 'entrada' : 'salida'} {formatTime(d.due_at)})</span>
+          ))}
+        </div>
+      )}
 
       <div style={{ position: 'relative', width: '100%', maxWidth: 720, marginTop: 12, borderRadius: 16, overflow: 'hidden', background: '#000', aspectRatio: '4 / 3' }}>
         <video ref={videoRef} playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', transform: facing === 'user' ? 'scaleX(-1)' : 'none' }} />

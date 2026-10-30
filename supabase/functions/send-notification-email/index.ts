@@ -17,6 +17,7 @@ const TYPE_ROUTE: Record<string, string> = {
   confirmation_reversed: "/cola",
   risk_flag: "/cola",
   guest_submission: "/comprobantes-invitados",
+  attendance_reminder: "/mi-asistencia",
 }
 
 // Texto del botón, distinto por tipo -- un verbo de acción específico
@@ -27,6 +28,7 @@ const TYPE_CTA: Record<string, string> = {
   confirmation_reversed: "Revisar",
   risk_flag: "Revisar alerta",
   guest_submission: "Revisar comprobante",
+  attendance_reminder: "Marcar ahora",
 }
 
 function escapeHtml(value: string) {
@@ -68,8 +70,9 @@ function buildEmailHtml(opts: {
   ctaLabel: string
   preheader: string
   isAlert: boolean
+  footer: string
 }) {
-  const { orgName, title, body, when, ctaPath, ctaLabel, preheader, isAlert } = opts
+  const { orgName, title, body, when, ctaPath, ctaLabel, preheader, isAlert, footer } = opts
   const accent = isAlert ? "#A2483A" : "#2B6459"
   const accentSoft = isAlert ? "#FBEFEC" : "#EAF3F0"
 
@@ -127,7 +130,7 @@ function buildEmailHtml(opts: {
             </tr>
             <tr>
               <td style="padding:20px 28px 24px;border-top:1px solid #eee9e0;background:#faf8f4;">
-                <p style="margin:0 0 6px;font-size:12px;line-height:1.5;color:#7d7668;">Recibes esto porque tu rol en ${escapeHtml(orgName)} está autorizado para revisar pagos en Cotejo.</p>
+                <p style="margin:0 0 6px;font-size:12px;line-height:1.5;color:#7d7668;">${escapeHtml(footer)}</p>
                 <p style="margin:0;font-size:12px;color:#9a9384;">Cotejo · <a href="${APP_URL}" style="color:#9a9384;">cotejo.net</a></p>
               </td>
             </tr>
@@ -195,17 +198,19 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "Usuario sin correo" }), { status: 404 })
   }
 
+  const isReminderType = notification.type === "attendance_reminder"
   const isAlert = notification.title?.includes("🚨") ?? false
   const ctaPath = TYPE_ROUTE[notification.type] ?? "/cola"
   const ctaLabel = TYPE_CTA[notification.type] ?? "Ver en Cotejo"
   const body = notification.body ?? ""
   const highlight = extractHighlight(body)
-  const when = notification.created_at ? relativeTime(notification.created_at) : null
+  const when = notification.created_at && !isReminderType ? relativeTime(notification.created_at) : null
 
   // El asunto lleva el dato concreto (monto/banco o quién envió) en vez de
   // solo el título genérico -- es lo primero que se lee en la bandeja, sin
   // abrir el correo, así que es donde más vale la pena ser específico.
-  const subject = highlight ? `${notification.title} · ${highlight}` : notification.title
+  const isReminder = notification.type === "attendance_reminder"
+  const subject = highlight && !isReminder ? `${notification.title} · ${highlight}` : notification.title
 
   // El preheader es el fragmento que Gmail/Outlook muestran junto al
   // asunto en la bandeja, antes de abrir -- sin uno propio, toman texto al
@@ -222,6 +227,9 @@ Deno.serve(async (req) => {
     ctaLabel,
     preheader,
     isAlert,
+    footer: isReminderType
+      ? `Recibes este recordatorio porque trabajas en ${org?.name ?? "tu empresa"} y tu horario tiene marcación en Cotejo.`
+      : `Recibes esto porque tu rol en ${org?.name ?? "tu empresa"} está autorizado para revisar pagos en Cotejo.`,
   })
 
   const resendResp = await fetch("https://api.resend.com/emails", {

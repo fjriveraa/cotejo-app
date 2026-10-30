@@ -17,6 +17,7 @@ const TYPE_ROUTE: Record<string, string> = {
   confirmation_reversed: "/cola",
   risk_flag: "/cola",
   guest_submission: "/comprobantes-invitados",
+  attendance_reminder: "/mi-asistencia",
 }
 
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
