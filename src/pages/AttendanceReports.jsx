@@ -54,17 +54,20 @@ export default function AttendanceReports() {
 
   return (
     <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <h1 className="page-title" style={{ margin: 0 }}>Asistencia</h1>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div className="att-header">
+        <div>
+          <h1 className="page-title att-title">Asistencia</h1>
+          <p className="att-sub">{membership?.organizations?.name}</p>
+        </div>
+        <div className="att-actions">
           {isOwner && <Link to="/invitar" className="btn btn-secondary">+ Invitar empleado</Link>}
-          {canSupervise && <Link to="/asistencia/marcar" className="btn btn-secondary">Abrir modo marcación</Link>}
+          {canSupervise && <Link to="/asistencia/marcar" className="btn btn-secondary">Abrir reloj</Link>}
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 6, margin: '16px 0', flexWrap: 'wrap' }}>
+      <div className="att-tabs" role="tablist">
         {TABS.filter((t) => t.id !== 'config' || isOwner).map((t) => (
-          <button key={t.id} type="button" className={`btn ${tab === t.id ? '' : 'btn-secondary'}`} onClick={() => setTab(t.id)}>{t.label}</button>
+          <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={`att-tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
         ))}
       </div>
 
@@ -186,19 +189,19 @@ function ReportTab({ orgId, employees, branches, canSupervise }) {
 
   return (
     <div>
-      <div className="card" style={{ display: 'grid', gap: 10 }}>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {[['hoy', 'Hoy'], ['semana', 'Esta semana'], ['mes', 'Este mes'], ['anio', 'Este año'], ['custom', 'Personalizado']].map(([id, label]) => (
-            <button key={id} type="button" className={`btn ${period === id ? '' : 'btn-secondary'}`} style={{ fontSize: 13 }} onClick={() => setPeriod(id)}>{label}</button>
+      <div className="card att-panel">
+        <div className="att-seg" role="group" aria-label="Período">
+          {[['hoy', 'Hoy'], ['semana', 'Semana'], ['mes', 'Mes'], ['anio', 'Año'], ['custom', 'Personalizado']].map(([id, label]) => (
+            <button key={id} type="button" className={period === id ? 'active' : ''} onClick={() => setPeriod(id)}>{label}</button>
           ))}
         </div>
         {period === 'custom' && (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div className="att-filters">
             <label>Desde <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} /></label>
             <label>Hasta <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} /></label>
           </div>
         )}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end' }}>
+        <div className="att-filters">
           <label>Agrupar por
             <select value={view} onChange={(e) => setView(e.target.value)}>
               <option value="dia">Día</option>
@@ -210,7 +213,7 @@ function ReportTab({ orgId, employees, branches, canSupervise }) {
           <label>Empleado
             <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
               <option value="">Todos</option>
-              {employees.map((e) => <option key={e.membership_id} value={e.membership_id}>{e.display_name}</option>)}
+              {employees.filter((e) => e.included !== false && e.role !== 'marcador').map((e) => <option key={e.membership_id} value={e.membership_id}>{e.display_name}</option>)}
             </select>
           </label>
           <label>Sucursal
@@ -219,9 +222,11 @@ function ReportTab({ orgId, employees, branches, canSupervise }) {
               {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </label>
-          <button type="button" className="btn btn-secondary" onClick={exportExcel} disabled={rows.length === 0}>Descargar Excel</button>
         </div>
-        <div style={{ fontSize: 12, opacity: 0.6 }}>Del {from} al {to}</div>
+        <div className="att-foot">
+          <span className="range">Del {from ? formatDateLong(from) : '…'} al {to ? formatDateLong(to) : '…'}</span>
+          <button type="button" className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 12px' }} onClick={exportExcel} disabled={rows.length === 0}>Descargar Excel</button>
+        </div>
       </div>
 
       {error && <p className="error-text">{error}</p>}
@@ -251,15 +256,16 @@ function ReportTab({ orgId, employees, branches, canSupervise }) {
 }
 
 function Totals({ s }) {
+  const plural = (n, one, many) => `${n} ${n > 1 ? many : one}`
   return (
-    <span style={{ fontSize: 12, opacity: 0.75, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-      <span>{formatMinutes(s.worked)} efectivas</span>
-      <span style={{ color: s.late > 0 ? '#A2483A' : undefined }}>{s.late} min tarde{s.lateDays ? ` (${s.lateDays} d)` : ''}</span>
-      {s.overtime > 0 && <span>{formatMinutes(s.overtime)} extra</span>}
-      {s.pauses > 0 && <span>{formatMinutes(s.pauses)} en pausas de almuerzo</span>}
-      {s.lunchFlags > 0 && <span style={{ color: '#A2483A' }}>{s.lunchFlags} almuerzo{s.lunchFlags > 1 ? 's' : ''} no cuadra{s.lunchFlags > 1 ? 'n' : ''}</span>}
-      {s.absences > 0 && <span style={{ color: '#A2483A' }}>{s.absences} ausencia{s.absences > 1 ? 's' : ''}</span>}
-      {s.incomplete > 0 && <span>{s.incomplete} incompleto{s.incomplete > 1 ? 's' : ''}</span>}
+    <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      <span className="att-chip ok">{formatMinutes(s.worked)} efectivas</span>
+      {s.late > 0 && <span className="att-chip alert">{s.late} min tarde{s.lateDays ? ` · ${s.lateDays} d` : ''}</span>}
+      {s.overtime > 0 && <span className="att-chip">{formatMinutes(s.overtime)} extra</span>}
+      {s.pauses > 0 && <span className="att-chip">{formatMinutes(s.pauses)} en pausas</span>}
+      {s.lunchFlags > 0 && <span className="att-chip alert">{plural(s.lunchFlags, 'almuerzo no cuadra', 'almuerzos no cuadran')}</span>}
+      {s.absences > 0 && <span className="att-chip alert">{plural(s.absences, 'ausencia', 'ausencias')}</span>}
+      {s.incomplete > 0 && <span className="att-chip">{plural(s.incomplete, 'incompleto', 'incompletos')}</span>}
     </span>
   )
 }
@@ -268,8 +274,8 @@ function GroupFolder({ view, gkey, rows, defaultOpen, onOpenDetail }) {
   const s = summarize(rows)
   return (
     <details open={defaultOpen} className="card" style={{ padding: 0 }}>
-      <summary style={{ cursor: 'pointer', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <strong style={{ textTransform: 'capitalize' }}>{groupLabel(view, gkey)}</strong>
+      <summary className="att-group-summary">
+        <span className="att-group-title">{groupLabel(view, gkey)}</span>
         <Totals s={s} />
       </summary>
       <div style={{ padding: '0 16px 12px', overflowX: 'auto' }}>
@@ -279,18 +285,18 @@ function GroupFolder({ view, gkey, rows, defaultOpen, onOpenDetail }) {
   )
 }
 
-const th = { textAlign: 'left', fontSize: 12, opacity: 0.6, padding: '4px 8px', whiteSpace: 'nowrap' }
+const th = { textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', opacity: 0.6, padding: '6px 8px', whiteSpace: 'nowrap' }
 const td = { padding: '6px 8px', fontSize: 14, whiteSpace: 'nowrap' }
 
 function DayRows({ rows, onOpenDetail }) {
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+    <table className="att-table">
       <thead>
         <tr><th style={th}>Empleado</th><th style={th}>Entrada</th><th style={th}>Salida</th><th style={th}>Almuerzo</th><th style={th}>Efectivas</th><th style={th}>Tarde</th><th style={th}>Extra</th><th style={th}></th></tr>
       </thead>
       <tbody>
         {rows.map((r) => (
-          <tr key={`${r.membership_id}-${r.work_date}`} style={{ borderTop: '1px solid rgba(0,0,0,0.06)', cursor: 'pointer' }} onClick={() => onOpenDetail?.(r)}>
+          <tr key={`${r.membership_id}-${r.work_date}`} style={{ borderTop: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => onOpenDetail?.(r)}>
             <td style={td}><strong>{r.employee_name}</strong>{r.branch_name && <span style={{ opacity: 0.55 }}> · {r.branch_name}</span>}</td>
             {r.absent ? (
               <td style={{ ...td, color: '#A2483A' }} colSpan={6}>Ausente{r.scheduled_start ? ` (entraba ${r.scheduled_start.slice(0, 5)})` : ''}</td>
@@ -324,7 +330,7 @@ function EmployeeRows({ rows, onOpenDetail }) {
   }
   const list = [...byEmp.values()].sort((a, b) => a.name.localeCompare(b.name))
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+    <table className="att-table">
       <thead>
         <tr><th style={th}>Empleado</th><th style={th}>Días</th><th style={th}>Trabajadas</th><th style={th}>Min. tarde</th><th style={th}>Días tarde</th><th style={th}>Extra</th><th style={th}>Ausencias</th></tr>
       </thead>
@@ -332,7 +338,7 @@ function EmployeeRows({ rows, onOpenDetail }) {
         {list.map(({ name, rows: rs }) => {
           const s = summarize(rs)
           return (
-            <tr key={name} style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+            <tr key={name} style={{ borderTop: '1px solid var(--border)' }}>
               <td style={td}><strong>{name}</strong></td>
               <td style={td}>{s.days}</td>
               <td style={td}>{formatMinutes(s.worked)}</td>
@@ -390,7 +396,7 @@ function DayDetail({ orgId, row, canEdit, onClose, onChanged }) {
         {loading ? <p style={{ opacity: 0.6 }}>Cargando...</p> : punches.length === 0 ? <p style={{ opacity: 0.6 }}>Sin marcas este día.</p> : (
           <div style={{ marginTop: 12 }}>
             {punches.map((p) => (
-              <div key={p.punch_id} style={{ padding: '8px 0', borderTop: '1px solid rgba(0,0,0,0.06)', opacity: p.voided_at ? 0.5 : 1 }}>
+              <div key={p.punch_id} style={{ padding: '8px 0', borderTop: '1px solid var(--border)', opacity: p.voided_at ? 0.5 : 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                   <span style={{ textDecoration: p.voided_at ? 'line-through' : 'none' }}>
                     <strong>{EVENT_LABELS[p.event_type]}</strong> · {formatTime(p.punched_at)}
@@ -558,9 +564,9 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
           <button type="button" className="btn btn-secondary" onClick={() => step(-1)}>←</button>
           <strong style={{ textTransform: 'capitalize' }}>{span === 'semana' ? weekLabel(from) : monthLabel(from.slice(0, 7))}</strong>
           <button type="button" className="btn btn-secondary" onClick={() => step(1)}>→</button>
-          <span style={{ display: 'inline-flex', gap: 4, marginLeft: 6 }}>
+          <span className="att-seg" style={{ marginLeft: 6 }}>
             {[['semana', 'Semana'], ['mes', 'Mes']].map(([k, l]) => (
-              <button key={k} type="button" className={`btn ${span === k ? '' : 'btn-secondary'}`} style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setSpan(k)}>{l}</button>
+              <button key={k} type="button" className={span === k ? 'active' : ''} onClick={() => setSpan(k)}>{l}</button>
             ))}
           </span>
         </div>
@@ -571,9 +577,9 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
           </div>
         )}
       </div>
-      <div style={{ display: 'flex', gap: 6, margin: '10px 0 0', flexWrap: 'wrap' }}>
+      <div className="att-seg" style={{ margin: '10px 0 0' }}>
         {[['grid', 'Cuadrícula'], ['branch', 'Por sucursal'], ['person', 'Por persona']].map(([k, l]) => (
-          <button key={k} type="button" className={`btn ${view === k ? '' : 'btn-secondary'}`} style={{ fontSize: 13 }} onClick={() => setView(k)}>{l}</button>
+          <button key={k} type="button" className={view === k ? 'active' : ''} onClick={() => setView(k)}>{l}</button>
         ))}
       </div>
       {msg && <p style={{ color: '#2B6459' }}>{msg}</p>}
@@ -600,7 +606,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
             </thead>
             <tbody>
               {employees.map((e) => (
-                <tr key={e.membership_id} style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                <tr key={e.membership_id} style={{ borderTop: '1px solid var(--border)' }}>
                   <td style={td}>
                     <strong>{e.display_name}</strong>
                     <div style={{ fontSize: 11, opacity: 0.65 }}>{profileSummary(profiles.find((x) => x.membership_id === e.membership_id))}</div>
@@ -651,7 +657,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
             {showHidden ? 'Ocultar' : 'Ver'} personas fuera del horario ({hidden.length})
           </button>
           {showHidden && hidden.map((e) => (
-            <div key={e.membership_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+            <div key={e.membership_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: '1px solid var(--border)' }}>
               <span>{e.display_name}</span>
               <button type="button" className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => setIncluded(e.membership_id, true)}>Incluir en el horario</button>
             </div>
@@ -685,7 +691,7 @@ function BranchView({ days, items, offs, employees, branches }) {
               const todays = rows.filter((x) => x.work_date === d).sort((a, b) => (a.start_time < b.start_time ? -1 : 1))
               if (todays.length === 0) return null
               return (
-                <div key={d} style={{ display: 'flex', gap: 10, padding: '6px 0', borderTop: '1px solid rgba(0,0,0,0.06)', fontSize: 13 }}>
+                <div key={d} style={{ display: 'flex', gap: 10, padding: '6px 0', borderTop: '1px solid var(--border)', fontSize: 13 }}>
                   <strong style={{ minWidth: 86, textTransform: 'capitalize' }}>{formatDateLong(d).split(',')[0]}</strong>
                   <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {todays.map((x) => (
@@ -730,7 +736,7 @@ function PersonView({ days, items, offs, employees, profiles }) {
             const pr = profiles.find((x) => x.membership_id === e.membership_id)
             const type = pr ? (pr.mode === 'variable' ? 'Variable' : 'Fijo') : mine.length ? (starts.length > 1 ? 'Rotativo' : 'Por turno') : '—'
             return (
-              <tr key={e.membership_id} style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+              <tr key={e.membership_id} style={{ borderTop: '1px solid var(--border)' }}>
                 <td style={td}><strong>{e.display_name}</strong></td>
                 <td style={td}>{type}</td>
                 <td style={td}>{pr?.mode === 'variable' ? 'Libre' : starts.length ? starts.join(' / ') : '—'}</td>
@@ -1159,7 +1165,7 @@ function ConfigTab({ orgId, branches, onBranchesChanged }) {
         {devices.filter((d) => d.active).length === 0 ? (
           <p style={{ opacity: 0.65 }}>Aún no hay dispositivos. Abre “modo marcación” en la tableta de la sucursal para registrarla.</p>
         ) : devices.filter((d) => d.active).map((d) => (
-          <div key={d.device_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+          <div key={d.device_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderTop: '1px solid var(--border)' }}>
             <span><strong>{d.name}</strong> <span style={{ opacity: 0.6 }}>· {d.branch_name}</span></span>
             <button type="button" className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => deactivate(d)}>Desactivar</button>
           </div>

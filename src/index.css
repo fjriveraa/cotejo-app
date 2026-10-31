@@ -1185,3 +1185,49 @@ html, body { overflow-x: hidden; }
 .tabbar-mark-reloj { color: #B94A2F; flex-basis: 66px; text-decoration: none; }
 .tabbar-mark-reloj .tabbar-mark-circle { background: #C8553D; box-shadow: 0 4px 14px rgba(200, 85, 61, 0.45); }
 .nav-pill-reloj { background: #C8553D; color: #fff; border-color: #C8553D; }
+
+/* ---------- Asistencia: encabezado, pestañas, filtros y chips ---------- */
+.att-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.att-title { margin: 0; }
+.att-sub { margin: 2px 0 0; font-size: 13px; opacity: 0.65; }
+.att-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.att-actions .btn { font-size: 13px; padding: 8px 12px; text-decoration: none; }
+
+.att-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin: 14px 0 16px; overflow-x: auto; scrollbar-width: none; }
+.att-tabs::-webkit-scrollbar { display: none; }
+.att-tab { background: none; border: none; padding: 10px 14px; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); opacity: 0.6; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; cursor: pointer; }
+.att-tab:hover { opacity: 0.85; }
+.att-tab.active { opacity: 1; color: var(--teal-text); border-bottom-color: var(--teal); }
+
+.att-seg { display: inline-flex; background: rgba(42, 38, 32, 0.06); border-radius: 10px; padding: 3px; gap: 2px; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.att-seg::-webkit-scrollbar { display: none; }
+.att-seg button { border: none; background: transparent; padding: 7px 12px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); opacity: 0.7; cursor: pointer; white-space: nowrap; }
+.att-seg button.active { background: var(--card); box-shadow: var(--shadow); color: var(--teal-text); opacity: 1; }
+
+.att-panel { display: grid; gap: 12px; }
+.att-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.att-filters label { display: grid; gap: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.8; }
+.att-filters select, .att-filters input { width: 100%; font-size: 14px; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.att-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.att-foot .range { opacity: 0.6; }
+
+.att-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: rgba(42, 38, 32, 0.07); white-space: nowrap; }
+.att-chip.alert { background: rgba(162, 72, 58, 0.12); color: var(--rust); }
+.att-chip.ok { background: rgba(43, 100, 89, 0.12); color: var(--teal-text); }
+.att-group-summary { cursor: pointer; padding: 12px 16px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: center; list-style: none; }
+.att-group-summary::-webkit-details-marker { display: none; }
+.att-group-title { font-family: var(--font-display); font-size: 17px; text-transform: capitalize; }
+.att-table { width: 100%; border-collapse: collapse; }
+.att-table tbody tr:hover { background: rgba(43, 100, 89, 0.05); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .att-tab { color: var(--ink-dark); }
+  :root:not([data-theme="light"]) .att-tab.active { color: #8CC9BB; border-bottom-color: #8CC9BB; }
+  :root:not([data-theme="light"]) .att-seg { background: rgba(237, 231, 217, 0.08); }
+  :root:not([data-theme="light"]) .att-seg button { color: var(--ink-dark); }
+  :root:not([data-theme="light"]) .att-seg button.active { background: var(--card-dark); color: #8CC9BB; }
+  :root:not([data-theme="light"]) .att-chip { background: rgba(237, 231, 217, 0.1); }
+  :root:not([data-theme="light"]) .att-chip.alert { background: rgba(217, 119, 100, 0.18); color: #E8998A; }
+  :root:not([data-theme="light"]) .att-chip.ok { background: rgba(140, 201, 187, 0.16); color: #8CC9BB; }
+  :root:not([data-theme="light"]) .att-tabs { border-bottom-color: var(--border-dark); }
+}
