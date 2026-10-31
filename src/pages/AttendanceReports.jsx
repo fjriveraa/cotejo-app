@@ -29,6 +29,11 @@ export default function AttendanceReports() {
   const [employees, setEmployees] = useState([])
   const [branches, setBranches] = useState([])
 
+  const loadEmployees = useCallback(() => {
+    if (!orgId) return
+    supabase.rpc('list_attendance_employees', { p_organization_id: orgId }).then(({ data }) => setEmployees(data || []))
+  }, [orgId])
+
   const loadBranches = useCallback(() => {
     if (!orgId) return
     supabase.from('branches').select('id, name').eq('organization_id', orgId).eq('active', true).order('name').then(({ data }) => setBranches(data || []))
@@ -36,9 +41,9 @@ export default function AttendanceReports() {
 
   useEffect(() => {
     if (!orgId) return
-    supabase.rpc('list_attendance_employees', { p_organization_id: orgId }).then(({ data }) => setEmployees(data || []))
+    loadEmployees()
     loadBranches()
-  }, [orgId, loadBranches])
+  }, [orgId, loadBranches, loadEmployees])
 
   return (
     <div className="container">
@@ -57,7 +62,7 @@ export default function AttendanceReports() {
       </div>
 
       {tab === 'reporte' && <ReportTab orgId={orgId} employees={employees} branches={branches} canSupervise={canSupervise} />}
-      {tab === 'horarios' && <ScheduleTab orgId={orgId} employees={employees} branches={branches} canEdit={canSupervise} />}
+      {tab === 'horarios' && <ScheduleTab orgId={orgId} employees={employees} branches={branches} canEdit={canSupervise} onEmployeesChanged={loadEmployees} />}
       {tab === 'correcciones' && <CorrectionsTab orgId={orgId} canReview={canSupervise} />}
       {tab === 'config' && isOwner && <ConfigTab orgId={orgId} branches={branches} onBranchesChanged={loadBranches} />}
     </div>
@@ -460,7 +465,16 @@ function lastDayOfMonth(firstDay) {
   return `${firstDay.slice(0, 8)}${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}`
 }
 
-function ScheduleTab({ orgId, employees, branches, canEdit }) {
+function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmployeesChanged }) {
+  // Quien está fuera del horario (ej. el reloj de la tienda o el propietario) no sale en la cuadrícula.
+  const employees = allEmployees.filter((e) => e.included !== false)
+  const hidden = allEmployees.filter((e) => e.included === false && e.role !== 'marcador')
+  const [showHidden, setShowHidden] = useState(false)
+  async function setIncluded(mid, value) {
+    const { error: err } = await supabase.rpc('set_attendance_included', { p_organization_id: orgId, p_membership_id: mid, p_included: value })
+    if (err) { setError(err.message); return }
+    onEmployeesChanged?.()
+  }
   const [span, setSpan] = useState('semana') // semana | mes
   const [anchor, setAnchor] = useState(() => hondurasDateStr())
   const from = span === 'semana' ? mondayOf(anchor) : `${anchor.slice(0, 8)}01`
@@ -561,6 +575,12 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
                     <strong>{e.display_name}</strong>
                     <div style={{ fontSize: 11, opacity: 0.65 }}>{profileSummary(profiles.find((x) => x.membership_id === e.membership_id))}</div>
                     {canEdit && (
+                      <button type="button" className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', marginTop: 4, marginRight: 4 }}
+                        onClick={() => { if (window.confirm(`¿Sacar a ${e.display_name} del horario? Sus marcas y turnos ya guardados se conservan.`)) setIncluded(e.membership_id, false) }}>
+                        Quitar del horario
+                      </button>
+                    )}
+                    {canEdit && (
                       <button type="button" className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', marginTop: 4 }}
                         onClick={() => setProfileEdit({ membership_id: e.membership_id, name: e.display_name, current: profiles.find((x) => x.membership_id === e.membership_id) })}>
                         Configurar horario
@@ -589,6 +609,19 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      {canEdit && hidden.length > 0 && (
+        <div className="card" style={{ marginTop: 12 }}>
+          <button type="button" className="btn btn-secondary" style={{ fontSize: 13 }} onClick={() => setShowHidden(!showHidden)}>
+            {showHidden ? 'Ocultar' : 'Ver'} personas fuera del horario ({hidden.length})
+          </button>
+          {showHidden && hidden.map((e) => (
+            <div key={e.membership_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '8px 0', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+              <span>{e.display_name}</span>
+              <button type="button" className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => setIncluded(e.membership_id, true)}>Incluir en el horario</button>
+            </div>
+          ))}
         </div>
       )}
       {importOpen && <ScheduleImport orgId={orgId} employees={employees} branches={branches} onClose={() => setImportOpen(false)} onSaved={() => { setImportOpen(false); load() }} />}
