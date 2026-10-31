@@ -450,8 +450,16 @@ function AddPunch({ orgId, row, onDone }) {
 /* Horarios                                                           */
 /* ------------------------------------------------------------------ */
 
+function lastDayOfMonth(firstDay) {
+  const [y, m] = firstDay.split('-').map(Number)
+  return `${firstDay.slice(0, 8)}${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}`
+}
+
 function ScheduleTab({ orgId, employees, branches, canEdit }) {
-  const [monday, setMonday] = useState(() => mondayOf(hondurasDateStr()))
+  const [span, setSpan] = useState('semana') // semana | mes
+  const [anchor, setAnchor] = useState(() => hondurasDateStr())
+  const from = span === 'semana' ? mondayOf(anchor) : `${anchor.slice(0, 8)}01`
+  const to = span === 'semana' ? addDays(from, 6) : lastDayOfMonth(from)
   const [items, setItems] = useState([])
   const [offs, setOffs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -467,27 +475,36 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
     if (!orgId) return
     setLoading(true)
     const [{ data, error: err }, { data: prof }, { data: offData }] = await Promise.all([
-      supabase.rpc('list_attendance_schedule', { p_organization_id: orgId, p_from: monday, p_to: addDays(monday, 6) }),
+      supabase.rpc('list_attendance_schedule', { p_organization_id: orgId, p_from: from, p_to: to }),
       supabase.rpc('list_attendance_profiles', { p_organization_id: orgId }),
-      supabase.rpc('list_attendance_days_off', { p_organization_id: orgId, p_from: monday, p_to: addDays(monday, 6) })
+      supabase.rpc('list_attendance_days_off', { p_organization_id: orgId, p_from: from, p_to: to })
     ])
     setOffs(offData || [])
     setProfiles(prof || [])
     setLoading(false)
     if (err) { setError(err.message); return }
     setItems(data || [])
-  }, [orgId, monday])
+  }, [orgId, from, to])
 
   useEffect(() => { load() }, [load])
 
-  const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i))
+  const dayCount = Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1
+  const days = Array.from({ length: dayCount }, (_, i) => addDays(from, i))
+  const compact = span === 'mes'
+
+  function step(dir) {
+    if (span === 'semana') { setAnchor(addDays(from, 7 * dir)); return }
+    const [y, m] = from.split('-').map(Number)
+    const d = new Date(Date.UTC(y, m - 1 + dir, 1))
+    setAnchor(d.toISOString().slice(0, 10))
+  }
   const cell = (mid, d) => items.find((x) => x.membership_id === mid && x.work_date === d)
   const isOff = (mid, d) => offs.some((x) => x.membership_id === mid && x.work_date === d)
 
   async function copyPrevious() {
     setMsg(null)
     const { data, error: err } = await supabase.rpc('copy_attendance_week', {
-      p_organization_id: orgId, p_from_monday: addDays(monday, -7), p_to_monday: monday
+      p_organization_id: orgId, p_from_monday: addDays(from, -7), p_to_monday: from
     })
     if (err) { setError(err.message); return }
     setMsg(`Se copiaron ${data} turnos de la semana anterior (lo que ya estaba asignado no se tocó).`)
@@ -498,14 +515,19 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
     <div>
       <div className="card" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <button type="button" className="btn btn-secondary" onClick={() => setMonday(addDays(monday, -7))}>←</button>
-          <strong>{weekLabel(monday)}</strong>
-          <button type="button" className="btn btn-secondary" onClick={() => setMonday(addDays(monday, 7))}>→</button>
+          <button type="button" className="btn btn-secondary" onClick={() => step(-1)}>←</button>
+          <strong style={{ textTransform: 'capitalize' }}>{span === 'semana' ? weekLabel(from) : monthLabel(from.slice(0, 7))}</strong>
+          <button type="button" className="btn btn-secondary" onClick={() => step(1)}>→</button>
+          <span style={{ display: 'inline-flex', gap: 4, marginLeft: 6 }}>
+            {[['semana', 'Semana'], ['mes', 'Mes']].map(([k, l]) => (
+              <button key={k} type="button" className={`btn ${span === k ? '' : 'btn-secondary'}`} style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setSpan(k)}>{l}</button>
+            ))}
+          </span>
         </div>
         {canEdit && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button type="button" className="btn" onClick={() => setImportOpen(true)}>Importar horario</button>
-            <button type="button" className="btn btn-secondary" onClick={copyPrevious}>Copiar semana anterior</button>
+            {span === 'semana' && <button type="button" className="btn btn-secondary" onClick={copyPrevious}>Copiar semana anterior</button>}
           </div>
         )}
       </div>
@@ -520,11 +542,11 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
       {!loading && view === 'person' && <PersonView days={days} items={items} offs={offs} employees={employees} profiles={profiles} />}
       {loading ? <p style={{ opacity: 0.6 }}>Cargando...</p> : view === 'grid' && (
         <div className="card" style={{ marginTop: 12, overflowX: 'auto', padding: 8 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: compact ? days.length * 62 + 150 : 720 }}>
             <thead>
               <tr>
                 <th style={th}>Empleado</th>
-                {days.map((d) => <th key={d} style={th}>{formatDateLong(d).split(' ')[0]} {d.slice(8)}</th>)}
+                {days.map((d) => <th key={d} style={th}>{compact ? `${DAY_NAMES[(new Date(`${d}T00:00:00Z`).getUTCDay() + 6) % 7]} ${d.slice(8)}` : `${formatDateLong(d).split(' ')[0]} ${d.slice(8)}`}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -551,7 +573,9 @@ function ScheduleTab({ orgId, employees, branches, canEdit }) {
                           onClick={() => setEdit({ membership_id: e.membership_id, name: e.display_name, date: d, current: c, off })}
                           style={{ width: '100%', minHeight: 44, border: '1px dashed rgba(0,0,0,0.15)', borderRadius: 6, background: off ? 'rgba(162,72,58,0.1)' : c ? (c.is_default ? 'rgba(43,100,89,0.04)' : 'rgba(43,100,89,0.12)') : 'transparent', fontSize: 12, lineHeight: 1.3, cursor: canEdit ? 'pointer' : 'default' }}
                         >
-                          {off ? <strong style={{ color: '#A2483A' }}>LIBRE</strong> : c ? (<><strong>{c.start_time.slice(0, 5)}</strong>{c.end_time ? `–${c.end_time.slice(0, 5)}` : ''}<br />{c.lunch_start && <span style={{ opacity: 0.75 }}>🍽 {c.lunch_start.slice(0, 5)}<br /></span>}<span style={{ opacity: 0.6 }}>{c.branch_name || ''}</span></>) : <span style={{ opacity: 0.35 }}>—</span>}
+                          {off ? <strong style={{ color: '#A2483A' }}>LIBRE</strong> : c ? (compact
+                            ? (<><strong>{c.start_time.slice(0, 5)}</strong><br /><span style={{ opacity: 0.6 }}>{(c.branch_name || '').slice(0, 7)}</span></>)
+                            : (<><strong>{c.start_time.slice(0, 5)}</strong>{c.end_time ? `–${c.end_time.slice(0, 5)}` : ''}<br />{c.lunch_start && <span style={{ opacity: 0.75 }}>🍽 {c.lunch_start.slice(0, 5)}<br /></span>}<span style={{ opacity: 0.6 }}>{c.branch_name || ''}</span></>)) : <span style={{ opacity: 0.35 }}>—</span>}
                         </button>
                       </td>
                     )
@@ -746,36 +770,46 @@ function ScheduleEditor({ orgId, branches, edit, onClose, onSaved }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
-  async function save(e) {
+  // Se puede aplicar lo mismo a varios días de esa semana (ej. lunes a viernes en una sucursal,
+  // sábado y domingo en otra).
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(mondayOf(edit.date), i))
+  const [picked, setPicked] = useState(() => new Set([edit.date]))
+  const dates = weekDays.filter((d) => picked.has(d))
+  const togglePick = (d) => setPicked((prev) => {
+    const n = new Set(prev)
+    if (n.has(d)) { if (n.size > 1) n.delete(d) } else n.add(d)
+    return n
+  })
+  const pickRange = (idxs) => setPicked(new Set(idxs.map((i) => weekDays[i])))
+
+  async function runAll(fn) {
+    setBusy(true)
+    for (const d of dates) {
+      const { error: err } = await fn(d)
+      if (err) { setBusy(false); setError(err.message); return }
+    }
+    setBusy(false)
+    onSaved()
+  }
+
+  function save(e) {
     e.preventDefault()
-    setBusy(true)
-    const { error: err } = await supabase.rpc('set_attendance_schedule', {
-      p_organization_id: orgId, p_membership_id: edit.membership_id, p_work_date: edit.date,
+    runAll((d) => supabase.rpc('set_attendance_schedule', {
+      p_organization_id: orgId, p_membership_id: edit.membership_id, p_work_date: d,
       p_branch_id: branchId || null, p_start_time: start, p_end_time: end || null, p_lunch_start: lunch || null
-    })
-    setBusy(false)
-    if (err) { setError(err.message); return }
-    onSaved()
+    }))
   }
 
-  async function setOff(value) {
-    setBusy(true)
-    const { error: err } = await supabase.rpc('set_attendance_day_off', {
-      p_organization_id: orgId, p_membership_id: edit.membership_id, p_work_date: edit.date, p_off: value
-    })
-    setBusy(false)
-    if (err) { setError(err.message); return }
-    onSaved()
+  function setOff(value) {
+    runAll((d) => supabase.rpc('set_attendance_day_off', {
+      p_organization_id: orgId, p_membership_id: edit.membership_id, p_work_date: d, p_off: value
+    }))
   }
 
-  async function clear() {
-    setBusy(true)
-    const { error: err } = await supabase.rpc('clear_attendance_schedule', {
-      p_organization_id: orgId, p_membership_id: edit.membership_id, p_work_date: edit.date
-    })
-    setBusy(false)
-    if (err) { setError(err.message); return }
-    onSaved()
+  function clear() {
+    runAll((d) => supabase.rpc('clear_attendance_schedule', {
+      p_organization_id: orgId, p_membership_id: edit.membership_id, p_work_date: d
+    }))
   }
 
   return (
@@ -783,6 +817,21 @@ function ScheduleEditor({ orgId, branches, edit, onClose, onSaved }) {
       <form className="card" onSubmit={save} onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 380, display: 'grid', gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>{edit.name}</h2>
         <div style={{ opacity: 0.65, textTransform: 'capitalize' }}>{formatDateLong(edit.date)}</div>
+        <div>
+          <div style={{ fontSize: 13, marginBottom: 4 }}>Aplicar a estos días</div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {weekDays.map((d, i) => (
+              <button key={d} type="button" onClick={() => togglePick(d)} className={`btn ${picked.has(d) ? '' : 'btn-secondary'}`} style={{ fontSize: 12, padding: '4px 8px', minWidth: 42 }}>
+                {DAY_NAMES[i]} {d.slice(8)}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+            <button type="button" className="btn btn-secondary" style={{ fontSize: 12, padding: '2px 8px' }} onClick={() => pickRange([0, 1, 2, 3, 4])}>Lun–Vie</button>
+            <button type="button" className="btn btn-secondary" style={{ fontSize: 12, padding: '2px 8px' }} onClick={() => pickRange([5, 6])}>Sáb–Dom</button>
+            <button type="button" className="btn btn-secondary" style={{ fontSize: 12, padding: '2px 8px' }} onClick={() => pickRange([0, 1, 2, 3, 4, 5, 6])}>Toda la semana</button>
+          </div>
+        </div>
         {edit.off && <p style={{ margin: 0, color: '#A2483A', fontWeight: 700 }}>Este día está marcado como libre. Si guardas un turno, deja de serlo.</p>}
         <label>Hora de entrada <input type="time" value={start} onChange={(e) => setStart(e.target.value)} required /></label>
         <label>Hora de almuerzo asignada (opcional) <input type="time" value={lunch} onChange={(e) => setLunch(e.target.value)} /></label>
@@ -793,9 +842,9 @@ function ScheduleEditor({ orgId, branches, edit, onClose, onSaved }) {
           </select>
         </label>
         {error && <p className="error-text" style={{ margin: 0 }}>{error}</p>}
-        <button className="btn" disabled={busy}>Guardar</button>
-        {cur && <button type="button" className="btn btn-secondary" disabled={busy} onClick={clear}>Quitar turno</button>}
-        <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => setOff(!edit.off)}>{edit.off ? 'Quitar día libre' : 'Marcar día libre'}</button>
+        <button className="btn" disabled={busy}>{dates.length > 1 ? `Guardar en ${dates.length} días` : 'Guardar'}</button>
+        {(cur || dates.length > 1) && <button type="button" className="btn btn-secondary" disabled={busy} onClick={clear}>{dates.length > 1 ? 'Quitar turno de esos días' : 'Quitar turno'}</button>}
+        <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => setOff(dates.length > 1 ? true : !edit.off)}>{dates.length > 1 ? 'Marcar esos días libres' : edit.off ? 'Quitar día libre' : 'Marcar día libre'}</button>
         <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
       </form>
     </div>
