@@ -31,7 +31,14 @@ export default function AttendanceReports() {
 
   const loadEmployees = useCallback(() => {
     if (!orgId) return
-    supabase.rpc('list_attendance_employees', { p_organization_id: orgId }).then(({ data }) => setEmployees(data || []))
+    Promise.all([
+      supabase.rpc('list_attendance_employees', { p_organization_id: orgId }),
+      supabase.rpc('list_attendance_included', { p_organization_id: orgId })
+    ]).then(([emp, inc]) => {
+      const flags = new Map((inc.data || []).map((x) => [x.membership_id, x.included]))
+      // La cuenta Sucursal (reloj) no es una persona con horario: queda fuera salvo que se incluya a propósito.
+      setEmployees((emp.data || []).map((e) => ({ ...e, included: flags.has(e.membership_id) ? flags.get(e.membership_id) : true })))
+    })
   }, [orgId])
 
   const loadBranches = useCallback(() => {
@@ -481,7 +488,7 @@ function lastDayOfMonth(firstDay) {
 
 function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmployeesChanged }) {
   // Quien está fuera del horario (ej. el reloj de la tienda o el propietario) no sale en la cuadrícula.
-  const employees = allEmployees.filter((e) => e.included !== false)
+  const employees = allEmployees.filter((e) => e.included !== false && e.role !== 'marcador')
   const hidden = allEmployees.filter((e) => e.included === false && e.role !== 'marcador')
   const [showHidden, setShowHidden] = useState(false)
   async function setIncluded(mid, value) {
