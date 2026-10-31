@@ -36,7 +36,7 @@ export default function AttendanceReports() {
 
   const loadBranches = useCallback(() => {
     if (!orgId) return
-    supabase.from('branches').select('id, name').eq('organization_id', orgId).eq('active', true).order('name').then(({ data }) => setBranches(data || []))
+    supabase.from('branches').select('id, name').eq('organization_id', orgId).eq('active', true).order('created_at').then(({ data }) => setBranches(data || []))
   }, [orgId])
 
   useEffect(() => {
@@ -460,6 +460,20 @@ function AddPunch({ orgId, row, onDone }) {
 /* Horarios                                                           */
 /* ------------------------------------------------------------------ */
 
+// Un color por sucursal (como en la hoja de papel). El rojo se reserva para los días libres.
+const BRANCH_COLORS = [
+  { bg: '#DCEFD6', border: '#9CCB8F' }, // verde
+  { bg: '#EAD6F2', border: '#C39BDB' }, // morado
+  { bg: '#D3E9F8', border: '#8FC0E6' }, // azul
+  { bg: '#FBE2CF', border: '#EFB68B' }, // naranja
+  { bg: '#F8F0BF', border: '#DCCB62' }, // amarillo
+  { bg: '#D1EFE9', border: '#86CBBE' }  // turquesa
+]
+const branchColor = (branches, id) => {
+  const i = branches.findIndex((b) => b.id === id)
+  return i < 0 ? { bg: 'rgba(0,0,0,0.05)', border: 'rgba(0,0,0,0.2)' } : BRANCH_COLORS[i % BRANCH_COLORS.length]
+}
+
 function lastDayOfMonth(firstDay) {
   const [y, m] = firstDay.split('-').map(Number)
   return `${firstDay.slice(0, 8)}${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}`
@@ -557,6 +571,15 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
       </div>
       {msg && <p style={{ color: '#2B6459' }}>{msg}</p>}
       {error && <p className="error-text">{error}</p>}
+      {branches.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '10px 0 0', fontSize: 12 }}>
+          {branches.map((b) => {
+            const col = branchColor(branches, b.id)
+            return <span key={b.id} style={{ background: col.bg, border: `1px solid ${col.border}`, borderRadius: 10, padding: '2px 10px' }}>{b.name}</span>
+          })}
+          <span style={{ background: 'rgba(162,72,58,0.12)', border: '1px solid rgba(162,72,58,0.45)', color: '#A2483A', borderRadius: 10, padding: '2px 10px', fontWeight: 700 }}>Libre</span>
+        </div>
+      )}
       {!loading && view === 'branch' && <BranchView days={days} items={items} offs={offs} employees={employees} branches={branches} />}
       {!loading && view === 'person' && <PersonView days={days} items={items} offs={offs} employees={employees} profiles={profiles} />}
       {loading ? <p style={{ opacity: 0.6 }}>Cargando...</p> : view === 'grid' && (
@@ -596,7 +619,11 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
                           type="button"
                           disabled={!canEdit}
                           onClick={() => setEdit({ membership_id: e.membership_id, name: e.display_name, date: d, current: c, off })}
-                          style={{ width: '100%', minHeight: 44, border: '1px dashed rgba(0,0,0,0.15)', borderRadius: 6, background: off ? 'rgba(162,72,58,0.1)' : c ? (c.is_default ? 'rgba(43,100,89,0.04)' : 'rgba(43,100,89,0.12)') : 'transparent', fontSize: 12, lineHeight: 1.3, cursor: canEdit ? 'pointer' : 'default' }}
+                          style={{
+                            width: '100%', minHeight: 44, borderRadius: 6, fontSize: 12, lineHeight: 1.3, cursor: canEdit ? 'pointer' : 'default', color: off ? '#A2483A' : 'var(--ink, #1f1b14)',
+                            border: off ? '1px solid rgba(162,72,58,0.45)' : c ? `1px ${c.is_default ? 'dashed' : 'solid'} ${branchColor(branches, c.branch_id).border}` : '1px dashed rgba(0,0,0,0.15)',
+                            background: off ? 'rgba(162,72,58,0.12)' : c ? branchColor(branches, c.branch_id).bg : 'transparent'
+                          }}
                         >
                           {off ? <strong style={{ color: '#A2483A' }}>LIBRE</strong> : c ? (compact
                             ? (<><strong>{c.start_time.slice(0, 5)}</strong><br /><span style={{ opacity: 0.6 }}>{(c.branch_name || '').slice(0, 7)}</span></>)
@@ -655,7 +682,7 @@ function BranchView({ days, items, offs, employees, branches }) {
                   <strong style={{ minWidth: 86, textTransform: 'capitalize' }}>{formatDateLong(d).split(',')[0]}</strong>
                   <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {todays.map((x) => (
-                      <span key={x.membership_id} style={{ background: 'rgba(43,100,89,0.1)', borderRadius: 10, padding: '2px 8px', opacity: x.is_default ? 0.8 : 1 }}>
+                      <span key={x.membership_id} style={{ background: branchColor(branches, g.id).bg, border: `1px solid ${branchColor(branches, g.id).border}`, borderRadius: 10, padding: '2px 8px', opacity: x.is_default ? 0.8 : 1 }}>
                         {nameOf(x.membership_id)} <strong>{hmShort(x.start_time)}</strong>{x.end_time ? `–${hmShort(x.end_time)}` : ''}{x.lunch_start ? ` · 🍽${hmShort(x.lunch_start)}` : ''}
                       </span>
                     ))}
