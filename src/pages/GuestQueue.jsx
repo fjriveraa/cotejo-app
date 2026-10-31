@@ -259,6 +259,7 @@ export default function GuestQueue() {
   const [error, setError] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const [bankFilter, setBankFilter] = useState('todos')
+  const [branchMatches, setBranchMatches] = useState({}) // submission_id -> pago ya registrado por la sucursal
   const forensicsEnabled = Boolean(membership?.organizations?.forensics_addon_enabled)
 
   function applyForensicsResult(submissionId, result) {
@@ -299,15 +300,22 @@ export default function GuestQueue() {
   async function load() {
     setLoading(true)
     setError(null)
-    const { data, error } = await supabase.rpc('list_guest_submissions', { p_organization_id: membership.organization_id })
+    const [{ data, error }, matchRes] = await Promise.all([
+      supabase.rpc('list_guest_submissions', { p_organization_id: membership.organization_id }),
+      supabase.rpc('guest_branch_matches', { p_organization_id: membership.organization_id })
+    ])
     setLoading(false)
     if (error) setError(error.message)
     else setItems(data || [])
+    // Si esta consulta falla, simplemente no se muestra el aviso: la lista sigue funcionando.
+    const map = {}
+    for (const m of matchRes?.data || []) map[m.submission_id] = m
+    setBranchMatches(map)
   }
 
-  async function decide(item, approve) {
-    let reviewNotes = null
-    if (!approve) {
+  async function decide(item, approve, presetNotes = null) {
+    let reviewNotes = presetNotes
+    if (!approve && presetNotes === null) {
       reviewNotes = window.prompt('¿Por qué no se pudo confirmar? (esto lo va a ver la persona que lo envió, sé breve y claro)')
       if (reviewNotes === null) return
     }
@@ -500,9 +508,24 @@ export default function GuestQueue() {
                   </div>
                 )}
                 {s.notes && <div className="meta">Nota del cliente: {s.notes}</div>}
+                {branchMatches[s.submission_id] && (
+                  <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: '#92400E', background: '#FEF3C7', padding: '6px 10px', borderRadius: 6 }}>
+                    ⚠ Posible doble envío: la sucursal ya registró este pago ({branchMatches[s.submission_id].payment_public_id}) el{' '}
+                    {new Date(branchMatches[s.submission_id].payment_created_at).toLocaleString('es-HN')}.
+                  </div>
+                )}
               </div>
               <div className="actions-row">
                 <ViewEvidence path={s.evidence_path} />
+                {branchMatches[s.submission_id] && (
+                  <button
+                    className="btn btn-secondary"
+                    disabled={busyId === s.submission_id}
+                    onClick={() => decide(s, false, `Ya registramos tu pago en la tienda (${branchMatches[s.submission_id].payment_public_id}). No necesitas hacer nada más.`)}
+                  >
+                    Ya registrado en sucursal
+                  </button>
+                )}
                 <button className="btn btn-primary" disabled={busyId === s.submission_id} onClick={() => decide(s, true)}>
                   {busyId === s.submission_id ? 'Un momento...' : 'Confirmar'}
                 </button>
