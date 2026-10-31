@@ -29,11 +29,16 @@ export default function AttendanceReports() {
   const [employees, setEmployees] = useState([])
   const [branches, setBranches] = useState([])
 
+  const loadBranches = useCallback(() => {
+    if (!orgId) return
+    supabase.from('branches').select('id, name').eq('organization_id', orgId).eq('active', true).order('name').then(({ data }) => setBranches(data || []))
+  }, [orgId])
+
   useEffect(() => {
     if (!orgId) return
     supabase.rpc('list_attendance_employees', { p_organization_id: orgId }).then(({ data }) => setEmployees(data || []))
-    supabase.from('branches').select('id, name').eq('organization_id', orgId).eq('active', true).then(({ data }) => setBranches(data || []))
-  }, [orgId])
+    loadBranches()
+  }, [orgId, loadBranches])
 
   return (
     <div className="container">
@@ -54,7 +59,7 @@ export default function AttendanceReports() {
       {tab === 'reporte' && <ReportTab orgId={orgId} employees={employees} branches={branches} canSupervise={canSupervise} />}
       {tab === 'horarios' && <ScheduleTab orgId={orgId} employees={employees} branches={branches} canEdit={canSupervise} />}
       {tab === 'correcciones' && <CorrectionsTab orgId={orgId} canReview={canSupervise} />}
-      {tab === 'config' && isOwner && <ConfigTab orgId={orgId} branches={branches} />}
+      {tab === 'config' && isOwner && <ConfigTab orgId={orgId} branches={branches} onBranchesChanged={loadBranches} />}
     </div>
   )
 }
@@ -919,7 +924,56 @@ function CorrectionsTab({ orgId, canReview }) {
 /* Dispositivos y reglas                                              */
 /* ------------------------------------------------------------------ */
 
-function ConfigTab({ orgId, branches }) {
+function BranchesCard({ orgId, branches, onChanged }) {
+  const [newName, setNewName] = useState('')
+  const [editing, setEditing] = useState(null) // { id, name }
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+
+  async function save(args) {
+    setBusy(true)
+    setError(null)
+    const { error: err } = await supabase.rpc('save_branch', { p_organization_id: orgId, ...args })
+    setBusy(false)
+    if (err) { setError(err.message); return false }
+    onChanged()
+    return true
+  }
+
+  return (
+    <div className="card" style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+      <h3 style={{ margin: 0, fontSize: 16 }}>Sucursales</h3>
+      <p style={{ margin: 0, fontSize: 13, opacity: 0.7 }}>Las sucursales aparecen al armar horarios, al invitar una cuenta Sucursal (reloj) y en los reportes.</p>
+      {branches.map((b) => (
+        <div key={b.id} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {editing?.id === b.id ? (
+            <>
+              <input value={editing.name} onChange={(e) => setEditing({ id: b.id, name: e.target.value })} style={{ flex: 1, minWidth: 160 }} />
+              <button type="button" className="btn" disabled={busy} onClick={async () => { if (await save({ p_branch_id: b.id, p_name: editing.name })) setEditing(null) }}>Guardar</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setEditing(null)}>Cancelar</button>
+            </>
+          ) : (
+            <>
+              <strong style={{ flex: 1 }}>{b.name}</strong>
+              <button type="button" className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => setEditing({ id: b.id, name: b.name })}>Renombrar</button>
+              <button type="button" className="btn btn-secondary" style={{ fontSize: 12 }} disabled={busy || branches.length <= 1}
+                onClick={() => { if (window.confirm(`¿Desactivar la sucursal ${b.name}? Los turnos ya guardados se conservan.`)) save({ p_branch_id: b.id, p_name: b.name, p_active: false }) }}>
+                Desactivar
+              </button>
+            </>
+          )}
+        </div>
+      ))}
+      <form style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }} onSubmit={async (e) => { e.preventDefault(); if (await save({ p_name: newName })) setNewName('') }}>
+        <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nueva sucursal (ej. Unicah)" style={{ flex: 1, minWidth: 180 }} />
+        <button className="btn" disabled={busy || !newName.trim()}>Agregar sucursal</button>
+      </form>
+      {error && <p className="error-text" style={{ margin: 0 }}>{error}</p>}
+    </div>
+  )
+}
+
+function ConfigTab({ orgId, branches, onBranchesChanged }) {
   const [settings, setSettings] = useState(null)
   const [devices, setDevices] = useState([])
   const [error, setError] = useState(null)
@@ -966,6 +1020,7 @@ function ConfigTab({ orgId, branches }) {
   return (
     <div style={{ display: 'grid', gap: 16 }}>
       {error && <p className="error-text">{error}</p>}
+      <BranchesCard orgId={orgId} branches={branches} onChanged={onBranchesChanged} />
       {settings && (
         <form onSubmit={save} className="card" style={{ display: 'grid', gap: 10, maxWidth: 520 }}>
           <h2 style={{ margin: 0, fontSize: 18 }}>Cómo marcan tus empleados</h2>
