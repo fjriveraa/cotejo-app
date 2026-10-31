@@ -665,7 +665,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
         </div>
       )}
       {importOpen && <ScheduleImport orgId={orgId} employees={employees} branches={branches} onClose={() => setImportOpen(false)} onSaved={() => { setImportOpen(false); load() }} />}
-      {profileEdit && <ProfileEditor orgId={orgId} branches={branches} edit={profileEdit} onClose={() => setProfileEdit(null)} onSaved={() => { setProfileEdit(null); load() }} />}
+      {profileEdit && <ProfileEditor orgId={orgId} branches={branches} edit={profileEdit} onClose={() => setProfileEdit(null)} onSaved={(ok) => { setProfileEdit(null); setMsg(ok ? '✓ Horario base guardado.' : null); load() }} />}
       {edit && <ScheduleEditor orgId={orgId} branches={branches} edit={edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); load() }} />}
     </div>
   )
@@ -779,9 +779,16 @@ function ProfileEditor({ orgId, branches, edit, onClose, onSaved }) {
       p_start_time: mode === 'fijo' ? start : null, p_work_days: mode === 'fijo' ? days : null,
       p_daily_hours: hours === '' ? null : Number(hours), p_branch_id: branchId || null
     })
+    if (err) { setBusy(false); setError(err.message); return }
+    // Verifica que de verdad quedó guardado antes de cerrar.
+    const { data: check, error: checkErr } = await supabase.rpc('list_attendance_profiles', { p_organization_id: orgId })
     setBusy(false)
-    if (err) { setError(err.message); return }
-    onSaved()
+    if (checkErr) { setError(checkErr.message); return }
+    if (!(check || []).some((x) => x.membership_id === edit.membership_id)) {
+      setError('No se pudo confirmar el guardado. Inténtalo de nuevo o recarga la página.')
+      return
+    }
+    onSaved(true)
   }
 
   async function clear() {
