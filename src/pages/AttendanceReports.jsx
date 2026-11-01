@@ -37,7 +37,7 @@ export default function AttendanceReports() {
     ]).then(([emp, inc]) => {
       const flags = new Map((inc.data || []).map((x) => [x.membership_id, x.included]))
       // La cuenta Sucursal (reloj) no es una persona con horario: queda fuera salvo que se incluya a propósito.
-      setEmployees((emp.data || []).map((e) => ({ ...e, included: flags.has(e.membership_id) ? flags.get(e.membership_id) : true })))
+      setEmployees((emp.data || []).map((e) => ({ ...e, display_name: shortName(e.display_name), included: flags.has(e.membership_id) ? flags.get(e.membership_id) : true })))
     })
   }, [orgId])
 
@@ -165,7 +165,7 @@ function ReportTab({ orgId, employees, branches, canSupervise }) {
     }))
     const byEmp = new Map()
     for (const r of rows) {
-      if (!byEmp.has(r.membership_id)) byEmp.set(r.membership_id, { name: r.employee_name, rows: [] })
+      if (!byEmp.has(r.membership_id)) byEmp.set(r.membership_id, { name: shortName(r.employee_name), rows: [] })
       byEmp.get(r.membership_id).rows.push(r)
     }
     const summaryRows = [...byEmp.values()].map(({ name, rows: rs }) => {
@@ -285,7 +285,16 @@ function GroupFolder({ view, gkey, rows, defaultOpen, onOpenDetail }) {
   )
 }
 
+// "Reyna lizeth Ortes Jimenez" -> "Reyna Ortes": primer nombre y primer apellido.
+function shortName(full) {
+  const w = String(full || '').trim().split(/\s+/).filter(Boolean)
+  if (w.length <= 2) return w.join(' ')
+  const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1)
+  return cap(w[0]) + ' ' + cap(w.length === 3 ? w[1] : w[2])
+}
+
 const th = { textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', opacity: 0.6, padding: '6px 8px', whiteSpace: 'nowrap' }
+const stickyCol = { position: 'sticky', left: 0, width: 150, minWidth: 150, maxWidth: 150, whiteSpace: 'normal', background: 'var(--card)', zIndex: 2, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.15)' }
 const td = { padding: '6px 8px', fontSize: 14, whiteSpace: 'nowrap' }
 
 function DayRows({ rows, onOpenDetail }) {
@@ -297,7 +306,7 @@ function DayRows({ rows, onOpenDetail }) {
       <tbody>
         {rows.map((r) => (
           <tr key={`${r.membership_id}-${r.work_date}`} style={{ borderTop: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => onOpenDetail?.(r)}>
-            <td style={td}><strong>{r.employee_name}</strong>{r.branch_name && <span style={{ opacity: 0.55 }}> · {r.branch_name}</span>}</td>
+            <td style={td}><strong>{shortName(r.employee_name)}</strong>{r.branch_name && <span style={{ opacity: 0.55 }}> · {r.branch_name}</span>}</td>
             {r.absent ? (
               <td style={{ ...td, color: '#A2483A' }} colSpan={6}>Ausente{r.scheduled_start ? ` (entraba ${r.scheduled_start.slice(0, 5)})` : ''}</td>
             ) : (
@@ -325,7 +334,7 @@ function DayRows({ rows, onOpenDetail }) {
 function EmployeeRows({ rows, onOpenDetail }) {
   const byEmp = new Map()
   for (const r of rows) {
-    if (!byEmp.has(r.membership_id)) byEmp.set(r.membership_id, { name: r.employee_name, rows: [] })
+    if (!byEmp.has(r.membership_id)) byEmp.set(r.membership_id, { name: shortName(r.employee_name), rows: [] })
     byEmp.get(r.membership_id).rows.push(r)
   }
   const list = [...byEmp.values()].sort((a, b) => a.name.localeCompare(b.name))
@@ -387,7 +396,7 @@ function DayDetail({ orgId, row, canEdit, onClose, onChanged }) {
       <div className="card" style={{ width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: 18 }}>{row.employee_name}</h2>
+            <h2 style={{ margin: 0, fontSize: 18 }}>{shortName(row.employee_name)}</h2>
             <div style={{ opacity: 0.65, textTransform: 'capitalize' }}>{formatDateLong(row.work_date)}</div>
           </div>
           <button type="button" className="btn btn-secondary" onClick={onClose}>Cerrar</button>
@@ -600,14 +609,14 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: compact ? days.length * 62 + 150 : 720 }}>
             <thead>
               <tr>
-                <th style={th}>Empleado</th>
+                <th style={{ ...th, ...stickyCol, zIndex: 3 }}>Empleado</th>
                 {days.map((d) => <th key={d} style={th}>{compact ? `${DAY_NAMES[(new Date(`${d}T00:00:00Z`).getUTCDay() + 6) % 7]} ${d.slice(8)}` : `${formatDateLong(d).split(' ')[0]} ${d.slice(8)}`}</th>)}
               </tr>
             </thead>
             <tbody>
               {employees.map((e) => (
                 <tr key={e.membership_id} style={{ borderTop: '1px solid var(--border)' }}>
-                  <td style={td}>
+                  <td style={{ ...td, ...stickyCol }}>
                     <strong>{e.display_name}</strong>
                     <div style={{ fontSize: 11, opacity: 0.65 }}>{profileSummary(profiles.find((x) => x.membership_id === e.membership_id))}</div>
                     {canEdit && (
@@ -982,7 +991,7 @@ function CorrectionsTab({ orgId, canReview }) {
         <div style={{ display: 'grid', gap: 8 }}>
           {list.map((c) => (
             <div key={c.correction_id} className="card">
-              <div><strong>{c.employee_name}</strong> · {EVENT_LABELS[c.event_type]} a las {c.requested_time.slice(0, 5)}</div>
+              <div><strong>{shortName(c.employee_name)}</strong> · {EVENT_LABELS[c.event_type]} a las {c.requested_time.slice(0, 5)}</div>
               <div style={{ opacity: 0.65, textTransform: 'capitalize' }}>{formatDateLong(c.work_date)}</div>
               <div style={{ marginTop: 4 }}>“{c.reason}”</div>
               {c.review_notes && <div style={{ fontSize: 13, opacity: 0.7 }}>Nota: {c.review_notes}</div>}
