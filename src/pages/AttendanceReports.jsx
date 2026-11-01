@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import * as XLSX from 'xlsx'
+import { scheduleToPng, saveOrShareImage } from '../lib/scheduleImage'
 import ScheduleImport from '../components/ScheduleImport'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -557,6 +558,23 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
   const cell = (mid, d) => items.find((x) => x.membership_id === mid && x.work_date === d)
   const isOff = (mid, d) => offs.some((x) => x.membership_id === mid && x.work_date === d)
 
+
+  async function downloadImage() {
+    const rows = employees.map((e) => ({
+      name: e.display_name,
+      cells: days.map((d) => {
+        if (isOff(e.membership_id, d)) return { bg: '#F6E0DB', border: '#D9A39A', color: '#A2483A', main: 'LIBRE' }
+        const c = cell(e.membership_id, d)
+        if (!c || !c.start_time) return null
+        const col = branchColor(branches, c.branch_id)
+        return { bg: col.bg, border: col.border, main: `${c.start_time.slice(0, 5)}${c.end_time ? '–' + c.end_time.slice(0, 5) : ''}`, sub: c.branch_name || branches.find((b) => b.id === c.branch_id)?.name || '' }
+      })
+    }))
+    const legend = [...branches.filter((b) => b.active !== false).map((b) => ({ ...branchColor(branches, b.id), label: b.name })), { bg: '#F6E0DB', border: '#D9A39A', label: 'Libre' }]
+    const blob = await scheduleToPng({ title: 'Horario del personal', subtitle: `Del ${from.slice(8)}/${from.slice(5, 7)} al ${to.slice(8)}/${to.slice(5, 7)}`, days, rows, legend })
+    await saveOrShareImage(blob, `horario-${from}.png`)
+  }
+
   async function copyPrevious() {
     setMsg(null)
     const { data, error: err } = await supabase.rpc('copy_attendance_week', {
@@ -586,6 +604,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
             {span === 'semana' && <button type="button" className="btn btn-secondary" onClick={copyPrevious}>Copiar semana anterior</button>}
           </div>
         )}
+        <button type="button" className="btn btn-secondary" onClick={downloadImage}>Descargar imagen</button>
       </div>
       <div className="att-seg" style={{ margin: '10px 0 0' }}>
         {[['grid', 'Cuadrícula'], ['branch', 'Por sucursal'], ['person', 'Por persona']].map(([k, l]) => (
