@@ -1231,3 +1231,8 @@ html, body { overflow-x: hidden; }
   :root:not([data-theme="light"]) .att-chip.ok { background: rgba(140, 201, 187, 0.16); color: #8CC9BB; }
   :root:not([data-theme="light"]) .att-tabs { border-bottom-color: var(--border-dark); }
 }
+
+/* Que las tablas de reportes se deslicen dentro de su tarjeta en vez de ensanchar la pantalla */
+.att-group { max-width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden; }
+.att-scroll { max-width: 100%; touch-action: pan-x pan-y; }
+.att-scroll .att-table { width: max-content; min-width: 100%; }

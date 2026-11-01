@@ -273,12 +273,12 @@ function Totals({ s }) {
 function GroupFolder({ view, gkey, rows, defaultOpen, onOpenDetail }) {
   const s = summarize(rows)
   return (
-    <details open={defaultOpen} className="card" style={{ padding: 0 }}>
+    <details open={defaultOpen} className="card att-group" style={{ padding: 0 }}>
       <summary className="att-group-summary">
         <span className="att-group-title">{groupLabel(view, gkey)}</span>
         <Totals s={s} />
       </summary>
-      <div style={{ padding: '0 16px 12px', overflowX: 'auto' }}>
+      <div className="att-scroll" style={{ padding: '0 16px 12px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         {view === 'dia' ? <DayRows rows={rows} onOpenDetail={onOpenDetail} /> : <EmployeeRows rows={rows} view={view} onOpenDetail={onOpenDetail} />}
       </div>
     </details>
@@ -295,18 +295,19 @@ function shortName(full) {
 
 const th = { textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', opacity: 0.6, padding: '6px 8px', whiteSpace: 'nowrap' }
 const stickyCol = { position: 'sticky', left: 0, width: 150, minWidth: 150, maxWidth: 150, whiteSpace: 'normal', background: 'var(--card)', zIndex: 2, boxShadow: '2px 0 4px -2px rgba(0,0,0,0.15)' }
+const stickyName = { position: 'sticky', left: 0, background: 'var(--card)', zIndex: 1 }
 const td = { padding: '6px 8px', fontSize: 14, whiteSpace: 'nowrap' }
 
 function DayRows({ rows, onOpenDetail }) {
   return (
     <table className="att-table">
       <thead>
-        <tr><th style={th}>Empleado</th><th style={th}>Entrada</th><th style={th}>Salida</th><th style={th}>Almuerzo</th><th style={th}>Efectivas</th><th style={th}>Tarde</th><th style={th}>Extra</th><th style={th}></th></tr>
+        <tr><th style={{ ...th, ...stickyName }}>Empleado</th><th style={th}>Entrada</th><th style={th}>Salida</th><th style={th}>Almuerzo</th><th style={th}>Efectivas</th><th style={th}>Tarde</th><th style={th}>Extra</th><th style={th}></th></tr>
       </thead>
       <tbody>
         {rows.map((r) => (
           <tr key={`${r.membership_id}-${r.work_date}`} style={{ borderTop: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => onOpenDetail?.(r)}>
-            <td style={td}><strong>{shortName(r.employee_name)}</strong>{r.branch_name && <span style={{ opacity: 0.55 }}> · {r.branch_name}</span>}</td>
+            <td style={{ ...td, ...stickyName }}><strong>{shortName(r.employee_name)}</strong>{r.branch_name && <span style={{ opacity: 0.55 }}> · {r.branch_name}</span>}</td>
             {r.absent ? (
               <td style={{ ...td, color: '#A2483A' }} colSpan={6}>Ausente{r.scheduled_start ? ` (entraba ${r.scheduled_start.slice(0, 5)})` : ''}</td>
             ) : (
@@ -341,14 +342,14 @@ function EmployeeRows({ rows, onOpenDetail }) {
   return (
     <table className="att-table">
       <thead>
-        <tr><th style={th}>Empleado</th><th style={th}>Días</th><th style={th}>Trabajadas</th><th style={th}>Min. tarde</th><th style={th}>Días tarde</th><th style={th}>Extra</th><th style={th}>Ausencias</th></tr>
+        <tr><th style={{ ...th, ...stickyName }}>Empleado</th><th style={th}>Días</th><th style={th}>Trabajadas</th><th style={th}>Min. tarde</th><th style={th}>Días tarde</th><th style={th}>Extra</th><th style={th}>Ausencias</th></tr>
       </thead>
       <tbody>
         {list.map(({ name, rows: rs }) => {
           const s = summarize(rs)
           return (
             <tr key={name} style={{ borderTop: '1px solid var(--border)' }}>
-              <td style={td}><strong>{name}</strong></td>
+              <td style={{ ...td, ...stickyName }}><strong>{name}</strong></td>
               <td style={td}>{s.days}</td>
               <td style={td}>{formatMinutes(s.worked)}</td>
               <td style={{ ...td, color: s.late > 0 ? '#A2483A' : undefined, fontWeight: s.late > 0 ? 700 : 400 }}>{s.late}</td>
