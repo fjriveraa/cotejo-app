@@ -625,57 +625,82 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
       {!loading && view === 'branch' && <BranchView days={days} items={items} offs={offs} employees={employees} branches={branches} />}
       {!loading && view === 'person' && <PersonView days={days} items={items} offs={offs} employees={employees} profiles={profiles} />}
       {loading ? <p style={{ opacity: 0.6 }}>Cargando...</p> : view === 'grid' && (
-        <div className="card" style={{ marginTop: 12, overflowX: 'auto', padding: 8 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: compact ? days.length * 62 + 150 : 720 }}>
+        <div className="card att-grid-card" style={{ marginTop: 12, overflowX: 'auto', padding: 6, WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ borderCollapse: 'separate', borderSpacing: '4px 6px', width: 'max-content', minWidth: '100%' }}>
             <thead>
               <tr>
-                <th style={{ ...th, ...stickyCol, zIndex: 3 }}>Empleado</th>
-                {days.map((d) => <th key={d} style={th}>{compact ? `${DAY_NAMES[(new Date(`${d}T00:00:00Z`).getUTCDay() + 6) % 7]} ${d.slice(8)}` : `${formatDateLong(d).split(' ')[0]} ${d.slice(8)}`}</th>)}
+                <th style={{ ...stickyCol, width: 128, minWidth: 128, maxWidth: 128, background: 'var(--card)', zIndex: 3, textAlign: 'left', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 1, color: 'var(--ink-soft, #7d7668)', padding: '4px 6px' }}>Equipo</th>
+                {days.map((d) => {
+                  const dow = (new Date(`${d}T00:00:00Z`).getUTCDay() + 6) % 7
+                  const isToday = d === hondurasDateStr()
+                  return (
+                    <th key={d} style={{ minWidth: compact ? 58 : 92, padding: '4px 2px', textAlign: 'center', fontWeight: 600, borderRadius: 10, background: isToday ? '#2B6459' : dow >= 5 ? 'rgba(0,0,0,0.04)' : 'transparent', color: isToday ? '#fff' : 'var(--ink-soft, #7d7668)' }}>
+                      <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'][dow]}</div>
+                      <div style={{ fontSize: 17, fontWeight: 700, color: isToday ? '#fff' : 'var(--ink, #1f1b14)' }}>{d.slice(8)}</div>
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody>
-              {employees.map((e) => (
-                <tr key={e.membership_id} style={{ borderTop: '1px solid var(--border)' }}>
-                  <td style={{ ...td, ...stickyCol }}>
-                    <strong>{e.display_name}</strong>
-                    <div style={{ fontSize: 11, opacity: 0.65 }}>{profileSummary(profiles.find((x) => x.membership_id === e.membership_id))}</div>
-                    {canEdit && (
-                      <button type="button" className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', marginTop: 4, marginRight: 4 }}
-                        onClick={() => { if (window.confirm(`¿Sacar a ${e.display_name} del horario? Sus marcas y turnos ya guardados se conservan.`)) setIncluded(e.membership_id, false) }}>
-                        Quitar del horario
+              {employees.map((e) => {
+                const mins = days.reduce((acc, d) => {
+                  const c = cell(e.membership_id, d)
+                  if (!c || !c.start_time || !c.end_time || isOff(e.membership_id, d)) return acc
+                  const [h1, m1] = c.start_time.split(':').map(Number)
+                  const [h2, m2] = c.end_time.split(':').map(Number)
+                  return acc + Math.max(0, h2 * 60 + m2 - (h1 * 60 + m1))
+                }, 0)
+                const workDays = days.filter((d) => cell(e.membership_id, d) && !isOff(e.membership_id, d)).length
+                const freeDays = days.filter((d) => isOff(e.membership_id, d)).length
+                const initials = (e.display_name || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+                return (
+                  <tr key={e.membership_id}>
+                    <td style={{ ...stickyCol, width: 128, minWidth: 128, maxWidth: 128, padding: '2px 6px 2px 2px', verticalAlign: 'middle' }}>
+                      <button type="button" disabled={!canEdit} onClick={() => setProfileEdit({ membership_id: e.membership_id, name: e.display_name, current: profiles.find((x) => x.membership_id === e.membership_id) })}
+                        style={{ all: 'unset', cursor: canEdit ? 'pointer' : 'default', display: 'flex', gap: 8, alignItems: 'center', width: '100%' }}>
+                        <span style={{ flex: '0 0 30px', height: 30, borderRadius: '50%', background: 'rgba(43,100,89,0.14)', color: '#2B6459', fontWeight: 700, fontSize: 12, display: 'grid', placeItems: 'center' }}>{initials}</span>
+                        <span style={{ minWidth: 0 }}>
+                          <strong style={{ display: 'block', fontSize: 14, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.display_name}</strong>
+                          <span style={{ display: 'block', fontSize: 11, opacity: 0.65, whiteSpace: 'nowrap' }}>
+                            {workDays ? `${Math.round(mins / 6) / 10 || '—'} h · ${workDays} d` : 'Sin turnos'}{freeDays ? ` · ${freeDays} libre` : ''}
+                          </span>
+                        </span>
                       </button>
-                    )}
-                    {canEdit && (
-                      <button type="button" className="btn btn-secondary" style={{ fontSize: 11, padding: '2px 8px', marginTop: 4 }}
-                        onClick={() => setProfileEdit({ membership_id: e.membership_id, name: e.display_name, current: profiles.find((x) => x.membership_id === e.membership_id) })}>
-                        Configurar horario
-                      </button>
-                    )}
-                  </td>
-                  {days.map((d) => {
-                    const c = cell(e.membership_id, d)
-                    const off = isOff(e.membership_id, d)
-                    return (
-                      <td key={d} style={{ ...td, padding: 2 }}>
-                        <button
-                          type="button"
-                          disabled={!canEdit}
-                          onClick={() => setEdit({ membership_id: e.membership_id, name: e.display_name, date: d, current: c, off })}
-                          style={{
-                            width: '100%', minHeight: 44, borderRadius: 6, fontSize: 12, lineHeight: 1.3, cursor: canEdit ? 'pointer' : 'default', color: off ? '#A2483A' : 'var(--ink, #1f1b14)',
-                            border: off ? '1px solid rgba(162,72,58,0.45)' : c ? `1px ${c.is_default ? 'dashed' : 'solid'} ${branchColor(branches, c.branch_id).border}` : '1px dashed rgba(0,0,0,0.15)',
-                            background: off ? 'rgba(162,72,58,0.12)' : c ? branchColor(branches, c.branch_id).bg : 'transparent'
-                          }}
-                        >
-                          {off ? <strong style={{ color: '#A2483A' }}>LIBRE</strong> : c ? (compact
-                            ? (<><strong>{c.start_time.slice(0, 5)}</strong><br /><span style={{ opacity: 0.6 }}>{(c.branch_name || '').slice(0, 7)}</span></>)
-                            : (<><strong>{c.start_time.slice(0, 5)}</strong>{c.end_time ? `–${c.end_time.slice(0, 5)}` : ''}<br />{c.lunch_start && <span style={{ opacity: 0.75 }}>🍽 {c.lunch_start.slice(0, 5)}<br /></span>}<span style={{ opacity: 0.6 }}>{c.branch_name || ''}</span></>)) : <span style={{ opacity: 0.35 }}>—</span>}
-                        </button>
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
+                    </td>
+                    {days.map((d) => {
+                      const c = cell(e.membership_id, d)
+                      const off = isOff(e.membership_id, d)
+                      const col = c ? branchColor(branches, c.branch_id) : null
+                      const isToday = d === hondurasDateStr()
+                      return (
+                        <td key={d} style={{ padding: 0, verticalAlign: 'middle', background: isToday ? 'rgba(43,100,89,0.06)' : 'transparent', borderRadius: 10 }}>
+                          <button
+                            type="button"
+                            disabled={!canEdit}
+                            onClick={() => setEdit({ membership_id: e.membership_id, name: e.display_name, date: d, current: c, off })}
+                            style={{
+                              width: '100%', minHeight: 54, borderRadius: 10, fontSize: 12, lineHeight: 1.25, padding: '4px 2px', cursor: canEdit ? 'pointer' : 'default',
+                              display: 'grid', placeItems: 'center', alignContent: 'center',
+                              color: off ? '#A2483A' : 'var(--ink, #1f1b14)',
+                              border: off ? '1px solid rgba(162,72,58,0.35)' : c ? `1px ${c.is_default ? 'dashed' : 'solid'} ${col.border}` : '1px dashed rgba(0,0,0,0.12)',
+                              background: off ? 'rgba(162,72,58,0.10)' : c ? col.bg : 'transparent'
+                            }}
+                          >
+                            {off ? <strong style={{ letterSpacing: '0.08em', fontSize: 11 }}>LIBRE</strong> : c ? (
+                              <>
+                                <strong style={{ fontSize: compact ? 12 : 14 }}>{c.start_time.slice(0, 5)}{!compact && c.end_time ? <span style={{ fontWeight: 500, opacity: 0.8 }}>–{c.end_time.slice(0, 5)}</span> : null}</strong>
+                                {!compact && c.lunch_start && <span style={{ opacity: 0.7, fontSize: 11 }}>🍽 {c.lunch_start.slice(0, 5)}</span>}
+                                <span style={{ fontSize: 11, opacity: 0.7 }}>{compact ? (c.branch_name || '').slice(0, 7) : (c.branch_name || '')}</span>
+                              </>
+                            ) : <span style={{ opacity: 0.25, fontSize: 16 }}>+</span>}
+                          </button>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -694,7 +719,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
         </div>
       )}
       {importOpen && <ScheduleImport orgId={orgId} employees={employees} branches={branches} onClose={() => setImportOpen(false)} onSaved={() => { setImportOpen(false); load() }} />}
-      {profileEdit && <ProfileEditor orgId={orgId} branches={branches} edit={profileEdit} onClose={() => setProfileEdit(null)} onSaved={(ok) => { setProfileEdit(null); setMsg(ok ? '✓ Horario base guardado.' : null); load() }} />}
+      {profileEdit && <ProfileEditor orgId={orgId} branches={branches} edit={profileEdit} onClose={() => setProfileEdit(null)} onRemove={() => { if (window.confirm(`¿Sacar a ${profileEdit.name} del horario? Sus marcas y turnos ya guardados se conservan.`)) { setIncluded(profileEdit.membership_id, false); setProfileEdit(null) } }} onSaved={(ok) => { setProfileEdit(null); setMsg(ok ? '✓ Horario base guardado.' : null); load() }} />}
       {edit && <ScheduleEditor orgId={orgId} branches={branches} edit={edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); load() }} />}
     </div>
   )
@@ -788,7 +813,7 @@ function profileSummary(pr) {
   return `Fijo ${pr.start_time.slice(0, 5)} · ${(pr.work_days || []).map((d) => DAY_NAMES[d - 1]).join(' ')}`
 }
 
-function ProfileEditor({ orgId, branches, edit, onClose, onSaved }) {
+function ProfileEditor({ orgId, branches, edit, onClose, onSaved, onRemove }) {
   const cur = edit.current
   const [mode, setMode] = useState(cur?.mode || 'fijo')
   const [start, setStart] = useState(cur?.start_time?.slice(0, 5) || '08:00')
@@ -870,6 +895,7 @@ function ProfileEditor({ orgId, branches, edit, onClose, onSaved }) {
         <button className="btn" disabled={busy}>Guardar horario</button>
         {cur && <button type="button" className="btn btn-secondary" disabled={busy} onClick={clear}>Quitar horario base</button>}
         <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+        {onRemove && <button type="button" className="btn btn-secondary" style={{ color: '#A2483A' }} onClick={onRemove}>Quitar del horario</button>}
       </form>
     </div>
   )
