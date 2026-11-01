@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import * as XLSX from 'xlsx'
-import { scheduleToPng, saveOrShareImage } from '../lib/scheduleImage'
+import { scheduleToPng, saveOrShareImage, rangeText } from '../lib/scheduleImage'
 import ScheduleImport from '../components/ScheduleImport'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -504,6 +504,8 @@ function lastDayOfMonth(firstDay) {
 }
 
 function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmployeesChanged }) {
+  const { membership: authMembership } = useAuth()
+  const orgDisplayName = authMembership?.organizations?.name || ''
   // Quien está fuera del horario (ej. el reloj de la tienda o el propietario) no sale en la cuadrícula.
   const employees = allEmployees.filter((e) => e.included !== false && e.role !== 'marcador')
   const hidden = allEmployees.filter((e) => e.included === false && e.role !== 'marcador')
@@ -560,18 +562,26 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
 
 
   async function downloadImage() {
-    const rows = employees.map((e) => ({
-      name: e.display_name,
-      cells: days.map((d) => {
-        if (isOff(e.membership_id, d)) return { bg: '#F6E0DB', border: '#D9A39A', color: '#A2483A', main: 'LIBRE' }
+    const minsOf = (c) => {
+      if (!c?.start_time || !c?.end_time) return 0
+      const [h1, m1] = c.start_time.split(':').map(Number)
+      const [h2, m2] = c.end_time.split(':').map(Number)
+      return Math.max(0, h2 * 60 + m2 - (h1 * 60 + m1))
+    }
+    const rows = employees.map((e) => {
+      let total = 0
+      const cells = days.map((d) => {
+        if (isOff(e.membership_id, d)) return { off: true }
         const c = cell(e.membership_id, d)
         if (!c || !c.start_time) return null
+        total += minsOf(c)
         const col = branchColor(branches, c.branch_id)
-        return { bg: col.bg, border: col.border, main: `${c.start_time.slice(0, 5)}${c.end_time ? '–' + c.end_time.slice(0, 5) : ''}`, sub: c.branch_name || branches.find((b) => b.id === c.branch_id)?.name || '' }
+        return { border: col.border, main: `${c.start_time.slice(0, 5)}${c.end_time ? ' – ' + c.end_time.slice(0, 5) : ''}`, sub: c.branch_name || branches.find((b) => b.id === c.branch_id)?.name || '' }
       })
-    }))
-    const legend = [...branches.filter((b) => b.active !== false).map((b) => ({ ...branchColor(branches, b.id), label: b.name })), { bg: '#F6E0DB', border: '#D9A39A', label: 'Libre' }]
-    const blob = await scheduleToPng({ title: 'Horario del personal', subtitle: `Del ${from.slice(8)}/${from.slice(5, 7)} al ${to.slice(8)}/${to.slice(5, 7)}`, days, rows, legend })
+      return { name: e.display_name, total: total ? `${Math.round(total / 6) / 10} h en el periodo` : '', cells }
+    })
+    const legend = branches.filter((b) => b.active !== false).map((b) => ({ border: branchColor(branches, b.id).border, label: b.name }))
+    const blob = await scheduleToPng({ orgName: orgDisplayName, title: 'Horario del personal', period: `${span === 'semana' ? 'Semana' : 'Mes'} del ${rangeText(from, to)}`, days, rows, legend })
     await saveOrShareImage(blob, `horario-${from}.png`)
   }
 
