@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import PushPrompt from '../components/PushPrompt'
 import { hondurasDateStr, formatDateLong, addDays, mondayOf, weekLabel, formatTime } from '../lib/attendance'
 
 const DAY_NAMES = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
@@ -39,6 +40,7 @@ export default function MySchedule() {
   return (
     <div className="container" style={{ maxWidth: 560 }}>
       <h1 className="page-title">Mi horario</h1>
+      <PushPrompt />
       <p style={{ opacity: 0.75, marginTop: 0 }}>{loading ? ' ' : profileText(data?.profile)}</p>
 
       <div className="card" style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'space-between' }}>

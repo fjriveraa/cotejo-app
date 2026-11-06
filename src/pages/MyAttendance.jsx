@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import AttendanceQr from '../components/AttendanceQr'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import PushPrompt from '../components/PushPrompt'
 import { EVENT_LABELS, CORRECTABLE_EVENTS, TZ, hondurasDateStr, formatTime, formatDateLong, addDays, monthKey, monthLabel, formatMinutes } from '../lib/attendance'
 
 export default function MyAttendance() {
@@ -57,6 +58,7 @@ export default function MyAttendance() {
   return (
     <div className="container" style={{ maxWidth: 560 }}>
       <h1 className="page-title">Mi asistencia</h1>
+      <PushPrompt />
       <p style={{ opacity: 0.7, marginTop: 0 }}>
         Muestra este código en el dispositivo de tu sucursal para marcar entrada, almuerzo o salida.
       </p>
