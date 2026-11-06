@@ -371,9 +371,9 @@ function Scanner({ orgId, device, settings, onChangeDevice }) {
 
       {dueSoon.length > 0 && (
         <div style={{ width: '100%', maxWidth: 720, marginTop: 10, padding: '10px 14px', borderRadius: 12, background: 'rgba(200,85,61,0.18)', border: '1px solid rgba(200,85,61,0.6)', fontSize: 15 }}>
-          <strong>⏰ Por marcar pronto:</strong>{' '}
+          <strong>⏰ Por marcar:</strong>{' '}
           {dueSoon.map((d, i) => (
-            <span key={i}>{i > 0 && ' · '}{d.name} ({d.kind === 'entrada' ? 'entrada' : 'salida'} {formatTime(d.due_at)})</span>
+            <span key={i}>{i > 0 && ' · '}{d.name} ({d.kind === 'almuerzo' ? '🍽 almuerzo pendiente' : `${d.kind === 'entrada' ? 'entrada' : 'salida'} ${formatTime(d.due_at)}`})</span>
           ))}
         </div>
       )}
