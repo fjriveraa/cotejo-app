@@ -59,6 +59,13 @@ export function scheduleToPng({ orgName, title, period, days, rows, legend }) {
     r.cells.forEach((cell, i) => {
       const x = gx + colW * i + 6, w = colW - 12, h = rowH - 14, yy = y + 7
       if (!cell) { g.fillStyle = '#D9D3C6'; g.textAlign = 'center'; g.font = font('400', 16); g.fillText('·', x + w / 2, yy + h / 2); return }
+      if (cell.vac) {
+        g.fillStyle = '#FBF1DC'; g.beginPath(); g.roundRect(x, yy, w, h, 8); g.fill()
+        g.fillStyle = '#8A5A00'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = font('700', 11)
+        g.fillText('VACACIONES', x + w / 2, yy + h / 2)
+        g.textAlign = 'left'
+        return
+      }
       if (cell.off) {
         g.textAlign = 'center'; g.fillStyle = '#A2483A'; g.font = font('700', 11)
         const t = 'LIBRE', tw = [...t].reduce((a, ch) => a + g.measureText(ch).width + 2, -2)

@@ -35,7 +35,7 @@ export default function MySchedule() {
 
   const today = hondurasDateStr()
   const days = data?.days || []
-  const free = days.filter((d) => d.is_off).length
+  const free = days.filter((d) => d.is_off && !d.is_vacation).length
 
   return (
     <div className="container" style={{ maxWidth: 560 }}>
@@ -59,7 +59,7 @@ export default function MySchedule() {
                 {d.branch_name && !d.is_off && <div style={{ fontSize: 12, opacity: 0.65 }}>{d.branch_name}</div>}
               </div>
               <div style={{ textAlign: 'right', fontSize: 14 }}>
-                {d.is_off ? <strong style={{ color: '#A2483A' }}>Día libre</strong> : d.start_time ? (
+                {d.is_off ? <strong style={{ color: d.is_vacation ? '#8A5A00' : '#A2483A' }}>{d.is_vacation ? '🏖 Vacaciones' : 'Día libre'}</strong> : d.start_time ? (
                   <>
                     <div>Entrada <strong>{formatTime(`${d.work_date}T${d.start_time}-06:00`)}</strong>{d.end_time && <> · Salida <strong>{formatTime(`${d.work_date}T${d.end_time}-06:00`)}</strong></>}</div>
                     {d.lunch_start && <div style={{ fontSize: 12, opacity: 0.75 }}>Almuerzo {formatTime(`${d.work_date}T${d.lunch_start}-06:00`)}</div>}

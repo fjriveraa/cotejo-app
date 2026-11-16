@@ -521,6 +521,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
   const to = span === 'semana' ? addDays(from, 6) : lastDayOfMonth(from)
   const [items, setItems] = useState([])
   const [offs, setOffs] = useState([])
+  const [vacs, setVacs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [edit, setEdit] = useState(null) // { membership_id, name, date, current }
@@ -533,12 +534,14 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
   const load = useCallback(async () => {
     if (!orgId) return
     setLoading(true)
-    const [{ data, error: err }, { data: prof }, { data: offData }] = await Promise.all([
+    const [{ data, error: err }, { data: prof }, { data: offData }, { data: vacData }] = await Promise.all([
       supabase.rpc('list_attendance_schedule', { p_organization_id: orgId, p_from: from, p_to: to }),
       supabase.rpc('list_attendance_profiles', { p_organization_id: orgId }),
-      supabase.rpc('list_attendance_days_off', { p_organization_id: orgId, p_from: from, p_to: to })
+      supabase.rpc('list_attendance_days_off', { p_organization_id: orgId, p_from: from, p_to: to }),
+      supabase.rpc('list_attendance_vacations', { p_organization_id: orgId, p_from: from, p_to: to })
     ])
     setOffs(offData || [])
+    setVacs(vacData || [])
     setProfiles(prof || [])
     setLoading(false)
     if (err) { setError(err.message); return }
@@ -559,6 +562,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
   }
   const cell = (mid, d) => items.find((x) => x.membership_id === mid && x.work_date === d)
   const isOff = (mid, d) => offs.some((x) => x.membership_id === mid && x.work_date === d)
+  const isVac = (mid, d) => vacs.some((x) => x.membership_id === mid && x.work_date === d)
 
 
   async function downloadImage() {
@@ -571,6 +575,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
     const rows = employees.map((e) => {
       let total = 0
       const cells = days.map((d) => {
+        if (isVac(e.membership_id, d)) return { vac: true }
         if (isOff(e.membership_id, d)) return { off: true }
         const c = cell(e.membership_id, d)
         if (!c || !c.start_time) return null
@@ -580,7 +585,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
       })
       return { name: e.display_name, total: total ? `${Math.round(total / 6) / 10} h en el periodo` : '', cells }
     })
-    const legend = branches.filter((b) => b.active !== false).map((b) => ({ border: branchColor(branches, b.id).border, label: b.name }))
+    const legend = [...branches.filter((b) => b.active !== false).map((b) => ({ border: branchColor(branches, b.id).border, label: b.name })), { border: '#C9921E', label: 'Vacaciones' }]
     const blob = await scheduleToPng({ orgName: orgDisplayName, title: 'Horario del personal', period: `${span === 'semana' ? 'Semana' : 'Mes'} del ${rangeText(from, to)}`, days, rows, legend })
     await saveOrShareImage(blob, `horario-${from}.png`)
   }
@@ -630,6 +635,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
             return <span key={b.id} style={{ background: col.bg, border: `1px solid ${col.border}`, borderRadius: 10, padding: '2px 10px' }}>{b.name}</span>
           })}
           <span style={{ background: 'rgba(162,72,58,0.12)', border: '1px solid rgba(162,72,58,0.45)', color: '#A2483A', borderRadius: 10, padding: '2px 10px', fontWeight: 700 }}>Libre</span>
+          <span style={{ background: 'rgba(201,146,30,0.16)', border: '1px solid rgba(201,146,30,0.55)', color: '#8A5A00', borderRadius: 10, padding: '2px 10px', fontWeight: 700 }}>🏖 Vacaciones</span>
         </div>
       )}
       {!loading && view === 'branch' && <BranchView days={days} items={items} offs={offs} employees={employees} branches={branches} />}
@@ -662,7 +668,8 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
                   return acc + Math.max(0, h2 * 60 + m2 - (h1 * 60 + m1))
                 }, 0)
                 const workDays = days.filter((d) => cell(e.membership_id, d) && !isOff(e.membership_id, d)).length
-                const freeDays = days.filter((d) => isOff(e.membership_id, d)).length
+                const freeDays = days.filter((d) => isOff(e.membership_id, d) && !isVac(e.membership_id, d)).length
+                const vacDays = days.filter((d) => isVac(e.membership_id, d)).length
                 const initials = (e.display_name || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
                 return (
                   <tr key={e.membership_id}>
@@ -673,7 +680,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
                         <span style={{ minWidth: 0 }}>
                           <strong style={{ display: 'block', fontSize: 14, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.display_name}</strong>
                           <span style={{ display: 'block', fontSize: 11, opacity: 0.65, whiteSpace: 'nowrap' }}>
-                            {workDays ? `${Math.round(mins / 6) / 10 || '—'} h · ${workDays} d` : 'Sin turnos'}{freeDays ? ` · ${freeDays} libre` : ''}
+                            {workDays ? `${Math.round(mins / 6) / 10 || '—'} h · ${workDays} d` : 'Sin turnos'}{freeDays ? ` · ${freeDays} libre` : ''}{vacDays ? ` · ${vacDays} vac.` : ''}
                           </span>
                         </span>
                       </button>
@@ -681,6 +688,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
                     {days.map((d) => {
                       const c = cell(e.membership_id, d)
                       const off = isOff(e.membership_id, d)
+                      const vac = isVac(e.membership_id, d)
                       const col = c ? branchColor(branches, c.branch_id) : null
                       const isToday = d === hondurasDateStr()
                       return (
@@ -688,16 +696,16 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
                           <button
                             type="button"
                             disabled={!canEdit}
-                            onClick={() => setEdit({ membership_id: e.membership_id, name: e.display_name, date: d, current: c, off })}
+                            onClick={() => setEdit({ membership_id: e.membership_id, name: e.display_name, date: d, current: c, off, vac })}
                             style={{
                               width: '100%', minHeight: 54, borderRadius: 10, fontSize: 12, lineHeight: 1.25, padding: '4px 2px', cursor: canEdit ? 'pointer' : 'default',
                               display: 'grid', placeItems: 'center', alignContent: 'center',
-                              color: off ? '#A2483A' : 'var(--ink, #1f1b14)',
-                              border: off ? '1px solid rgba(162,72,58,0.35)' : c ? `1px ${c.is_default ? 'dashed' : 'solid'} ${col.border}` : '1px dashed rgba(0,0,0,0.12)',
-                              background: off ? 'rgba(162,72,58,0.10)' : c ? col.bg : 'transparent'
+                              color: vac ? '#8A5A00' : off ? '#A2483A' : 'var(--ink, #1f1b14)',
+                              border: vac ? '1px solid rgba(201,146,30,0.55)' : off ? '1px solid rgba(162,72,58,0.35)' : c ? `1px ${c.is_default ? 'dashed' : 'solid'} ${col.border}` : '1px dashed rgba(0,0,0,0.12)',
+                              background: vac ? 'rgba(201,146,30,0.16)' : off ? 'rgba(162,72,58,0.10)' : c ? col.bg : 'transparent'
                             }}
                           >
-                            {off ? <strong style={{ letterSpacing: '0.08em', fontSize: 11 }}>LIBRE</strong> : c ? (
+                            {vac ? <><span style={{ fontSize: 15 }}>🏖</span><strong style={{ letterSpacing: '0.04em', fontSize: 10 }}>{compact ? 'VAC.' : 'VACACIONES'}</strong></> : off ? <strong style={{ letterSpacing: '0.08em', fontSize: 11 }}>LIBRE</strong> : c ? (
                               <>
                                 <strong style={{ fontSize: compact ? 12 : 14 }}>{c.start_time.slice(0, 5)}{!compact && c.end_time ? <span style={{ fontWeight: 500, opacity: 0.8 }}>–{c.end_time.slice(0, 5)}</span> : null}</strong>
                                 {!compact && c.lunch_start && <span style={{ opacity: 0.7, fontSize: 11 }}>🍽 {c.lunch_start.slice(0, 5)}</span>}
@@ -956,6 +964,12 @@ function ScheduleEditor({ orgId, branches, edit, onClose, onSaved }) {
     }))
   }
 
+  function setVacation(value) {
+    runAll((d) => supabase.rpc('set_attendance_vacation', {
+      p_organization_id: orgId, p_membership_id: edit.membership_id, p_work_date: d, p_on: value
+    }))
+  }
+
   function clear() {
     runAll((d) => supabase.rpc('clear_attendance_schedule', {
       p_organization_id: orgId, p_membership_id: edit.membership_id, p_work_date: d
@@ -982,7 +996,7 @@ function ScheduleEditor({ orgId, branches, edit, onClose, onSaved }) {
             <button type="button" className="btn btn-secondary" style={{ fontSize: 12, padding: '2px 8px' }} onClick={() => pickRange([0, 1, 2, 3, 4, 5, 6])}>Toda la semana</button>
           </div>
         </div>
-        {edit.off && <p style={{ margin: 0, color: '#A2483A', fontWeight: 700 }}>Este día está marcado como libre. Si guardas un turno, deja de serlo.</p>}
+        {edit.off && <p style={{ margin: 0, color: edit.vac ? '#8A5A00' : '#A2483A', fontWeight: 700 }}>{edit.vac ? 'Este día está registrado como vacaciones.' : 'Este día está marcado como libre.'} Si guardas un turno, deja de serlo.</p>}
         <label>Hora de entrada <input type="time" value={start} onChange={(e) => setStart(e.target.value)} required /></label>
         <label>Hora de almuerzo asignada (opcional) <input type="time" value={lunch} onChange={(e) => setLunch(e.target.value)} /></label>
         <label>Hora de salida (opcional) <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} /></label>
@@ -994,7 +1008,8 @@ function ScheduleEditor({ orgId, branches, edit, onClose, onSaved }) {
         {error && <p className="error-text" style={{ margin: 0 }}>{error}</p>}
         <button className="btn" disabled={busy}>{dates.length > 1 ? `Guardar en ${dates.length} días` : 'Guardar'}</button>
         {(cur || dates.length > 1) && <button type="button" className="btn btn-secondary" disabled={busy} onClick={clear}>{dates.length > 1 ? 'Quitar turno de esos días' : 'Quitar turno'}</button>}
-        <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => setOff(dates.length > 1 ? true : !edit.off)}>{dates.length > 1 ? 'Marcar esos días libres' : edit.off ? 'Quitar día libre' : 'Marcar día libre'}</button>
+        <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => setVacation(dates.length > 1 ? true : !edit.vac)}>🏖 {dates.length > 1 ? 'Registrar esos días como vacaciones' : edit.vac ? 'Quitar vacaciones' : 'Registrar vacaciones'}</button>
+        <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => setOff(dates.length > 1 ? true : !(edit.off && !edit.vac))}>{dates.length > 1 ? 'Marcar esos días libres' : edit.off && !edit.vac ? 'Quitar día libre' : 'Marcar día libre'}</button>
         <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
       </form>
     </div>
