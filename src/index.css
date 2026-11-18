@@ -43,9 +43,16 @@ h1, h2, h3, .display {
   letter-spacing: -0.01em;
 }
 
-code, .mono, input, select, textarea {
+code, .mono {
   font-family: var(--font-mono);
 }
+
+/* Campos de formulario con la tipografía de la app (antes monoespaciada, parecía de máquina de escribir). */
+input, select, textarea {
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
+input[type="number"], input[inputmode="decimal"] { font-variant-numeric: tabular-nums; }
 
 button {
   font-family: var(--font-body);
@@ -1236,3 +1243,13 @@ html, body { overflow-x: hidden; }
 .att-group { max-width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden; }
 .att-scroll { max-width: 100%; touch-action: pan-x pan-y; }
 .att-scroll .att-table { width: max-content; min-width: 100%; }
+
+/* Nombres en listas: tipografía de título, no monoespaciada */
+.payment-row .row-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+}
+.org-select { font-family: var(--font-body); font-weight: 600; letter-spacing: 0; }

@@ -112,7 +112,7 @@ export default function PaymentGroups() {
           {groups.map((g) => (
             <Link key={g.group_id} to={`/grupos/${g.group_id}`} className="payment-row" style={{ textDecoration: 'none', color: 'inherit' }}>
               <div>
-                <div className="amount" style={{ fontSize: 16 }}>{g.name}</div>
+                <div className="row-title">{g.name}</div>
                 <div className="meta">
                   {g.member_count} {g.member_count === 1 ? 'persona' : 'personas'} en la lista
                   {' · '}{g.period_type === 'monthly' ? 'cobro mensual' : 'cobro único'}
