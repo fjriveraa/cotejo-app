@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom'
+import { Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom'
+import BackButton from './components/BackButton'
 import { useAuth } from './hooks/useAuth'
 import { listenForNativePushTaps } from './lib/nativePush'
 import Login from './pages/Login'
@@ -117,6 +118,20 @@ function ErrorScreen({ message }) {
   )
 }
 
+// Pantallas con barra de pestañas propia o que ya traen su botón Volver:
+// ahí no se agrega el automático.
+const NO_AUTO_BACK = ['/', '/registrar', '/cola', '/grupos', '/asistencia', '/asistencia/marcar', '/mi-asistencia', '/autonomo', '/empresas', '/unirme']
+function AutoBack() {
+  const { pathname } = useLocation()
+  const clean = pathname.replace(/\/+$/, '') || '/'
+  if (NO_AUTO_BACK.includes(clean) || /^\/grupos\/[^/]+$/.test(clean)) return null
+  return (
+    <div style={{ maxWidth: 960, margin: '0 auto', padding: '16px 24px 0', width: '100%', marginBottom: -16, flex: 'none' }}>
+      <BackButton />
+    </div>
+  )
+}
+
 function ProtectedLayout({ children }) {
   const { session, membership, isLoading, membershipError, needsOrgConfirmation } = useAuth()
 
@@ -135,6 +150,7 @@ function ProtectedLayout({ children }) {
     <BiometricLockScreen>
       <div className="app-shell">
         <TopBar />
+        <AutoBack />
         {children}
       </div>
     </BiometricLockScreen>
