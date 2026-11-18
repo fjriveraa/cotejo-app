@@ -24,6 +24,9 @@ export default function ReceivingAccounts() {
   const [form, setForm] = useState(emptyForm)
   const [submitting, setSubmitting] = useState(false)
   const [busyId, setBusyId] = useState(null)
+  const [openId, setOpenId] = useState(null)
+  const [det, setDet] = useState({ account_number: '', holder_name: '', account_type: 'Ahorro', show_to_payers: false })
+  const [detMsg, setDetMsg] = useState(null)
 
   useEffect(() => {
     if (!membership) return
@@ -35,7 +38,7 @@ export default function ReceivingAccounts() {
     setError(null)
     const { data, error } = await supabase
       .from('receiving_accounts')
-      .select('id, bank, alias, last4, currency, active, created_at')
+      .select('id, bank, alias, last4, currency, active, created_at, account_number, holder_name, account_type, show_to_payers')
       .eq('organization_id', membership.organization_id)
       .order('active', { ascending: false })
       .order('bank')
@@ -81,6 +84,39 @@ export default function ReceivingAccounts() {
       return
     }
     setForm(emptyForm)
+    load()
+  }
+
+  function openDetails(acc) {
+    if (openId === acc.id) { setOpenId(null); return }
+    setOpenId(acc.id)
+    setDetMsg(null)
+    setDet({
+      account_number: acc.account_number || '',
+      holder_name: acc.holder_name || '',
+      account_type: acc.account_type || 'Ahorro',
+      show_to_payers: Boolean(acc.show_to_payers)
+    })
+  }
+
+  async function saveDetails(acc) {
+    setDetMsg(null)
+    const number = det.account_number.trim()
+    if (det.show_to_payers && !number) { setDetMsg('Para mostrarla a quien paga, escribe el número de cuenta.'); return }
+    if (number && !/^[\d\- ]{6,30}$/.test(number)) { setDetMsg('El número de cuenta solo lleva dígitos (6 a 30).'); return }
+    setBusyId(acc.id)
+    const digits = number.replace(/\D/g, '')
+    const patch = {
+      account_number: number || null,
+      holder_name: det.holder_name.trim() || null,
+      account_type: det.account_type || null,
+      show_to_payers: det.show_to_payers
+    }
+    if (digits.length >= 4) patch.last4 = digits.slice(-4)
+    const { error } = await supabase.from('receiving_accounts').update(patch).eq('id', acc.id)
+    setBusyId(null)
+    if (error) { setDetMsg(error.message); return }
+    setDetMsg('✓ Guardado.')
     load()
   }
 
@@ -186,15 +222,53 @@ export default function ReceivingAccounts() {
                   {acc.bank} · {acc.alias}
                   {!acc.active && <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.7 }}>(inactiva)</span>}
                 </div>
-                <div className="meta">**** {acc.last4} · {acc.currency}</div>
+                <div className="meta">
+                  **** {acc.last4} · {acc.currency}
+                  {acc.show_to_payers && ' · 👁 visible para quien paga'}
+                </div>
               </div>
-              <button
-                className="btn btn-amber"
-                disabled={busyId === acc.id}
-                onClick={() => toggleActive(acc)}
-              >
-                {busyId === acc.id ? 'Un momento...' : acc.active ? 'Desactivar' : 'Reactivar'}
-              </button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => openDetails(acc)}>
+                  {openId === acc.id ? 'Cerrar' : 'Datos para pagar'}
+                </button>
+                <button
+                  className="btn btn-amber"
+                  disabled={busyId === acc.id}
+                  onClick={() => toggleActive(acc)}
+                >
+                  {busyId === acc.id ? 'Un momento...' : acc.active ? 'Desactivar' : 'Reactivar'}
+                </button>
+              </div>
+              {openId === acc.id && (
+                <div style={{ flexBasis: '100%', borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: 12 }}>
+                  <p style={{ fontSize: 12, opacity: 0.7, margin: '0 0 10px' }}>
+                    Estos datos los ve cualquiera que abra tus enlaces de pago, para que sepa a dónde depositar. Úsalos solo en cuentas que quieras mostrar.
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <div className="field" style={{ flex: '1 1 200px', margin: 0 }}>
+                      <label>Número de cuenta</label>
+                      <input type="text" inputMode="numeric" value={det.account_number} onChange={(e) => setDet((p) => ({ ...p, account_number: e.target.value }))} placeholder="ej. 21120002331" />
+                    </div>
+                    <div className="field" style={{ flex: '1 1 200px', margin: 0 }}>
+                      <label>A nombre de</label>
+                      <input type="text" value={det.holder_name} onChange={(e) => setDet((p) => ({ ...p, holder_name: e.target.value }))} placeholder="Titular de la cuenta" />
+                    </div>
+                    <div className="field" style={{ flex: '0 1 130px', margin: 0 }}>
+                      <label>Tipo</label>
+                      <select value={det.account_type} onChange={(e) => setDet((p) => ({ ...p, account_type: e.target.value }))}>
+                        <option value="Ahorro">Ahorro</option>
+                        <option value="Cheques">Cheques</option>
+                      </select>
+                    </div>
+                  </div>
+                  <label style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0', fontSize: 14, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={det.show_to_payers} onChange={(e) => setDet((p) => ({ ...p, show_to_payers: e.target.checked }))} />
+                    Mostrar esta cuenta a quien va a pagar
+                  </label>
+                  <button type="button" className="btn btn-primary" disabled={busyId === acc.id} onClick={() => saveDetails(acc)}>Guardar</button>
+                  {detMsg && <span style={{ marginLeft: 10, fontSize: 13 }}>{detMsg}</span>}
+                </div>
+              )}
             </div>
           ))}
         </div>

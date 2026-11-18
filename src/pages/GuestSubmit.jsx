@@ -88,7 +88,18 @@ export default function GuestSubmit() {
   const [groupInfo, setGroupInfo] = useState(null)
   const [groupImages, setGroupImages] = useState([])
   const [groupOptions, setGroupOptions] = useState([])
+  const [payAccounts, setPayAccounts] = useState([])
+  const [copiedAcc, setCopiedAcc] = useState(null)
   const [chosenOption, setChosenOption] = useState(null)
+  const payOrgId = selectedOrg?.organization_id
+  useEffect(() => {
+    if (!payOrgId) return
+    let cancelled = false
+    supabase.rpc('public_payment_accounts', { p_organization_id: payOrgId }).then(({ data }) => {
+      if (!cancelled) setPayAccounts(data || [])
+    })
+    return () => { cancelled = true }
+  }, [payOrgId])
   const needsPick = groupOptions.length > 0 && !chosenOption
   const [form, setForm] = useState(emptyForm)
   const [file, setFile] = useState(null)
@@ -493,6 +504,28 @@ export default function GuestSubmit() {
                 <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#2B6459' }}>Monto a pagar</div>
                 <div style={{ fontFamily: 'var(--font-display, Fraunces, serif)', fontSize: 38, fontWeight: 700, lineHeight: 1.15, color: '#16483F' }}>
                   L {Number(groupInfo.member_expected_amount || groupInfo.default_expected_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+            )}
+            {!needsPick && payAccounts.length > 0 && (
+              <div style={{ margin: '0 0 18px', padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(0,0,0,0.12)', background: '#fff' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#2B6459', marginBottom: 8 }}>Dónde pagar</div>
+                <div style={{ display: 'grid', gap: 12 }}>
+                  {payAccounts.map((a, i) => (
+                    <div key={`${a.bank}-${a.account_number}-${i}`}>
+                      <div style={{ fontWeight: 700, fontSize: 16 }}>{a.bank}{a.account_type ? ` · ${a.account_type}` : ''}{a.currency && a.currency !== 'HNL' ? ` · ${a.currency}` : ''}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '2px 0' }}>
+                        <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 20, fontWeight: 600, letterSpacing: '.03em' }}>{a.account_number}</span>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ fontSize: 12, padding: '3px 10px' }}
+                          onClick={() => { navigator.clipboard?.writeText(String(a.account_number).replace(/\s/g, '')); setCopiedAcc(i); setTimeout(() => setCopiedAcc(null), 2000) }}
+                        >{copiedAcc === i ? 'Copiado' : 'Copiar'}</button>
+                      </div>
+                      {a.holder_name && <div style={{ fontSize: 13, opacity: 0.75 }}>A nombre de {a.holder_name}</div>}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
