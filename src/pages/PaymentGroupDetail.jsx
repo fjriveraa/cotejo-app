@@ -891,6 +891,13 @@ export default function PaymentGroupDetail() {
         </div>
       )}
 
+      {canManage && (
+        <p style={{ margin: '0 0 16px', fontSize: 13 }}>
+          🏦 Quien paga ve tus cuentas con número completo para copiar.{' '}
+          <button type="button" onClick={() => navigate('/cuentas')} style={{ background: 'none', border: 'none', padding: 0, color: '#2B6459', textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>Administrar cuentas</button>
+        </p>
+      )}
+
       <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
         <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Enlace general del grupo</div>
         <p style={{ fontSize: 12, opacity: 0.65, margin: '0 0 8px' }}>

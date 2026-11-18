@@ -5,7 +5,7 @@ import { bankNamesForCountry, DEFAULT_COUNTRY } from '../lib/banks'
 import { IconBuilding } from '../components/icons'
 
 const OTHER_BANK = '__other__'
-const emptyForm = { bank: '', bankOther: '', alias: '', last4: '', currency: 'HNL' }
+const emptyForm = { bank: '', bankOther: '', alias: '', last4: '', currency: 'HNL', accountNumber: '', holder: '', accountType: 'Ahorro', show: true }
 
 // Estas son las cuentas propias de la empresa — a dónde SÍ le pueden pagar
 // los clientes. Sirven de dos formas: (1) le dan al empleado un menú
@@ -58,14 +58,20 @@ export default function ReceivingAccounts() {
 
     const bank = (form.bank === OTHER_BANK ? form.bankOther : form.bank).trim()
     const alias = form.alias.trim()
-    const last4 = form.last4.trim()
+    const number = form.accountNumber.trim()
+    const digits = number.replace(/\D/g, '')
+    const last4 = digits.length >= 4 ? digits.slice(-4) : form.last4.trim()
 
     if (!bank || !alias) {
       setError('Indica el banco y un alias (ej. "Principal", "Ahorros").')
       return
     }
+    if (number && !/^[\d\- ]{6,30}$/.test(number)) {
+      setError('El número de cuenta solo lleva dígitos (entre 6 y 30).')
+      return
+    }
     if (!/^\d{4}$/.test(last4)) {
-      setError('Los últimos 4 dígitos deben ser exactamente 4 números.')
+      setError('Escribe el número de cuenta completo (o al menos sus últimos 4 dígitos).')
       return
     }
 
@@ -75,7 +81,11 @@ export default function ReceivingAccounts() {
       bank,
       alias,
       last4,
-      currency: form.currency
+      currency: form.currency,
+      account_number: number || null,
+      holder_name: form.holder.trim() || null,
+      account_type: form.accountType || null,
+      show_to_payers: Boolean(number) && form.show
     })
     setSubmitting(false)
 
@@ -180,17 +190,27 @@ export default function ReceivingAccounts() {
               placeholder="ej. Ahorros, Cheques, Principal"
             />
           </div>
-          <div className="field" style={{ flex: '0 1 110px', margin: 0 }}>
-            <label htmlFor="last4">Últimos 4 dígitos</label>
+          <div className="field" style={{ flex: '1 1 100%', margin: 0 }}>
+            <label htmlFor="accountNumber">Número de cuenta completo</label>
             <input
-              id="last4"
+              id="accountNumber"
               type="text"
               inputMode="numeric"
-              maxLength={4}
-              value={form.last4}
-              onChange={(e) => updateField('last4', e.target.value.replace(/\D/g, '').slice(0, 4))}
-              placeholder="0331"
+              value={form.accountNumber}
+              onChange={(e) => updateField('accountNumber', e.target.value)}
+              placeholder="ej. 21120002331"
             />
+          </div>
+          <div className="field" style={{ flex: '1 1 200px', margin: 0 }}>
+            <label htmlFor="holder">A nombre de</label>
+            <input id="holder" type="text" value={form.holder} onChange={(e) => updateField('holder', e.target.value)} placeholder="Titular de la cuenta" />
+          </div>
+          <div className="field" style={{ flex: '0 1 130px', margin: 0 }}>
+            <label htmlFor="accountType">Tipo</label>
+            <select id="accountType" value={form.accountType} onChange={(e) => updateField('accountType', e.target.value)}>
+              <option value="Ahorro">Ahorro</option>
+              <option value="Cheques">Cheques</option>
+            </select>
           </div>
           <div className="field" style={{ flex: '0 1 100px', margin: 0 }}>
             <label htmlFor="currency">Moneda</label>
@@ -199,6 +219,10 @@ export default function ReceivingAccounts() {
               <option value="USD">USD</option>
             </select>
           </div>
+          <label style={{ flex: '1 1 100%', display: 'flex', gap: 8, alignItems: 'center', fontSize: 14, cursor: 'pointer' }}>
+            <input type="checkbox" checked={form.show} onChange={(e) => updateField('show', e.target.checked)} />
+            Mostrar esta cuenta a quien va a pagar (con número completo para copiar y pegar)
+          </label>
           <button type="submit" className="btn btn-primary" disabled={submitting}>
             {submitting ? 'Agregando...' : '+ Agregar'}
           </button>
