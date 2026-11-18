@@ -4,6 +4,13 @@
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://leprvnyswebmuohvvabd.supabase.co'
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_Ql5iOOoHxVH40WM3RqHjsg_jBibFJG_'
 
+// WhatsApp no admite negrita en la descripción: se usan los dígitos y la L en negrita de Unicode.
+const bold = (t) => Array.from(t).map((ch) => {
+  if (ch >= '0' && ch <= '9') return String.fromCodePoint(0x1D7EC + Number(ch))
+  if (ch >= 'A' && ch <= 'Z') return String.fromCodePoint(0x1D5D4 + ch.charCodeAt(0) - 65)
+  return ch
+}).join('')
+
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 export default async function handler(req, res) {
@@ -29,8 +36,9 @@ export default async function handler(req, res) {
     if (g?.group_name) {
       const title = esc(g.group_name)
       const amt = Number(g.expected_amount)
-      const amtText = amt > 0 ? `Monto a pagar: L ${amt.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}. ` : ''
-      const desc = esc(`${amtText}${g.organization_name ? `Envía tu comprobante de pago a ${g.organization_name}.` : 'Envía tu comprobante de pago.'}`)
+      const org = g.organization_name
+      const cta = org ? `Sube tu comprobante de pago a ${org} y consulta su confirmación.` : 'Sube tu comprobante de pago y consulta su confirmación.'
+      const desc = esc(amt > 0 ? `💰 ${bold(`L ${amt.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)} · ${cta}` : cta)
       html = html
         .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
         .replace(/(property="og:title" content=")[^"]*"/, `$1${title}"`)
