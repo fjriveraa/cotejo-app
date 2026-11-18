@@ -1,7 +1,7 @@
 {
   "name": "Cotejo",
   "short_name": "Cotejo",
-  "description": "Ordena tus comprobantes y verifica duplicados.",
+  "description": "Controles administrativos para tu negocio o uso personal.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

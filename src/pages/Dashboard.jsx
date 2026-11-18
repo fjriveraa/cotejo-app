@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import AccessControlNotice from '../components/AccessControlNotice'
 import { IconDoc, IconCheckCircle, IconInbox, IconShield } from '../components/icons'
 
 // Mensajes de verificación: solo se muestran cuando hace falta actuar
@@ -74,6 +75,8 @@ export default function Dashboard() {
       <p style={{ opacity: 0.65, fontSize: 14, marginTop: 0, marginBottom: 24 }}>
         Esto es lo que pasa hoy en {membership?.organizations?.name || 'tu empresa'}.
       </p>
+
+      {['propietario', 'admin'].includes(membership?.role) && <AccessControlNotice />}
 
       {verificationAlert && (
         <div
