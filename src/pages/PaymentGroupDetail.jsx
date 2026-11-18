@@ -199,6 +199,25 @@ function CopyLink({ link }) {
   )
 }
 
+// Abre WhatsApp con el mensaje y el enlace listos. Si se pasa un teléfono, va directo a esa persona.
+function WhatsAppShare({ link, text, phone, label = 'WhatsApp' }) {
+  function send() {
+    let digits = String(phone || '').replace(/\D/g, '')
+    if (digits.length === 8) digits = `504${digits}`
+    const to = digits.length >= 10 ? digits : ''
+    window.open(`https://wa.me/${to}?text=${encodeURIComponent(`${text}\n${link}`)}`, '_blank', 'noopener')
+  }
+  return (
+    <button type="button" className="btn btn-secondary" onClick={send} style={{ fontSize: 12, padding: '4px 10px', color: '#1B7F4B', borderColor: 'rgba(27,127,75,0.5)' }}>
+      💬 {label}
+    </button>
+  )
+}
+
+function money(n) {
+  return `L ${Number(n).toLocaleString('es-HN', { minimumFractionDigits: 2 })}`
+}
+
 function AddMemberForm({ groupId, onAdded }) {
   const [open, setOpen] = useState(false)
   const [displayName, setDisplayName] = useState('')
@@ -536,6 +555,11 @@ export default function PaymentGroupDetail() {
   const [parentInfo, setParentInfo] = useState({ parent: null, label: '' })
   const [parentBusy, setParentBusy] = useState(false)
   const [parentMsg, setParentMsg] = useState(null)
+  const [pkgOpen, setPkgOpen] = useState(false)
+  const [pkgLabel, setPkgLabel] = useState('')
+  const [pkgAmount, setPkgAmount] = useState('')
+  const [pkgBusy, setPkgBusy] = useState(false)
+  const [pkgError, setPkgError] = useState(null)
   const [imgBusy, setImgBusy] = useState(false)
   const [imgError, setImgError] = useState(null)
   const [members, setMembers] = useState([])
@@ -624,6 +648,30 @@ export default function PaymentGroupDetail() {
     setManageBusy(false)
     if (e) { setError(e.message); return }
     load()
+  }
+
+  async function createPackage(e) {
+    e.preventDefault()
+    const label = pkgLabel.trim()
+    if (!label) return
+    setPkgBusy(true); setPkgError(null)
+    try {
+      const { data, error: cErr } = await supabase.rpc('create_payment_group', {
+        p_organization_id: group.organization_id,
+        p_name: `${label} – ${group.name}`,
+        p_period_type: group.period_type,
+        p_default_expected_amount: pkgAmount ? Number(pkgAmount) : null
+      })
+      if (cErr) throw cErr
+      const childId = data?.[0]?.group_id
+      const { error: pErr } = await supabase.rpc('set_payment_group_parent', { p_group_id: childId, p_parent_group_id: groupId, p_option_label: label })
+      if (pErr) throw pErr
+      setPkgLabel(''); setPkgAmount(''); setPkgOpen(false)
+      await load()
+    } catch (err) {
+      setPkgError(err?.message || 'No se pudo crear el paquete.')
+    }
+    setPkgBusy(false)
   }
 
   async function saveParent() {
@@ -783,29 +831,63 @@ export default function PaymentGroupDetail() {
         </div>
       )}
 
-      {kids.length > 0 && (
+      {(kids.length > 0 || (canManage && members.length === 0 && !parentInfo.parent)) && (
         <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
-          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Paquetes</div>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{kids.length > 0 ? 'Paquetes' : 'Paquetes (subgrupos)'}</div>
           <p style={{ fontSize: 12, opacity: 0.65, margin: '0 0 10px' }}>
-            Quien abre el enlace de este grupo elige su paquete y sube el comprobante. Cada pago queda en el paquete elegido.
+            {kids.length > 0 ? 'Quien abre el enlace de este grupo elige su paquete y sube el comprobante. Cada pago queda en el paquete elegido.' : 'Si este cobro tiene opciones (Paquete 1, 2, 3…), crea aquí cada una: se comparte un solo enlace y cada persona elige. Cada paquete también tiene su propio enlace.'}
           </p>
           <div style={{ display: 'grid', gap: 8 }}>
-            {kids.map((k) => (
-              <button key={k.group_id} type="button" onClick={() => navigate(`/grupos/${k.group_id}`)} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(0,0,0,0.12)', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                  <strong>{k.option_label || k.name}{!k.active ? ' · 📦' : ''}</strong>
-                  <strong>{k.default_expected_amount ? `L ${Number(k.default_expected_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}` : ''}</strong>
+            {kids.map((k) => {
+              const kLink = `${origin}/g/${k.link_code}`
+              return (
+                <div key={k.group_id} style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(0,0,0,0.12)', background: '#fff' }}>
+                  <button type="button" onClick={() => navigate(`/grupos/${k.group_id}`)} style={{ display: 'block', width: '100%', textAlign: 'left', padding: 0, border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                      <strong>{k.option_label || k.name}{!k.active ? ' · 📦' : ''}</strong>
+                      <strong>{k.default_expected_amount ? money(k.default_expected_amount) : ''}</strong>
+                    </div>
+                    <div style={{ fontSize: 13, opacity: 0.75, marginTop: 2 }}>
+                      {k.confirmed_count} confirmados ({money(k.confirmed_amount)}){k.pending_count > 0 ? ` · ${k.pending_count} por confirmar` : ''}
+                    </div>
+                  </button>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                    <CopyLink link={kLink} />
+                    <WhatsAppShare link={kLink} text={`${k.option_label || k.name}${k.default_expected_amount ? `\n💰 ${money(k.default_expected_amount)}` : ''}\nSube tu comprobante de pago aquí:`} />
+                  </div>
                 </div>
-                <div style={{ fontSize: 13, opacity: 0.75, marginTop: 2 }}>
-                  {k.confirmed_count} confirmados (L {Number(k.confirmed_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}){k.pending_count > 0 ? ` · ${k.pending_count} por confirmar` : ''}
-                </div>
-              </button>
-            ))}
+              )
+            })}
           </div>
+          {canManage && (
+            <div style={{ marginTop: 12 }}>
+              {!pkgOpen ? (
+                <button type="button" className="btn btn-secondary" style={{ fontSize: 13, padding: '6px 14px' }} onClick={() => setPkgOpen(true)}>+ Nuevo paquete</button>
+              ) : (
+                <form onSubmit={createPackage}>
+                  <div className="field">
+                    <label htmlFor="pkgLabel">Nombre del paquete (ej. Paquete 4)</label>
+                    <input id="pkgLabel" type="text" maxLength={40} value={pkgLabel} onChange={(e) => setPkgLabel(e.target.value)} required />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="pkgAmount">Monto (opcional)</label>
+                    <input id="pkgAmount" type="number" step="0.01" min="0" value={pkgAmount} onChange={(e) => setPkgAmount(e.target.value)} />
+                  </div>
+                  {pkgError && <p className="error-text" style={{ fontSize: 13 }}>{pkgError}</p>}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="submit" className="btn btn-primary" disabled={pkgBusy}>{pkgBusy ? 'Creando...' : 'Crear paquete'}</button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setPkgOpen(false)}>Cancelar</button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+          {kids.length > 0 && (
           <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(0,0,0,0.08)', fontSize: 14 }}>
             <strong>Total confirmado: L {kids.reduce((t, k) => t + Number(k.confirmed_amount || 0), 0).toLocaleString('es-HN', { minimumFractionDigits: 2 })}</strong>
             {' · '}{kids.reduce((t, k) => t + Number(k.confirmed_count || 0), 0)} pagos
           </div>
+          )}
         </div>
       )}
 
@@ -818,6 +900,7 @@ export default function PaymentGroupDetail() {
         <div style={{ display: 'flex', gap: 8 }}>
           <input readOnly value={groupLink} onFocus={(e) => e.target.select()} style={{ flex: 1, fontSize: 13 }} />
           <CopyLink link={groupLink} />
+          <WhatsAppShare link={groupLink} text={kids.length > 0 ? `${group.name}\nElige tu paquete y sube tu comprobante de pago:` : `${group.name}${group.default_expected_amount ? `\n💰 ${money(group.default_expected_amount)}` : ''}\nSube tu comprobante de pago aquí:`} />
         </div>
       </div>
 
@@ -846,6 +929,11 @@ export default function PaymentGroupDetail() {
                   </div>
                   <div className="actions-row">
                     <CopyLink link={`${origin}/g/${group.link_code}/${m.member_code}`} />
+                    <WhatsAppShare
+                      link={`${origin}/g/${group.link_code}/${m.member_code}`}
+                      phone={m.contact}
+                      text={`Hola ${m.display_name}, este es tu enlace para enviar tu comprobante de pago${m.expected_amount ? ` (${money(m.expected_amount)})` : ''}:`}
+                    />
                     <button type="button" className="btn btn-primary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setRegisteringFor(m.member_id)}>
                       Registrar pago
                     </button>
