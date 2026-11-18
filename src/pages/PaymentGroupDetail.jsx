@@ -621,6 +621,7 @@ export default function PaymentGroupDetail() {
   if (!group) {
     return (
       <div className="container">
+        <button type="button" onClick={() => navigate('/grupos')} style={{ background: 'none', border: 'none', padding: '4px 0', color: 'var(--primary, #2B6459)', fontWeight: 600, fontSize: 15, cursor: 'pointer' }}>← Grupos</button>
         <p className="error-text">{error || 'Grupo no encontrado.'}</p>
       </div>
     )
@@ -639,6 +640,7 @@ export default function PaymentGroupDetail() {
 
   return (
     <div className="container">
+      <button type="button" onClick={() => navigate('/grupos')} style={{ background: 'none', border: 'none', padding: '4px 0', margin: '0 0 8px', color: 'var(--primary, #2B6459)', fontWeight: 600, fontSize: 15, cursor: 'pointer' }}>← Grupos</button>
       <h2 style={{ marginTop: 0 }}>{group.name}</h2>
       <p style={{ opacity: 0.7, fontSize: 14, marginTop: -8, marginBottom: 20 }}>
         {group.period_type === 'monthly' ? 'Cobro mensual — se reinicia cada mes.' : 'Cobro único.'}
