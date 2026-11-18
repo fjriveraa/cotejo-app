@@ -36,10 +36,11 @@ begin
   update payment_groups set image_paths = p_image_paths where id = p_group_id;
 end $$;
 
+drop function if exists public.payment_group_public_info(text);
 create or replace function public.payment_group_public_info(p_link_code text)
-returns table(group_name text, organization_name text, image_paths text[])
+returns table(group_name text, organization_name text, image_paths text[], expected_amount numeric)
 language sql security definer set search_path to 'public' stable as $$
-  select g.name, o.name, g.image_paths
+  select g.name, o.name, g.image_paths, g.default_expected_amount
   from payment_groups g join organizations o on o.id = g.organization_id
   where g.link_code = p_link_code and g.active and o.status = 'active';
 $$;
@@ -47,5 +48,3 @@ $$;
 grant execute on function public.set_payment_group_images(uuid, text[]) to authenticated;
 grant execute on function public.payment_group_public_info(text) to anon, authenticated;
 
--- Ajuste posterior: se agregó expected_amount (monto del grupo) a payment_group_public_info
--- para mostrarlo en la vista previa del enlace.
