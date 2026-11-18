@@ -24,10 +24,20 @@ export default function PaymentGroups() {
   async function load() {
     setLoading(true)
     setError(null)
-    const { data, error } = await supabase.rpc('list_payment_groups', { p_organization_id: membership.organization_id })
+    let res
+    try {
+      res = await supabase.rpc('list_payment_groups', { p_organization_id: membership.organization_id })
+      // Un corte momentáneo de internet se reintenta una vez antes de avisar.
+      if (res.error && /load failed|failed to fetch|network/i.test(res.error.message || '')) {
+        await new Promise((r) => setTimeout(r, 1200))
+        res = await supabase.rpc('list_payment_groups', { p_organization_id: membership.organization_id })
+      }
+    } catch (e) {
+      res = { error: { message: String(e?.message || e) } }
+    }
     setLoading(false)
-    if (error) setError(error.message)
-    else setGroups(data || [])
+    if (res.error) setError(/load failed|failed to fetch|network/i.test(res.error.message || '') ? 'No se pudo cargar por la conexión. Toca Reintentar.' : res.error.message)
+    else setGroups(res.data || [])
   }
 
   async function handleCreate(e) {
@@ -71,7 +81,12 @@ export default function PaymentGroups() {
         quién ya pagó y quién falta, no solo recibir comprobantes sueltos.
       </p>
 
-      {error && <p className="error-text">{error}</p>}
+      {error && (
+        <p className="error-text">
+          {error}{' '}
+          <button type="button" className="btn btn-secondary" style={{ fontSize: 13, padding: '2px 10px' }} onClick={load}>Reintentar</button>
+        </p>
+      )}
 
       {!showForm ? (
         <button type="button" className="btn btn-primary" onClick={() => setShowForm(true)} style={{ marginBottom: 20 }}>
