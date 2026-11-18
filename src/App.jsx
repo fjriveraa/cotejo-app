@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom'
 import BackButton from './components/BackButton'
+import WelcomeCard from './components/WelcomeCard'
 import { useAuth } from './hooks/useAuth'
 import { listenForNativePushTaps } from './lib/nativePush'
 import Login from './pages/Login'
@@ -132,6 +133,20 @@ function AutoBack() {
   )
 }
 
+// La tarjeta de bienvenida sale en las pantallas de inicio de cada rol, salvo en la
+// cuenta del reloj de la sucursal (es una tableta compartida).
+const WELCOME_PATHS = ['/', '/registrar']
+function WelcomeSlot() {
+  const { pathname } = useLocation()
+  const { membership } = useAuth()
+  if (!WELCOME_PATHS.includes(pathname.replace(/\/+$/, '') || '/') || membership?.role === 'marcador') return null
+  return (
+    <div style={{ maxWidth: 960, margin: '0 auto', padding: '16px 24px 0', width: '100%', marginBottom: -16, flex: 'none' }}>
+      <WelcomeCard />
+    </div>
+  )
+}
+
 function ProtectedLayout({ children }) {
   const { session, membership, isLoading, membershipError, needsOrgConfirmation } = useAuth()
 
@@ -151,6 +166,7 @@ function ProtectedLayout({ children }) {
       <div className="app-shell">
         <TopBar />
         <AutoBack />
+        <WelcomeSlot />
         {children}
       </div>
     </BiometricLockScreen>
