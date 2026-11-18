@@ -19,10 +19,10 @@ export default async function handler(req, res) {
   }
   try {
     const code = String(req.query.code || '').slice(0, 64)
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/resolve_payment_group_link`, {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/payment_group_public_info`, {
       method: 'POST',
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_link_code: code, p_member_code: null })
+      body: JSON.stringify({ p_link_code: code })
     })
     const rows = r.ok ? await r.json() : null
     const g = Array.isArray(rows) ? rows[0] : null
@@ -36,6 +36,15 @@ export default async function handler(req, res) {
         .replace(/(property="og:description" content=")[^"]*"/, `$1${desc}"`)
         .replace(/(name="twitter:description" content=")[^"]*"/, `$1${desc}"`)
         .replace(/(name="description" content=")[^"]*"/, `$1${desc}"`)
+      const first = Array.isArray(g.image_paths) ? g.image_paths[0] : null
+      if (first) {
+        const img = esc(`${SUPABASE_URL}/storage/v1/object/public/group-images/${first.split('/').map(encodeURIComponent).join('/')}`)
+        html = html
+          .replace(/(property="og:image" content=")[^"]*"/, `$1${img}"`)
+          .replace(/(name="twitter:image" content=")[^"]*"/, `$1${img}"`)
+          .replace(/<meta property="og:image:width"[^>]*>\s*/, '')
+          .replace(/<meta property="og:image:height"[^>]*>\s*/, '')
+      }
     }
   } catch { /* se deja la vista previa general */ }
   res.setHeader('Content-Type', 'text/html; charset=utf-8')

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { groupImageUrl } from '../lib/groupImages'
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { isPlausibleTransactionDate, parseLocalDate } from '../lib/dateSanity'
@@ -85,6 +86,7 @@ export default function GuestSubmit() {
   // no el genérico del grupo), no tiene sentido pedirle su nombre otra vez
   // ni dejar que lo cambie -- ya sabemos quién es.
   const [groupInfo, setGroupInfo] = useState(null)
+  const [groupImages, setGroupImages] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
@@ -147,6 +149,9 @@ export default function GuestSubmit() {
       }
       setSelectedOrg({ organization_id: row.organization_id, name: row.organization_name })
       setGroupInfo(row)
+      supabase.rpc('payment_group_public_info', { p_link_code: linkCode }).then(({ data: info }) => {
+        if (!cancelled) setGroupImages(info?.[0]?.image_paths || [])
+      })
       if (row.member_id) {
         // Enlace individual: ya sabemos quién es -- se precarga el nombre y
         // no se le pide que lo escriba.
@@ -467,6 +472,15 @@ export default function GuestSubmit() {
               <p style={{ fontSize: 13, opacity: 0.75, marginTop: -8 }}>
                 Enviando como <strong>{groupInfo.member_display_name}</strong>.
               </p>
+            )}
+            {groupImages.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '0 0 14px', WebkitOverflowScrolling: 'touch' }}>
+                {groupImages.map((p, i) => (
+                  <a key={p} href={groupImageUrl(p)} target="_blank" rel="noreferrer" style={{ flex: 'none', width: groupImages.length === 1 ? '100%' : '78%' }}>
+                    <img src={groupImageUrl(p)} alt={`Referencia ${i + 1}`} style={{ width: '100%', maxHeight: 260, objectFit: 'cover', borderRadius: 12, display: 'block' }} />
+                  </a>
+                ))}
+              </div>
             )}
             {(groupInfo?.member_expected_amount || groupInfo?.default_expected_amount) && (
               <div style={{ margin: '4px 0 18px', padding: '14px 16px', borderRadius: 14, background: 'rgba(43,100,89,0.10)', border: '1px solid rgba(43,100,89,0.25)', textAlign: 'center' }}>

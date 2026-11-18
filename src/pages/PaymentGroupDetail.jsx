@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
 import { getCanonicalOrigin } from '../lib/appUrl'
+import { groupImageUrl, compressImage, MAX_GROUP_IMAGES } from '../lib/groupImages'
 import { SkeletonPaymentList } from '../components/Skeleton'
 
 // Palabras que ayudan a reconocer qué columna es cuál en un Excel/CSV con
@@ -529,6 +530,9 @@ export default function PaymentGroupDetail() {
   const [editName, setEditName] = useState('')
   const [editAmount, setEditAmount] = useState('')
   const [group, setGroup] = useState(null)
+  const [images, setImages] = useState([])
+  const [imgBusy, setImgBusy] = useState(false)
+  const [imgError, setImgError] = useState(null)
   const [members, setMembers] = useState([])
   const [periods, setPeriods] = useState([])
   const [memberHistory, setMemberHistory] = useState([])
@@ -561,6 +565,10 @@ export default function PaymentGroupDetail() {
       return
     }
     setGroup(groupData?.[0] || null)
+    if (groupData?.[0]?.link_code) {
+      const { data: info } = await supabase.rpc('payment_group_public_info', { p_link_code: groupData[0].link_code })
+      setImages(info?.[0]?.image_paths || [])
+    }
     setMembers(memberData || [])
     // Periodos e historial son "extra" -- si fallan (ej. rol sin acceso a auditor, o el RPC
     // todavía no está desplegado), no se bloquea la pantalla principal por eso.
@@ -597,6 +605,43 @@ export default function PaymentGroupDetail() {
     setManageBusy(false)
     if (e) { setError(e.message); return }
     load()
+  }
+
+  async function saveImages(paths) {
+    const { error: e } = await supabase.rpc('set_payment_group_images', { p_group_id: groupId, p_image_paths: paths })
+    if (e) throw e
+    setImages(paths)
+  }
+
+  async function addImages(e) {
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (!files.length) return
+    setImgError(null)
+    const room = MAX_GROUP_IMAGES - images.length
+    if (room <= 0) { setImgError(`Máximo ${MAX_GROUP_IMAGES} imágenes.`); return }
+    setImgBusy(true)
+    try {
+      const added = []
+      for (const f of files.slice(0, room)) {
+        const blob = await compressImage(f)
+        const path = `${membership.organization_id}/${groupId}-${Date.now()}-${added.length}.jpg`
+        const { error: upErr } = await supabase.storage.from('group-images').upload(path, blob, { contentType: 'image/jpeg' })
+        if (upErr) throw upErr
+        added.push(path)
+      }
+      await saveImages([...images, ...added])
+      if (files.length > room) setImgError(`Solo se agregaron ${room}: el máximo es ${MAX_GROUP_IMAGES}.`)
+    } catch (err) {
+      setImgError(err?.message || 'No se pudo subir la imagen.')
+    }
+    setImgBusy(false)
+  }
+
+  async function removeImage(path) {
+    if (!window.confirm('¿Quitar esta imagen del grupo?')) return
+    setImgError(null)
+    try { await saveImages(images.filter((p) => p !== path)) } catch (err) { setImgError(err?.message || 'No se pudo quitar.') }
   }
 
   async function deleteGroup() {
@@ -676,6 +721,35 @@ export default function PaymentGroupDetail() {
 
       {error && <p className="error-text">{error}</p>}
       {!group.active && <p style={{ background: 'rgba(0,0,0,0.06)', borderRadius: 8, padding: '8px 12px', fontSize: 14 }}>📦 Grupo archivado: el enlace está desactivado.</p>}
+
+      {(canManage || images.length > 0) && (
+        <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Imágenes de referencia</div>
+          <p style={{ fontSize: 13, opacity: 0.7, margin: '0 0 10px' }}>
+            Las ve quien va a pagar (afiche, paquete, precios). La primera sale también en la vista previa del enlace.
+          </p>
+          {images.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+              {images.map((p, i) => (
+                <div key={p} style={{ position: 'relative' }}>
+                  <a href={groupImageUrl(p)} target="_blank" rel="noreferrer">
+                    <img src={groupImageUrl(p)} alt={`Referencia ${i + 1}`} style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: 10, border: '1px solid rgba(0,0,0,0.12)', display: 'block' }} />
+                  </a>
+                  {i === 0 && <span style={{ position: 'absolute', left: 4, bottom: 4, fontSize: 10, fontWeight: 700, background: '#2B6459', color: '#fff', borderRadius: 6, padding: '1px 6px' }}>Portada</span>}
+                  {canManage && <button type="button" aria-label="Quitar imagen" onClick={() => removeImage(p)} style={{ position: 'absolute', top: -6, right: -6, width: 24, height: 24, borderRadius: 12, border: 'none', background: '#B3261E', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>×</button>}
+                </div>
+              ))}
+            </div>
+          )}
+          {canManage && images.length < MAX_GROUP_IMAGES && (
+            <label className="btn btn-secondary" style={{ display: 'inline-block', fontSize: 13, padding: '6px 14px', cursor: imgBusy ? 'wait' : 'pointer' }}>
+              {imgBusy ? 'Subiendo...' : '🖼 Agregar imagen'}
+              <input type="file" accept="image/*" multiple disabled={imgBusy} onChange={addImages} style={{ display: 'none' }} />
+            </label>
+          )}
+          {imgError && <p className="error-text" style={{ margin: '8px 0 0', fontSize: 13 }}>{imgError}</p>}
+        </div>
+      )}
 
       <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
         <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Enlace general del grupo</div>
