@@ -46,3 +46,6 @@ $$;
 
 grant execute on function public.set_payment_group_images(uuid, text[]) to authenticated;
 grant execute on function public.payment_group_public_info(text) to anon, authenticated;
+
+-- Ajuste posterior: se agregó expected_amount (monto del grupo) a payment_group_public_info
+-- para mostrarlo en la vista previa del enlace.

@@ -28,7 +28,9 @@ export default async function handler(req, res) {
     const g = Array.isArray(rows) ? rows[0] : null
     if (g?.group_name) {
       const title = esc(g.group_name)
-      const desc = esc(g.organization_name ? `Envía tu comprobante de pago a ${g.organization_name}.` : 'Envía tu comprobante de pago.')
+      const amt = Number(g.expected_amount)
+      const amtText = amt > 0 ? `Monto a pagar: L ${amt.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}. ` : ''
+      const desc = esc(`${amtText}${g.organization_name ? `Envía tu comprobante de pago a ${g.organization_name}.` : 'Envía tu comprobante de pago.'}`)
       html = html
         .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
         .replace(/(property="og:title" content=")[^"]*"/, `$1${title}"`)
