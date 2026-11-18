@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
 import { getCanonicalOrigin } from '../lib/appUrl'
 import { groupImageUrl, compressImage, MAX_GROUP_IMAGES } from '../lib/groupImages'
+import { fetchGroupReport, reportToPng, reportToPdf, reportToXlsx, reportFilename, saveOrShareFile } from '../lib/groupReport'
 import { SkeletonPaymentList } from '../components/Skeleton'
 
 // Palabras que ayudan a reconocer qué columna es cuál en un Excel/CSV con
@@ -555,6 +556,8 @@ export default function PaymentGroupDetail() {
   const [parentInfo, setParentInfo] = useState({ parent: null, label: '' })
   const [parentBusy, setParentBusy] = useState(false)
   const [parentMsg, setParentMsg] = useState(null)
+  const [reportBusy, setReportBusy] = useState(null)
+  const [reportError, setReportError] = useState(null)
   const [pkgOpen, setPkgOpen] = useState(false)
   const [pkgLabel, setPkgLabel] = useState('')
   const [pkgAmount, setPkgAmount] = useState('')
@@ -648,6 +651,19 @@ export default function PaymentGroupDetail() {
     setManageBusy(false)
     if (e) { setError(e.message); return }
     load()
+  }
+
+  async function downloadReport(kind) {
+    setReportBusy(kind); setReportError(null)
+    try {
+      const report = await fetchGroupReport(supabase, { groupId, group, kids, orgName: membership?.organizations?.name })
+      if (kind === 'png') await saveOrShareFile(await reportToPng(report), reportFilename(report, 'png'))
+      else if (kind === 'pdf') await saveOrShareFile(await reportToPdf(report), reportFilename(report, 'pdf'))
+      else await saveOrShareFile(reportToXlsx(report), reportFilename(report, 'xlsx'))
+    } catch (err) {
+      setReportError(err?.message || 'No se pudo generar el informe.')
+    }
+    setReportBusy(null)
   }
 
   async function createPackage(e) {
@@ -909,6 +925,19 @@ export default function PaymentGroupDetail() {
           <CopyLink link={groupLink} />
           <WhatsAppShare link={groupLink} text={kids.length > 0 ? 'Hola 👋 Aquí eliges tu paquete y envías tu comprobante de pago:' : 'Hola 👋 Aquí puedes enviar tu comprobante de pago:'} />
         </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
+        <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Descargar informe</div>
+        <p style={{ fontSize: 12, opacity: 0.65, margin: '0 0 10px' }}>
+          {kids.length > 0 ? 'Incluye todos los paquetes de este grupo, con el total y quién pagó, está en revisión o falta.' : 'Quién pagó, quién está en revisión y quién falta, con el total confirmado.'}
+        </p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" className="btn btn-secondary" disabled={Boolean(reportBusy)} onClick={() => downloadReport('png')}>{reportBusy === 'png' ? 'Generando...' : '🖼 Imagen'}</button>
+          <button type="button" className="btn btn-secondary" disabled={Boolean(reportBusy)} onClick={() => downloadReport('pdf')}>{reportBusy === 'pdf' ? 'Generando...' : '📄 PDF'}</button>
+          <button type="button" className="btn btn-secondary" disabled={Boolean(reportBusy)} onClick={() => downloadReport('xlsx')}>{reportBusy === 'xlsx' ? 'Generando...' : '📊 Excel'}</button>
+        </div>
+        {reportError && <p className="error-text" style={{ margin: '8px 0 0', fontSize: 13 }}>{reportError}</p>}
       </div>
 
       {kids.length === 0 && (<>
