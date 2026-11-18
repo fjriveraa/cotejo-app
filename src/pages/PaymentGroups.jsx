@@ -9,6 +9,7 @@ export default function PaymentGroups() {
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [parentOf, setParentOf] = useState({})
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
   const [periodType, setPeriodType] = useState('monthly')
@@ -35,6 +36,12 @@ export default function PaymentGroups() {
     } catch (e) {
       res = { error: { message: String(e?.message || e) } }
     }
+    try {
+      const pr = await supabase.rpc('payment_group_parents', { p_organization_id: membership.organization_id })
+      const map = {}
+      ;(pr.data || []).forEach((r) => { if (r.parent_group_id) map[r.group_id] = { parent: r.parent_group_id, label: r.option_label } })
+      setParentOf(map)
+    } catch { /* sin anidar si falla */ }
     setLoading(false)
     if (res.error) setError(/load failed|failed to fetch|network/i.test(res.error.message || '') ? 'No se pudo cargar por la conexión. Toca Reintentar.' : res.error.message)
     else setGroups(res.data || [])
@@ -124,18 +131,38 @@ export default function PaymentGroups() {
         <p className="empty-state">Todavía no tienes grupos.</p>
       ) : (
         <div className="payment-list">
-          {groups.map((g) => (
-            <Link key={g.group_id} to={`/grupos/${g.group_id}`} className="payment-row" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div>
-                <div className="row-title">{g.name}</div>
-                <div className="meta">
-                  {g.member_count} {g.member_count === 1 ? 'persona' : 'personas'} en la lista
-                  {' · '}{g.period_type === 'monthly' ? 'cobro mensual' : 'cobro único'}
-                  {!g.active && ' · 📦 archivado'}
-                </div>
+          {groups.filter((g) => !parentOf[g.group_id]).map((g) => {
+            const kids = groups.filter((k) => parentOf[k.group_id]?.parent === g.group_id)
+            return (
+              <div key={g.group_id}>
+                <Link to={`/grupos/${g.group_id}`} className="payment-row" style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <div>
+                    <div className="row-title">{g.name}</div>
+                    <div className="meta">
+                      {kids.length > 0
+                        ? `Grupo principal · ${kids.length} ${kids.length === 1 ? 'paquete' : 'paquetes'}`
+                        : `${g.member_count} ${g.member_count === 1 ? 'persona' : 'personas'} en la lista · ${g.period_type === 'monthly' ? 'cobro mensual' : 'cobro único'}`}
+                      {!g.active && ' · 📦 archivado'}
+                    </div>
+                  </div>
+                </Link>
+                {kids.map((k) => (
+                  <Link key={k.group_id} to={`/grupos/${k.group_id}`} className="payment-row" style={{ textDecoration: 'none', color: 'inherit', marginLeft: 22, marginTop: 6, borderLeft: '3px solid #2B6459' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 16 }}>
+                        {parentOf[k.group_id]?.label || k.name}
+                        {k.default_expected_amount ? ` · L ${Number(k.default_expected_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}` : ''}
+                      </div>
+                      <div className="meta">
+                        {k.member_count} {k.member_count === 1 ? 'persona' : 'personas'} en la lista
+                        {!k.active && ' · 📦 archivado'}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
               </div>
-            </Link>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

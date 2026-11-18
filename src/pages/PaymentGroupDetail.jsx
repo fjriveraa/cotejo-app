@@ -531,6 +531,11 @@ export default function PaymentGroupDetail() {
   const [editAmount, setEditAmount] = useState('')
   const [group, setGroup] = useState(null)
   const [images, setImages] = useState([])
+  const [kids, setKids] = useState([])
+  const [orgGroups, setOrgGroups] = useState([])
+  const [parentInfo, setParentInfo] = useState({ parent: null, label: '' })
+  const [parentBusy, setParentBusy] = useState(false)
+  const [parentMsg, setParentMsg] = useState(null)
   const [imgBusy, setImgBusy] = useState(false)
   const [imgError, setImgError] = useState(null)
   const [members, setMembers] = useState([])
@@ -569,6 +574,20 @@ export default function PaymentGroupDetail() {
       const { data: info } = await supabase.rpc('payment_group_public_info', { p_link_code: groupData[0].link_code })
       setImages(info?.[0]?.image_paths || [])
     }
+    // Paquetes dentro de este grupo y a qué grupo principal pertenece (si falla, se ignora).
+    try {
+      const orgId = groupData?.[0]?.organization_id
+      const [kidsRes, treeRes, listRes] = await Promise.all([
+        supabase.rpc('list_payment_group_children', { p_group_id: groupId }),
+        supabase.rpc('payment_group_parents', { p_organization_id: orgId }),
+        supabase.rpc('list_payment_groups', { p_organization_id: orgId })
+      ])
+      setKids(kidsRes.data || [])
+      const mine = (treeRes.data || []).find((r) => r.group_id === groupId)
+      setParentInfo({ parent: mine?.parent_group_id || null, label: mine?.option_label || '' })
+      const hasParent = new Set((treeRes.data || []).filter((r) => r.parent_group_id).map((r) => r.group_id))
+      setOrgGroups((listRes.data || []).filter((g) => g.group_id !== groupId && !hasParent.has(g.group_id)))
+    } catch { /* sin paquetes si falla */ }
     setMembers(memberData || [])
     // Periodos e historial son "extra" -- si fallan (ej. rol sin acceso a auditor, o el RPC
     // todavía no está desplegado), no se bloquea la pantalla principal por eso.
@@ -604,6 +623,19 @@ export default function PaymentGroupDetail() {
     const { error: e } = await supabase.rpc('set_payment_group_active', { p_group_id: groupId, p_active: !archiving })
     setManageBusy(false)
     if (e) { setError(e.message); return }
+    load()
+  }
+
+  async function saveParent() {
+    setParentBusy(true); setParentMsg(null)
+    const { error: e } = await supabase.rpc('set_payment_group_parent', {
+      p_group_id: groupId,
+      p_parent_group_id: parentInfo.parent || null,
+      p_option_label: parentInfo.label || null
+    })
+    setParentBusy(false)
+    if (e) { setParentMsg(e.message); return }
+    setParentMsg('✓ Guardado.')
     load()
   }
 
@@ -751,6 +783,32 @@ export default function PaymentGroupDetail() {
         </div>
       )}
 
+      {kids.length > 0 && (
+        <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Paquetes</div>
+          <p style={{ fontSize: 12, opacity: 0.65, margin: '0 0 10px' }}>
+            Quien abre el enlace de este grupo elige su paquete y sube el comprobante. Cada pago queda en el paquete elegido.
+          </p>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {kids.map((k) => (
+              <button key={k.group_id} type="button" onClick={() => navigate(`/grupos/${k.group_id}`)} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(0,0,0,0.12)', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                  <strong>{k.option_label || k.name}{!k.active ? ' · 📦' : ''}</strong>
+                  <strong>{k.default_expected_amount ? `L ${Number(k.default_expected_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}` : ''}</strong>
+                </div>
+                <div style={{ fontSize: 13, opacity: 0.75, marginTop: 2 }}>
+                  {k.confirmed_count} confirmados (L {Number(k.confirmed_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}){k.pending_count > 0 ? ` · ${k.pending_count} por confirmar` : ''}
+                </div>
+              </button>
+            ))}
+          </div>
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(0,0,0,0.08)', fontSize: 14 }}>
+            <strong>Total confirmado: L {kids.reduce((t, k) => t + Number(k.confirmed_amount || 0), 0).toLocaleString('es-HN', { minimumFractionDigits: 2 })}</strong>
+            {' · '}{kids.reduce((t, k) => t + Number(k.confirmed_count || 0), 0)} pagos
+          </div>
+        </div>
+      )}
+
       <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
         <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Enlace general del grupo</div>
         <p style={{ fontSize: 12, opacity: 0.65, margin: '0 0 8px' }}>
@@ -763,6 +821,7 @@ export default function PaymentGroupDetail() {
         </div>
       </div>
 
+      {kids.length === 0 && (<>
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         <AddMemberForm groupId={groupId} onAdded={load} />
         <ImportMembersForm groupId={groupId} organizationId={group.organization_id} onImported={load} />
@@ -836,6 +895,7 @@ export default function PaymentGroupDetail() {
       {members.length === 0 && (
         <p className="empty-state">Todavía no hay nadie en la lista. Agrega personas o importa una lista arriba.</p>
       )}
+      </>)}
 
       {pastPeriods.length > 0 && (
         <>
@@ -851,6 +911,30 @@ export default function PaymentGroupDetail() {
             />
           ))}
         </>
+      )}
+
+      {canManage && kids.length === 0 && (
+        <div className="card" style={{ marginTop: 28, maxWidth: 480 }}>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Dentro de un grupo principal</div>
+          <p style={{ fontSize: 12, opacity: 0.65, margin: '0 0 10px' }}>
+            Si este grupo es un paquete u opción de otro grupo, elígelo aquí: se comparte un solo enlace y cada persona escoge.
+          </p>
+          <div className="field">
+            <label htmlFor="parentSel">Grupo principal</label>
+            <select id="parentSel" value={parentInfo.parent || ''} onChange={(e) => setParentInfo((p) => ({ ...p, parent: e.target.value || null }))}>
+              <option value="">Ninguno (grupo independiente)</option>
+              {orgGroups.map((g) => <option key={g.group_id} value={g.group_id}>{g.name}</option>)}
+            </select>
+          </div>
+          {parentInfo.parent && (
+            <div className="field">
+              <label htmlFor="optLabel">Nombre corto que verá quien paga (ej. Paquete 1)</label>
+              <input id="optLabel" type="text" maxLength={40} value={parentInfo.label} onChange={(e) => setParentInfo((p) => ({ ...p, label: e.target.value }))} />
+            </div>
+          )}
+          <button type="button" className="btn btn-secondary" disabled={parentBusy} onClick={saveParent}>{parentBusy ? 'Guardando...' : 'Guardar'}</button>
+          {parentMsg && <span style={{ marginLeft: 10, fontSize: 13 }}>{parentMsg}</span>}
+        </div>
       )}
 
       {canManage && (

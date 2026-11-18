@@ -87,6 +87,9 @@ export default function GuestSubmit() {
   // ni dejar que lo cambie -- ya sabemos quién es.
   const [groupInfo, setGroupInfo] = useState(null)
   const [groupImages, setGroupImages] = useState([])
+  const [groupOptions, setGroupOptions] = useState([])
+  const [chosenOption, setChosenOption] = useState(null)
+  const needsPick = groupOptions.length > 0 && !chosenOption
   const [form, setForm] = useState(emptyForm)
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
@@ -149,6 +152,9 @@ export default function GuestSubmit() {
       }
       setSelectedOrg({ organization_id: row.organization_id, name: row.organization_name })
       setGroupInfo(row)
+      supabase.rpc('payment_group_options', { p_link_code: linkCode }).then(({ data: opts }) => {
+        if (!cancelled) setGroupOptions(opts || [])
+      })
       supabase.rpc('payment_group_public_info', { p_link_code: linkCode }).then(({ data: info }) => {
         if (!cancelled) setGroupImages(info?.[0]?.image_paths || [])
       })
@@ -482,13 +488,40 @@ export default function GuestSubmit() {
                 ))}
               </div>
             )}
-            {(groupInfo?.member_expected_amount || groupInfo?.default_expected_amount) && (
+            {!needsPick && (groupInfo?.member_expected_amount || groupInfo?.default_expected_amount) && (
               <div style={{ margin: '4px 0 18px', padding: '14px 16px', borderRadius: 14, background: 'rgba(43,100,89,0.10)', border: '1px solid rgba(43,100,89,0.25)', textAlign: 'center' }}>
                 <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#2B6459' }}>Monto a pagar</div>
                 <div style={{ fontFamily: 'var(--font-display, Fraunces, serif)', fontSize: 38, fontWeight: 700, lineHeight: 1.15, color: '#16483F' }}>
                   L {Number(groupInfo.member_expected_amount || groupInfo.default_expected_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
                 </div>
               </div>
+            )}
+            {needsPick ? (
+              <div style={{ margin: '4px 0 18px' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#2B6459', marginBottom: 10 }}>Elige tu paquete</div>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {groupOptions.map((o) => (
+                    <button
+                      key={o.group_id}
+                      type="button"
+                      onClick={() => { setChosenOption(o.group_id); setGroupInfo((prev) => ({ ...prev, group_id: o.group_id, group_name: o.label, default_expected_amount: o.expected_amount, member_expected_amount: null })) }}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, textAlign: 'left', padding: '16px 18px', borderRadius: 14, border: '2px solid #2B6459', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      <span style={{ fontWeight: 700, fontSize: 18, color: '#16483F' }}>{o.label}</span>
+                      {o.expected_amount ? (
+                        <span style={{ fontFamily: 'var(--font-display, Fraunces, serif)', fontWeight: 700, fontSize: 24, color: '#16483F', whiteSpace: 'nowrap' }}>
+                          L {Number(o.expected_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+                        </span>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (<>
+            {groupOptions.length > 0 && (
+              <p style={{ fontSize: 13, margin: '0 0 8px' }}>
+                <button type="button" onClick={() => setChosenOption(null)} style={{ background: 'none', border: 'none', color: '#2B6459', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: 13 }}>← Cambiar paquete</button>
+              </p>
             )}
             <form onSubmit={handleSubmit}>
               <div className="field">
@@ -646,6 +679,7 @@ export default function GuestSubmit() {
               </div>
               </>)}
             </form>
+            </>)}
           </>
         )}
 

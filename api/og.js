@@ -33,12 +33,29 @@ export default async function handler(req, res) {
     })
     const rows = r.ok ? await r.json() : null
     const g = Array.isArray(rows) ? rows[0] : null
+    let opts = []
+    try {
+      const ro = await fetch(`${SUPABASE_URL}/rest/v1/rpc/payment_group_options`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_link_code: code })
+      })
+      const j = ro.ok ? await ro.json() : []
+      opts = Array.isArray(j) ? j : []
+    } catch { /* sin paquetes */ }
     if (g?.group_name) {
       const title = esc(g.group_name)
       const amt = Number(g.expected_amount)
       const org = g.organization_name
-      const cta = org ? `Sube tu comprobante de pago a ${org} y consulta su confirmación.` : 'Sube tu comprobante de pago y consulta su confirmación.'
-      const desc = esc(amt > 0 ? `💰 ${bold(`L ${amt.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)} · ${cta}` : cta)
+      const fmt = (n) => Number(n).toLocaleString('es-HN', { minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2, maximumFractionDigits: 2 })
+      const amounts = opts.map((o) => Number(o.expected_amount)).filter((n) => n > 0)
+      const cta = opts.length
+        ? (org ? `Elige tu paquete y sube tu comprobante de pago a ${org}.` : 'Elige tu paquete y sube tu comprobante de pago.')
+        : (org ? `Sube tu comprobante de pago a ${org} y consulta su confirmación.` : 'Sube tu comprobante de pago y consulta su confirmación.')
+      const money = amounts.length
+        ? amounts.map((n) => bold(`L ${fmt(n)}`)).join(' · ')
+        : amt > 0 ? bold(`L ${amt.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`) : ''
+      const desc = esc(money ? `💰 ${money} · ${cta}` : cta)
       html = html
         .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
         .replace(/(property="og:title" content=")[^"]*"/, `$1${title}"`)
