@@ -525,6 +525,9 @@ export default function PaymentGroupDetail() {
   const { membership } = useAuth()
   const canManage = ['propietario', 'admin'].includes(membership?.role)
   const [manageBusy, setManageBusy] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editAmount, setEditAmount] = useState('')
   const [group, setGroup] = useState(null)
   const [members, setMembers] = useState([])
   const [periods, setPeriods] = useState([])
@@ -563,6 +566,27 @@ export default function PaymentGroupDetail() {
     // todavía no está desplegado), no se bloquea la pantalla principal por eso.
     setPeriods(periodError ? [] : (periodData || []))
     setMemberHistory(historyError ? [] : (historyData || []))
+  }
+
+  function startEdit() {
+    setEditName(group.name)
+    setEditAmount(group.default_expected_amount != null ? String(group.default_expected_amount) : '')
+    setEditing(true)
+  }
+
+  async function saveEdit(e) {
+    e.preventDefault()
+    setManageBusy(true)
+    setError(null)
+    const { error: err } = await supabase.rpc('update_payment_group', {
+      p_group_id: groupId,
+      p_name: editName,
+      p_default_expected_amount: editAmount === '' ? null : Number(editAmount)
+    })
+    setManageBusy(false)
+    if (err) { setError(err.message); return }
+    setEditing(false)
+    load()
   }
 
   async function toggleArchive() {
@@ -621,6 +645,32 @@ export default function PaymentGroupDetail() {
         {' '}{paidCount} de {members.length} {members.length === 1 ? 'persona ha' : 'personas han'} pagado
         {group.period_type === 'monthly' ? ' este mes.' : '.'}
       </p>
+
+      {canManage && !editing && (
+        <p style={{ margin: '-8px 0 16px' }}>
+          <button type="button" className="btn btn-secondary" style={{ fontSize: 13, padding: '4px 12px' }} onClick={startEdit}>✏️ Editar nombre y monto</button>
+        </p>
+      )}
+      {editing && (
+        <form className="card" onSubmit={saveEdit} style={{ marginBottom: 20, maxWidth: 480, display: 'grid', gap: 10 }}>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>Editar grupo</div>
+          <div>
+            <label htmlFor="groupEditName">Nombre del grupo</label>
+            <input id="groupEditName" value={editName} onChange={(e) => setEditName(e.target.value)} required maxLength={120} />
+          </div>
+          <div>
+            <label htmlFor="groupEditAmount">Monto esperado por persona (opcional)</label>
+            <input id="groupEditAmount" type="number" step="0.01" min="0" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} placeholder="ej. 350" />
+            <p style={{ fontSize: 12, opacity: 0.65, margin: '4px 0 0' }}>
+              Se usa para las personas que no tienen un monto propio. Las que ya tienen monto individual no cambian.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="submit" className="btn btn-primary" disabled={manageBusy}>{manageBusy ? 'Guardando...' : 'Guardar'}</button>
+            <button type="button" className="btn btn-secondary" onClick={() => setEditing(false)}>Cancelar</button>
+          </div>
+        </form>
+      )}
 
       {error && <p className="error-text">{error}</p>}
       {!group.active && <p style={{ background: 'rgba(0,0,0,0.06)', borderRadius: 8, padding: '8px 12px', fontSize: 14 }}>📦 Grupo archivado: el enlace está desactivado.</p>}

@@ -1,0 +1,2 @@
+-- Editar nombre y monto por defecto de un grupo de cobro (propietario/admin).
+-- Función: update_payment_group(p_group_id, p_name, p_default_expected_amount). Aplicada en producción.
