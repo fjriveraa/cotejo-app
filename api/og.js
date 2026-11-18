@@ -16,33 +16,29 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').repl
 export default async function handler(req, res) {
   const proto = req.headers['x-forwarded-proto'] || 'https'
   const base = `${proto}://${req.headers.host}`
-  let html = ''
-  try {
-    html = await (await fetch(`${base}/index.html`)).text()
-  } catch {
+  const code = String(req.query.code || '').slice(0, 64)
+  // Las tres consultas van a la vez y con tiempo límite: las apps de mensajería
+  // descartan la vista previa si la página tarda unos segundos.
+  const rpc = (fn) => fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_link_code: code }),
+    signal: AbortSignal.timeout(2500)
+  }).then((r) => (r.ok ? r.json() : [])).catch(() => [])
+  const [htmlRes, rows, optsRaw] = await Promise.all([
+    fetch(`${base}/index.html`).then((r) => r.text()).catch(() => null),
+    rpc('payment_group_public_info'),
+    rpc('payment_group_options')
+  ])
+  let html = htmlRes
+  if (!html) {
     res.statusCode = 302
     res.setHeader('Location', '/')
     return res.end()
   }
   try {
-    const code = String(req.query.code || '').slice(0, 64)
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/payment_group_public_info`, {
-      method: 'POST',
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_link_code: code })
-    })
-    const rows = r.ok ? await r.json() : null
     const g = Array.isArray(rows) ? rows[0] : null
-    let opts = []
-    try {
-      const ro = await fetch(`${SUPABASE_URL}/rest/v1/rpc/payment_group_options`, {
-        method: 'POST',
-        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ p_link_code: code })
-      })
-      const j = ro.ok ? await ro.json() : []
-      opts = Array.isArray(j) ? j : []
-    } catch { /* sin paquetes */ }
+    const opts = Array.isArray(optsRaw) ? optsRaw : []
     if (g?.group_name) {
       const title = esc(g.group_name)
       const amt = Number(g.expected_amount)
