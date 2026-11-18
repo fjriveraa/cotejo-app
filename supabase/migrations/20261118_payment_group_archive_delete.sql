@@ -1,0 +1,4 @@
+-- Archivar (desactiva el enlace, reversible) y eliminar grupos de cobro. Solo propietario/admin.
+-- Funciones: set_payment_group_active(p_group_id, p_active) y delete_payment_group(p_group_id).
+-- Eliminar borra la lista de personas (cascade); los guest_submissions se conservan con group_id nulo.
+-- (Aplicadas en producción como payment_group_archive_delete.)

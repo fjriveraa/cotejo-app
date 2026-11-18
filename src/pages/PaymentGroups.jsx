@@ -116,7 +116,7 @@ export default function PaymentGroups() {
                 <div className="meta">
                   {g.member_count} {g.member_count === 1 ? 'persona' : 'personas'} en la lista
                   {' · '}{g.period_type === 'monthly' ? 'cobro mensual' : 'cobro único'}
-                  {!g.active && ' · inactivo'}
+                  {!g.active && ' · 📦 archivado'}
                 </div>
               </div>
             </Link>

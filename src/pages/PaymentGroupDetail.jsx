@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
 import { getCanonicalOrigin } from '../lib/appUrl'
@@ -520,6 +521,10 @@ function RegisterPaymentForm({ groupId, organizationId, member, onDone, onCancel
 
 export default function PaymentGroupDetail() {
   const { groupId } = useParams()
+  const navigate = useNavigate()
+  const { membership } = useAuth()
+  const canManage = ['propietario', 'admin'].includes(membership?.role)
+  const [manageBusy, setManageBusy] = useState(false)
   const [group, setGroup] = useState(null)
   const [members, setMembers] = useState([])
   const [periods, setPeriods] = useState([])
@@ -560,6 +565,27 @@ export default function PaymentGroupDetail() {
     setMemberHistory(historyError ? [] : (historyData || []))
   }
 
+  async function toggleArchive() {
+    const archiving = group.active
+    if (archiving && !window.confirm(`¿Archivar "${group.name}"?\n\nEl enlace del grupo dejará de funcionar y ya no se podrán enviar comprobantes por él. Todo se conserva y puedes reactivarlo cuando quieras.`)) return
+    setManageBusy(true)
+    const { error: e } = await supabase.rpc('set_payment_group_active', { p_group_id: groupId, p_active: !archiving })
+    setManageBusy(false)
+    if (e) { setError(e.message); return }
+    load()
+  }
+
+  async function deleteGroup() {
+    const typed = window.prompt(`Eliminar "${group.name}" es definitivo: se borra la lista de personas y el enlace.\nLos comprobantes ya enviados se conservan, pero sin grupo.\n\nEscribe el nombre del grupo para confirmar:`)
+    if (typed === null) return
+    if (typed.trim().toLowerCase() !== group.name.trim().toLowerCase()) { setError('El nombre no coincide. No se eliminó nada.'); return }
+    setManageBusy(true)
+    const { error: e } = await supabase.rpc('delete_payment_group', { p_group_id: groupId })
+    setManageBusy(false)
+    if (e) { setError(e.message); return }
+    navigate('/grupos')
+  }
+
   if (loading) {
     return (
       <div className="container">
@@ -597,6 +623,7 @@ export default function PaymentGroupDetail() {
       </p>
 
       {error && <p className="error-text">{error}</p>}
+      {!group.active && <p style={{ background: 'rgba(0,0,0,0.06)', borderRadius: 8, padding: '8px 12px', fontSize: 14 }}>📦 Grupo archivado: el enlace está desactivado.</p>}
 
       <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
         <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Enlace general del grupo</div>
@@ -698,6 +725,19 @@ export default function PaymentGroupDetail() {
             />
           ))}
         </>
+      )}
+
+      {canManage && (
+        <div className="card" style={{ marginTop: 28, maxWidth: 480 }}>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Administrar grupo</div>
+          <p style={{ fontSize: 12, opacity: 0.65, margin: '0 0 10px' }}>
+            Archivar desactiva el enlace pero conserva todo (se puede reactivar). Eliminar es definitivo.
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="btn btn-secondary" disabled={manageBusy} onClick={toggleArchive}>{group.active ? 'Archivar grupo' : 'Reactivar grupo'}</button>
+            <button type="button" className="btn btn-secondary" disabled={manageBusy} onClick={deleteGroup} style={{ color: '#A2483A', borderColor: 'rgba(162,72,58,0.5)' }}>Eliminar grupo</button>
+          </div>
+        </div>
       )}
     </div>
   )
