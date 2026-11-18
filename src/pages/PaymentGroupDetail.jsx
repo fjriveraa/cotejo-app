@@ -853,7 +853,7 @@ export default function PaymentGroupDetail() {
                   </button>
                   <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                     <CopyLink link={kLink} />
-                    <WhatsAppShare link={kLink} text={`${k.option_label || k.name}${k.default_expected_amount ? `\n💰 ${money(k.default_expected_amount)}` : ''}\nSube tu comprobante de pago aquí:`} />
+                    <WhatsAppShare link={kLink} text="Hola 👋 Aquí puedes enviar tu comprobante de pago:" />
                   </div>
                 </div>
               )
@@ -900,7 +900,7 @@ export default function PaymentGroupDetail() {
         <div style={{ display: 'flex', gap: 8 }}>
           <input readOnly value={groupLink} onFocus={(e) => e.target.select()} style={{ flex: 1, fontSize: 13 }} />
           <CopyLink link={groupLink} />
-          <WhatsAppShare link={groupLink} text={kids.length > 0 ? `${group.name}\nElige tu paquete y sube tu comprobante de pago:` : `${group.name}${group.default_expected_amount ? `\n💰 ${money(group.default_expected_amount)}` : ''}\nSube tu comprobante de pago aquí:`} />
+          <WhatsAppShare link={groupLink} text={kids.length > 0 ? 'Hola 👋 Aquí eliges tu paquete y envías tu comprobante de pago:' : 'Hola 👋 Aquí puedes enviar tu comprobante de pago:'} />
         </div>
       </div>
 
@@ -932,7 +932,7 @@ export default function PaymentGroupDetail() {
                     <WhatsAppShare
                       link={`${origin}/g/${group.link_code}/${m.member_code}`}
                       phone={m.contact}
-                      text={`Hola ${m.display_name}, este es tu enlace para enviar tu comprobante de pago${m.expected_amount ? ` (${money(m.expected_amount)})` : ''}:`}
+                      text={`Hola ${m.display_name} 👋 Este es tu enlace para enviar tu comprobante de pago:`}
                     />
                     <button type="button" className="btn btn-primary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setRegisteringFor(m.member_id)}>
                       Registrar pago
