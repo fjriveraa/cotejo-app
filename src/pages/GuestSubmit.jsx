@@ -469,9 +469,12 @@ export default function GuestSubmit() {
               </p>
             )}
             {(groupInfo?.member_expected_amount || groupInfo?.default_expected_amount) && (
-              <p style={{ fontSize: 13, opacity: 0.75, marginTop: -8 }}>
-                Monto esperado: L {Number(groupInfo.member_expected_amount || groupInfo.default_expected_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
-              </p>
+              <div style={{ margin: '4px 0 18px', padding: '14px 16px', borderRadius: 14, background: 'rgba(43,100,89,0.10)', border: '1px solid rgba(43,100,89,0.25)', textAlign: 'center' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#2B6459' }}>Monto a pagar</div>
+                <div style={{ fontFamily: 'var(--font-display, Fraunces, serif)', fontSize: 38, fontWeight: 700, lineHeight: 1.15, color: '#16483F' }}>
+                  L {Number(groupInfo.member_expected_amount || groupInfo.default_expected_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+                </div>
+              </div>
             )}
             <form onSubmit={handleSubmit}>
               <div className="field">
