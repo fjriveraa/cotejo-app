@@ -1,7 +1,7 @@
 {
   "name": "Cotejo",
   "short_name": "Cotejo",
-  "description": "Ordena tus comprobantes y verifica.",
+  "description": "Ordena tus comprobantes y verifica duplicados.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
