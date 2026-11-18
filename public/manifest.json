@@ -1,7 +1,7 @@
 {
   "name": "Cotejo",
   "short_name": "Cotejo",
-  "description": "Evidencia y verificación de comprobantes de pago, sin sorpresas ni dudas.",
+  "description": "Ordena tus comprobantes y verifica.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
