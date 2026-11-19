@@ -29,6 +29,7 @@ import AllCompaniesQueue from './pages/AllCompaniesQueue'
 import PaymentGroups from './pages/PaymentGroups'
 import PaymentGroupDetail from './pages/PaymentGroupDetail'
 import Landing from './pages/Landing'
+import CreateAccount from './pages/CreateAccount'
 import TopBar from './components/TopBar'
 import OrgPicker from './components/OrgPicker'
 import CompanyHub from './pages/CompanyHub'
@@ -78,19 +79,19 @@ function ErrorScreen({ message }) {
     return (
       <div className="login-wrap">
         <div className="card login-card" style={{ maxWidth: 440 }}>
-          <h1>¿Cómo vas a usar Cotejo?</h1>
-          <p style={{ marginBottom: 20 }}>Elige la opción que mejor te describe.</p>
+          <h1>¡Cuenta creada! ¿Cómo vas a usar Cotejo?</h1>
+          <p style={{ marginBottom: 20 }}>Elige una opción. Puedes cambiarla o agregar la otra después.</p>
 
           <div className="choice-row">
             <Link to="/signup" className="choice-card">
               <IconBuilding width={26} height={26} />
-              <span className="choice-title">Tengo una empresa</span>
-              <span className="choice-subtitle">Varias personas van a usar Cotejo juntas</span>
+              <span className="choice-title">Empresarial</span>
+              <span className="choice-subtitle">Tengo una empresa y varias personas usarán Cotejo juntas</span>
             </Link>
             <Link to="/autonomo" className="choice-card">
               <IconBriefcase width={26} height={26} />
-              <span className="choice-title">Trabajo por mi cuenta</span>
-              <span className="choice-subtitle">Autónomo o comerciante individual</span>
+              <span className="choice-title">Personal</span>
+              <span className="choice-subtitle">Para mí solo: independiente, autónomo o uso propio</span>
             </Link>
           </div>
 
@@ -243,6 +244,7 @@ export default function App() {
           empresa (por ejemplo, entró con Google), tiene que poder abrirse
           igual. Solo Login se cierra automáticamente con sesión. */}
       <Route path="/signup" element={<Signup />} />
+      <Route path="/registro" element={session ? <Navigate to="/" replace /> : <CreateAccount />} />
       <Route path="/join/:token" element={<Join />} />
       {/* La raíz es pública: quien no tiene sesión elige primero qué
           necesita (enviar un comprobante o entrar a su negocio) antes de

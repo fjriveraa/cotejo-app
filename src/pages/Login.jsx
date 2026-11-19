@@ -79,7 +79,7 @@ export default function Login() {
         </form>
         <SocialButtons onGoogle={() => handleSocial('google')} onApple={() => handleSocial('apple')} loading={oauthLoading} />
         <p style={{ marginTop: 16, fontSize: 13, opacity: 0.7 }}>
-          ¿Tu empresa no tiene cuenta todavía? <Link to="/signup">Créala aquí</Link>
+          ¿Aún no tienes cuenta? <Link to="/registro">Crear cuenta</Link>
         </p>
         <p style={{ marginTop: 8, fontSize: 13, opacity: 0.7 }}>
           ¿Solo vienes a confirmar un pago que hiciste? <Link to="/comprobante">Envía tu comprobante aquí</Link>
