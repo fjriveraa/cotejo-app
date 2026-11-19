@@ -53,6 +53,7 @@ Usa ese catálogo para reconocer el banco por patrones visuales (color del logo,
 
 Extrae TODOS los datos que aparezcan en el comprobante de la imagen, con el mayor detalle posible. Responde ÚNICAMENTE con un objeto JSON válido, sin texto antes ni después, con esta forma exacta:
 {
+  "document_kind": "bank_receipt" o "cotejo_screen" o "other",
   "amount": number o null,
   "currency": "HNL" o "USD" o null,
   "bank": string o null,
@@ -71,8 +72,9 @@ Extrae TODOS los datos que aparezcan en el comprobante de la imagen, con el mayo
 }
 
 Reglas:
+- "document_kind": "bank_receipt" si la imagen es un comprobante, notificación o captura de una transferencia/depósito de un banco o app bancaria. "cotejo_screen" si es una captura de la propia página de Cotejo (se reconoce por el nombre "Cotejo", el texto "Comprobante recibido" / "Comprobante confirmado" / "Copiar este enlace para volver después" o "Crea tu cuenta gratis en Cotejo"): esa NO es un comprobante bancario, es la pantalla de confirmación que ve el cliente después de enviar. "other" para cualquier otra imagen que no sea un comprobante de pago. Si no es "bank_receipt", deja el resto de campos en null (no extraigas el monto, la referencia ni el nombre de una pantalla que no sea del banco).
 - Si un dato no aparece claramente en la imagen, usa null en ese campo y confidence 0 para ese campo. Nunca inventes datos.
-- "amount" es el monto de la transacción (el campo "Monto" o "Monto debitado"), como número (sin símbolos de moneda ni comas).
+- "amount" es el monto de la transacción (el campo "Monto" o "Monto debitado"), como número (sin símbolos de moneda ni comas). IMPORTANTE: en Honduras la letra "L" pegada o antes del monto (ej. "L500.00", "L 1,250.00") es el SÍMBOLO de lempiras, NUNCA un dígito: "L500.00" es 500, no 1500. Cuando el comprobante muestre "Monto" y "Monto debitado", deben coincidir; si no coinciden, o si dudas entre dos lecturas de un dígito, baja la confianza de "amount" a 0.5 o menos y explícalo en "notes". Lee los dígitos uno por uno, con cuidado, sobre todo si la foto es una captura tomada a otra pantalla (inclinada o borrosa).
 - "bank" es el banco de la cuenta que RECIBE el pago (cuenta destino, del comercio), usando el catálogo de arriba cuando sea reconocible. "account_last4" son los últimos 4 dígitos de esa cuenta destino, si aparecen. Estos dos se usan para comparar contra las cuentas receptoras reales de la empresa, así que solo repórtalos con confianza si de verdad se leen en la imagen -- nunca los inventes ni los asumas iguales al banco de origen.
 - "origin_bank" es el banco de la cuenta que ENVÍA el pago (la cuenta del cliente), si se puede determinar.
 - "origin_account_holder" es el nombre completo de la persona o empresa titular de la cuenta ORIGEN (quien envía), tal como aparece en "Cuenta origen".

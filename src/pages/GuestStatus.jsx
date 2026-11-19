@@ -9,7 +9,7 @@ const STATUS_INFO = {
   pending: {
     label: '✓ Comprobante recibido',
     color: '#B45309',
-    message: 'Ya llegó y está siendo revisado. Guarda este enlace para ver aquí mismo cuando quede confirmado.'
+    message: 'Ya llegó y está siendo revisado. No necesitas enviar nada más: guarda este enlace para ver aquí mismo cuando quede confirmado.'
   },
   confirmed: {
     label: '✓ Comprobante confirmado',

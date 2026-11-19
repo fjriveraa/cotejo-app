@@ -307,7 +307,16 @@ export default function GuestSubmit() {
       })
 
       if (fnError) throw fnError
-      if (fnData?.extraction) {
+      if (fnData?.extraction?.document_kind === 'cotejo_screen') {
+        // Captura de la pantalla de confirmación de Cotejo (suele pasar justo
+        // después de enviar): no es un comprobante, no se registra nada.
+        setEvidencePath(null)
+        setRawExtraction(null)
+        setAiStatus('wrong_doc')
+        setAiMessage('Esa es la pantalla de Cotejo, no el comprobante del banco. Si ya enviaste tu pago, no necesitas hacer nada más. Si vas a enviar otro, sube la captura que te dio tu banco.')
+        const input = document.getElementById('file')
+        if (input) input.value = ''
+      } else if (fnData?.extraction) {
         setExtractionConfidence(fnData.extraction.confidence || null)
         setRawExtraction(fnData.extraction)
         applyExtraction(fnData.extraction)
@@ -587,7 +596,7 @@ export default function GuestSubmit() {
                   </div>
                 )}
                 {aiMessage && !processing && (
-                  <p style={{ fontSize: 13, marginTop: 8, color: aiStatus === 'error' ? '#A2483A' : aiStatus === 'done' ? '#2B6459' : 'inherit' }}>
+                  <p style={{ fontSize: 13, marginTop: 8, color: aiStatus === 'error' || aiStatus === 'wrong_doc' ? '#A2483A' : aiStatus === 'done' ? '#2B6459' : 'inherit' }}>
                     {aiMessage}
                   </p>
                 )}
