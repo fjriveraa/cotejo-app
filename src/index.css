@@ -1412,3 +1412,20 @@ select.org-select { padding: 6px 28px 6px 10px; border-radius: 10px; }
 .sched-tag { font-style: normal; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
 .sched-tag-free { background: rgba(162, 72, 58, 0.12); color: #A2483A; }
 .sched-tag-vac { background: rgba(201, 146, 30, 0.18); color: #8A5A00; }
+
+/* Actividad: puntos de novedad, sub-pestañas y lista reciente. */
+.seg-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--rust); }
+.sub-pills { display: flex; gap: 8px; margin-top: 12px; }
+.sub-pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px;
+  border: 1px solid var(--border); border-radius: 999px; background: transparent;
+  color: var(--ink); font-size: 13px; font-weight: 600; opacity: 0.75;
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+.sub-pill b { background: var(--rust); color: white; border-radius: 999px; font-size: 11px; padding: 0 6px; line-height: 17px; }
+.sub-pill.active { background: var(--teal-strong); border-color: var(--teal-strong); color: white; opacity: 1; }
+.activity-day { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.55; margin: 0 4px 8px; }
+.activity-card { padding: 4px 14px; }
+.activity-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.activity-row:last-child { border-bottom: none; }
+.activity-icon { flex: 0 0 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 14px; }

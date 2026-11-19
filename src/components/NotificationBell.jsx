@@ -30,7 +30,7 @@ function timeAgo(dateStr) {
 // nuevo por confirmar, se confirma uno, o se revierte una confirmación —
 // pero nada en la app lo mostraba nunca. Este componente es la pieza que
 // faltaba: leerlas, mostrar cuántas hay sin leer, y marcarlas como leídas.
-export default function NotificationBell() {
+function LegacyBell() {
   const { membership } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -192,4 +192,63 @@ export default function NotificationBell() {
       )}
     </div>
   )
+}
+
+const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
+
+// Para quienes revisan pagos, la campana ya no es una lista aparte: lleva
+// directo a "Actividad" y su número es lo que realmente espera acción.
+function QueueBell() {
+  const { membership } = useAuth()
+  const navigate = useNavigate()
+  const [pending, setPending] = useState(0)
+  const orgId = membership?.organization_id
+
+  useEffect(() => {
+    if (!orgId) return
+    let alive = true
+    async function load() {
+      const [{ count: p }, { count: g }] = await Promise.all([
+        supabase.from('payment_records').select('id', { count: 'exact', head: true })
+          .eq('organization_id', orgId).in('verification_status', ['pending', 'under_review']),
+        supabase.from('guest_submissions').select('id', { count: 'exact', head: true })
+          .eq('organization_id', orgId).eq('status', 'pending')
+      ])
+      if (alive) setPending((p || 0) + (g || 0))
+    }
+    load()
+    const interval = setInterval(load, 45000)
+    return () => { alive = false; clearInterval(interval) }
+  }, [orgId])
+
+  return (
+    <button
+      type="button"
+      onClick={() => navigate('/cola')}
+      aria-label={pending > 0 ? `Actividad, ${pending} por hacer` : 'Actividad'}
+      style={{
+        position: 'relative', background: 'none', color: 'var(--ink)', border: '1px solid var(--border, #e5e0d8)',
+        borderRadius: 8, padding: '6px 9px', cursor: 'pointer', display: 'flex', alignItems: 'center'
+      }}
+    >
+      <IconBell width={19} height={19} />
+      {pending > 0 && (
+        <span
+          style={{
+            position: 'absolute', top: -5, right: -5, background: '#A2483A', color: 'white',
+            fontSize: 10, fontWeight: 700, borderRadius: 999, minWidth: 16, height: 16,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px'
+          }}
+        >
+          {pending > 99 ? '99+' : pending}
+        </span>
+      )}
+    </button>
+  )
+}
+
+export default function NotificationBell() {
+  const { membership } = useAuth()
+  if (!membership) return null
+  return QUEUE_ROLES.includes(membership.role) ? <QueueBell /> : <LegacyBell />
 }

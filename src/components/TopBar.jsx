@@ -384,7 +384,7 @@ export default function TopBar() {
         </NavLink>
         {canSeeQueue && (
           <NavLink to="/cola" className={({ isActive }) => `nav-pill${isActive || location.pathname === '/comprobantes-invitados' ? ' active' : ''}`}>
-            <IconCheckCircle /> Por confirmar <CountBadge count={pendingPayments + pendingGuests} />
+            <IconCheckCircle /> Actividad <CountBadge count={pendingPayments + pendingGuests} />
           </NavLink>
         )}
         {canSeeQueue && (
@@ -556,7 +556,7 @@ export default function TopBar() {
               <IconCheckCircle width={21} height={21} />
               <CountBadge count={pendingPayments + pendingGuests} />
             </span>
-            <span>Por confirmar</span>
+            <span>Actividad</span>
           </NavLink>
         )}
         {canSeeQueue ? (
