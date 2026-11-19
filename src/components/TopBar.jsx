@@ -358,7 +358,7 @@ export default function TopBar() {
       {membership && (
         <div className="working-in-banner">
           <IconBuilding width={15} height={15} style={{ flexShrink: 0, opacity: 0.7 }} />
-          <span style={{ opacity: 0.7 }}>Trabajando en</span>
+          <span className="wi-label">Trabajando en</span>
           {memberships.length > 1 ? (
             <select
               value={membership?.organization_id || ''}

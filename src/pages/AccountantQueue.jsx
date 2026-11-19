@@ -628,7 +628,7 @@ export default function AccountantQueue() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            style={{ fontSize: 12.5, padding: '4px 6px', borderRadius: 6, border: '1px solid #e5e0d8', minWidth: 0, maxWidth: '100%', flex: 1 }}
+            className="select-sm"
           >
             <option value="customer_waiting">Cliente esperando primero</option>
             <option value="transaction_date">Fecha del banco (más antigua primero)</option>

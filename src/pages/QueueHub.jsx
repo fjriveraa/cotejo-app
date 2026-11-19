@@ -51,20 +51,20 @@ export default function QueueHub() {
     <button
       type="button"
       onClick={() => choose(id)}
-      className={`btn ${tab === id ? '' : 'btn-secondary'}`}
-      style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}
+      className={`seg-item${tab === id ? ' active' : ''}`}
+      aria-pressed={tab === id}
     >
       {label}
-      {count > 0 && <span className="nav-count" style={{ position: 'static' }}>{count}</span>}
+      {count > 0 && <span className="seg-count">{count}</span>}
     </button>
   )
 
   return (
     <>
-      <div className="container" style={{ paddingBottom: 0 }}>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <div className="container seg-container">
+        <div className="seg-control">
           <Seg id="pagos" label="Pagos del equipo" count={counts.pagos} />
-          <Seg id="invitados" label="De clientes (invitados)" count={counts.invitados} />
+          <Seg id="invitados" label="Clientes invitados" count={counts.invitados} />
         </div>
       </div>
       {tab === 'invitados' ? <GuestQueue /> : tab === 'pagos' ? <AccountantQueue /> : null}
