@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import Loading from '../components/Loading'
 
 export default function MyIdentification() {
   const { user } = useAuth()
@@ -63,7 +64,7 @@ export default function MyIdentification() {
     }
   }
 
-  if (loading) return <div className="container"><p style={{ opacity: 0.6 }}>Cargando...</p></div>
+  if (loading) return <div className="container"><Loading label="Cargando" /></div>
 
   return (
     <div className="container">

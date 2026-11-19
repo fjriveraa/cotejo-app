@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import Loading from './Loading'
 
 // Visor de comprobantes dentro de la app. Antes se abría la URL firmada con
 // window.open, y en la app del iPhone eso saca a la persona al navegador.
@@ -41,7 +42,7 @@ export default function EvidenceViewer({ bucket, path, onClose }) {
         <button type="button" className="btn btn-primary" onClick={onClose}>Cerrar</button>
       </div>
       <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
-        {!src && !error && <p style={{ color: 'white' }}>Cargando comprobante...</p>}
+        {!src && !error && <Loading label="Cargando comprobante" light />}
         {error && (
           <div style={{ color: 'white', textAlign: 'center' }}>
             <p>{error}</p>

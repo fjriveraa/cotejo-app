@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import PushPrompt from '../components/PushPrompt'
 import { EVENT_LABELS, CORRECTABLE_EVENTS, TZ, hondurasDateStr, formatTime, formatDateLong, addDays, monthKey, monthLabel, formatMinutes } from '../lib/attendance'
+import Loading from '../components/Loading'
 
 export default function MyAttendance() {
   const { membership } = useAuth()
@@ -90,7 +91,7 @@ export default function MyAttendance() {
         )}
 
         {loadingPunches ? (
-          <p style={{ opacity: 0.6 }}>Cargando...</p>
+          <Loading label="Cargando" />
         ) : days.length === 0 ? (
           <p style={{ opacity: 0.6 }}>Todavía no hay marcas.</p>
         ) : (

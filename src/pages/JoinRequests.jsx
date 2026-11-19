@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { IconCheckCircle } from '../components/icons'
+import Loading from '../components/Loading'
 
 const ROLE_LABELS = {
   empleado: 'Colaborador',
@@ -49,7 +50,7 @@ export default function JoinRequests() {
   }
 
   if (loading) {
-    return <div className="container"><p style={{ opacity: 0.6 }}>Cargando...</p></div>
+    return <div className="container"><Loading label="Cargando" /></div>
   }
 
   return (

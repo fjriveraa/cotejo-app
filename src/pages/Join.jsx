@@ -5,6 +5,7 @@ import { useAuth, writePendingAction, clearPendingAction } from '../hooks/useAut
 import { getCanonicalOrigin } from '../lib/appUrl'
 import Spinner from '../components/Spinner'
 import SocialButtons from '../components/SocialButtons'
+import Loading from '../components/Loading'
 
 const ROLE_LABELS = {
   empleado: 'Colaborador',
@@ -112,7 +113,7 @@ export default function Join() {
   if (info === undefined) {
     return (
       <div className="login-wrap">
-        <p style={{ opacity: 0.6 }}>Cargando invitación...</p>
+        <Loading label="Cargando invitación" />
       </div>
     )
   }

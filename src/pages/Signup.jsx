@@ -5,6 +5,7 @@ import { useAuth, writePendingAction, clearPendingAction } from '../hooks/useAut
 import { getCanonicalOrigin } from '../lib/appUrl'
 import Spinner from '../components/Spinner'
 import SocialButtons from '../components/SocialButtons'
+import Loading from '../components/Loading'
 
 export default function Signup() {
   const { session, membership, loadingMembership, signUpWithPassword, signInWithOAuth, switchOrg, refreshMemberships } = useAuth()
@@ -171,7 +172,7 @@ export default function Signup() {
   if (session && loadingMembership) {
     return (
       <div className="login-wrap">
-        <p style={{ opacity: 0.6 }}>Cargando...</p>
+        <Loading label="Cargando" />
       </div>
     )
   }

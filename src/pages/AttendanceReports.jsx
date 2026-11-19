@@ -6,6 +6,7 @@ import ScheduleImport from '../components/ScheduleImport'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import EvidenceViewer from '../components/EvidenceViewer'
+import Loading from '../components/Loading'
 import {
   EVENT_LABELS, CORRECTABLE_EVENTS, hondurasDateStr, formatTime, formatDateLong, addDays, mondayOf,
   monthKey, monthLabel, weekKey, weekLabel, formatMinutes, summarize
@@ -232,7 +233,7 @@ function ReportTab({ orgId, employees, branches, canSupervise }) {
 
       {error && <p className="error-text">{error}</p>}
       {loading ? (
-        <p style={{ opacity: 0.6 }}>Cargando...</p>
+        <Loading label="Cargando" />
       ) : groups.length === 0 ? (
         <p style={{ opacity: 0.6, marginTop: 16 }}>No hay marcas en este período.</p>
       ) : (
@@ -404,7 +405,7 @@ function DayDetail({ orgId, row, canEdit, onClose, onChanged }) {
           <button type="button" className="btn btn-secondary" onClick={onClose}>Cerrar</button>
         </div>
         {error && <p className="error-text">{error}</p>}
-        {loading ? <p style={{ opacity: 0.6 }}>Cargando...</p> : punches.length === 0 ? <p style={{ opacity: 0.6 }}>Sin marcas este día.</p> : (
+        {loading ? <Loading label="Cargando" /> : punches.length === 0 ? <p style={{ opacity: 0.6 }}>Sin marcas este día.</p> : (
           <div style={{ marginTop: 12 }}>
             {punches.map((p) => (
               <div key={p.punch_id} style={{ padding: '8px 0', borderTop: '1px solid var(--border)', opacity: p.voided_at ? 0.5 : 1 }}>
@@ -640,7 +641,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
       )}
       {!loading && view === 'branch' && <BranchView days={days} items={items} offs={offs} employees={employees} branches={branches} />}
       {!loading && view === 'person' && <PersonView days={days} items={items} offs={offs} employees={employees} profiles={profiles} />}
-      {loading ? <p style={{ opacity: 0.6 }}>Cargando...</p> : view === 'grid' && (
+      {loading ? <Loading label="Cargando" /> : view === 'grid' && (
         <div className="card att-grid-card" style={{ marginTop: 12, overflowX: 'auto', padding: 6, WebkitOverflowScrolling: 'touch' }}>
           <table style={{ borderCollapse: 'separate', borderSpacing: '4px 6px', width: 'max-content', minWidth: '100%' }}>
             <thead>
@@ -1058,7 +1059,7 @@ function CorrectionsTab({ orgId, canReview }) {
         ))}
       </div>
       {error && <p className="error-text">{error}</p>}
-      {loading ? <p style={{ opacity: 0.6 }}>Cargando...</p> : list.length === 0 ? <p style={{ opacity: 0.6 }}>No hay solicitudes.</p> : (
+      {loading ? <Loading label="Cargando" /> : list.length === 0 ? <p style={{ opacity: 0.6 }}>No hay solicitudes.</p> : (
         <div style={{ display: 'grid', gap: 8 }}>
           {list.map((c) => (
             <div key={c.correction_id} className="card">

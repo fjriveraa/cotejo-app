@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { IconUsers } from '../components/icons'
 import { INVITE_ROLES, roleLabel } from '../lib/roles'
+import Loading from '../components/Loading'
 
 
 function ViewIdDoc({ path }) {
@@ -102,7 +103,7 @@ function OrgTeam({ membership: myMembership }) {
   }
 
   if (loading) {
-    return <p style={{ opacity: 0.6 }}>Cargando equipo...</p>
+    return <Loading label="Cargando equipo" />
   }
 
   return (

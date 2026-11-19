@@ -7,6 +7,7 @@ import { getCanonicalOrigin } from '../lib/appUrl'
 import { groupImageUrl, compressImage, MAX_GROUP_IMAGES } from '../lib/groupImages'
 import { fetchGroupReport, reportToPng, reportToPdf, reportToXlsx, reportFilename, saveOrShareFile } from '../lib/groupReport'
 import { SkeletonPaymentList } from '../components/Skeleton'
+import Loading from '../components/Loading'
 
 // Palabras que ayudan a reconocer qué columna es cuál en un Excel/CSV con
 // encabezados. Si no se reconoce ninguna, se asume el mismo orden que ya
@@ -142,7 +143,7 @@ function MonthHistorySection({ groupId, period, paidCount, totalCount, defaultOp
       </button>
       {open && (
         <div style={{ padding: '0 14px 12px' }}>
-          {loading && <p style={{ fontSize: 12, opacity: 0.6 }}>Cargando...</p>}
+          {loading && <Loading label="Cargando" small />}
           {members && members.length === 0 && <p style={{ fontSize: 12, opacity: 0.6 }}>Nadie en la lista ese mes.</p>}
           {members && members.map((m) => (
             <div key={m.member_id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '6px 0', borderTop: '1px solid #f1f1f1' }}>

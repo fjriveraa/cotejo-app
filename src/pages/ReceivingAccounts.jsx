@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { bankNamesForCountry, DEFAULT_COUNTRY } from '../lib/banks'
 import { IconBuilding } from '../components/icons'
+import Loading from '../components/Loading'
 
 const OTHER_BANK = '__other__'
 const emptyForm = { bank: '', bankOther: '', alias: '', last4: '', currency: 'HNL', accountNumber: '', holder: '', accountType: 'Ahorro', show: true }
@@ -143,7 +144,7 @@ export default function ReceivingAccounts() {
   }
 
   if (loading) {
-    return <div className="container"><p style={{ opacity: 0.6 }}>Cargando...</p></div>
+    return <div className="container"><Loading label="Cargando" /></div>
   }
 
   return (

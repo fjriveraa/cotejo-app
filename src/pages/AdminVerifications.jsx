@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import EvidenceViewer from '../components/EvidenceViewer'
 import { IconShield } from '../components/icons'
+import Loading from '../components/Loading'
 
 const METHOD_LABELS = {
   documentos_legales: 'Escritura / RTN / identificación',
@@ -57,7 +58,7 @@ export default function AdminVerifications() {
     load()
   }
 
-  if (loading) return <div className="container"><p style={{ opacity: 0.6 }}>Cargando...</p></div>
+  if (loading) return <div className="container"><Loading label="Cargando" /></div>
 
   return (
     <div className="container">

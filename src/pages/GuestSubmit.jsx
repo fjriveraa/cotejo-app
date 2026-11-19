@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { isPlausibleTransactionDate, parseLocalDate } from '../lib/dateSanity'
 import PublicPageHeader from '../components/PublicPageHeader'
 import Spinner from '../components/Spinner'
+import Loading from '../components/Loading'
 
 const emptyForm = {
   submitterName: '',
@@ -418,7 +419,7 @@ export default function GuestSubmit() {
       <div className="login-wrap">
         <div className="card login-card" style={{ maxWidth: 480 }}>
           <PublicPageHeader />
-          <p style={{ opacity: 0.6 }}>Cargando...</p>
+          <Loading label="Cargando" />
         </div>
       </div>
     )

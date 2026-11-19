@@ -4,6 +4,7 @@ import jsQR from 'jsqr'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { EVENT_LABELS, BUTTON_LABELS, formatTime, hondurasDateStr, formatMinutes } from '../lib/attendance'
+import Loading from '../components/Loading'
 
 // Pantalla del dispositivo de la sucursal (tableta o teléfono fijo). El
 // empleado muestra su QR frente a la cámara; en el mismo instante se guarda
@@ -90,7 +91,7 @@ export default function AttendanceKiosk() {
 
   const device = devices.find((d) => d.device_id === deviceId)
 
-  if (loadingDevices) return <div className="container"><p style={{ opacity: 0.6 }}>Cargando...</p></div>
+  if (loadingDevices) return <div className="container"><Loading label="Cargando" /></div>
 
   if (setupError) {
     return (

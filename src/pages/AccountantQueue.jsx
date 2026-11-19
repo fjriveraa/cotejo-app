@@ -5,6 +5,7 @@ import { IconCheckCircle, IconSearch, IconClose } from '../components/icons'
 import { SkeletonPaymentList } from '../components/Skeleton'
 import OnboardingTour, { hasSeenOnboarding } from '../components/OnboardingTour'
 import { isPlausibleTransactionDate, parseLocalDate } from '../lib/dateSanity'
+import Loading from '../components/Loading'
 
 const STATUS_LABELS = {
   pending: 'Pendiente',
@@ -125,7 +126,7 @@ export function EvidenceModal({ payment, onClose }) {
 
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
           <div style={{ flex: '1 1 260px', minWidth: 220 }}>
-            {loadingUrl && <p style={{ opacity: 0.6 }}>Cargando imagen...</p>}
+            {loadingUrl && <Loading label="Cargando imagen" />}
             {!loadingUrl && !payment.evidence_path && <p className="empty-state">Este pago no tiene comprobante adjunto.</p>}
             {!loadingUrl && payment.evidence_path && loadError && (
               <div className="empty-state" style={{ textAlign: 'left' }}>

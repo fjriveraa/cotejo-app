@@ -1253,3 +1253,42 @@ html, body { overflow-x: hidden; }
   letter-spacing: -0.005em;
 }
 .org-select { font-family: var(--font-body); font-weight: 600; letter-spacing: 0; }
+
+/* Espera sutil (Loading.jsx): puntos que laten + aparición con retraso. */
+.loading-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 28px 12px;
+  font-size: 14px;
+  opacity: 0;
+  animation: loading-appear 0.35s ease 0.25s forwards;
+}
+.loading-inline-small { padding: 6px 0; font-size: 12px; justify-content: flex-start; }
+.loading-inline > span:last-child { opacity: 0.65; }
+.loading-dots { display: inline-flex; gap: 5px; }
+.loading-dots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.25;
+  animation: loading-dot 1.2s ease-in-out infinite;
+}
+.loading-dots i:nth-child(2) { animation-delay: 0.15s; }
+.loading-dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes loading-appear { to { opacity: 1; } }
+@keyframes loading-dot {
+  0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
+  40% { opacity: 0.9; transform: scale(1.1); }
+}
+
+/* Cada pantalla entra con un fundido corto en vez de aparecer de golpe. */
+.container, .login-wrap, .landing-wrap { animation: screen-in 0.28s ease both; }
+@keyframes screen-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-dots i, .loading-logo, .container, .login-wrap, .landing-wrap { animation: none; }
+  .loading-inline { opacity: 1; animation: none; }
+}

@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { getCanonicalOrigin } from '../lib/appUrl'
 import { IconLink } from '../components/icons'
 import { INVITE_ROLES, roleLabel } from '../lib/roles'
+import Loading from '../components/Loading'
 
 // Por enlace solo se invita a colaboradores.
 const ROLE_LABELS = {
@@ -231,7 +232,7 @@ export default function InviteTeam() {
   }, {})
 
   if (loading) {
-    return <div className="container"><p style={{ opacity: 0.6 }}>Cargando...</p></div>
+    return <div className="container"><Loading label="Cargando" /></div>
   }
 
   return (

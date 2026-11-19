@@ -3,6 +3,7 @@ import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import PublicPageHeader from '../components/PublicPageHeader'
 import { getCanonicalOrigin } from '../lib/appUrl'
+import Loading from '../components/Loading'
 
 const STATUS_INFO = {
   pending: {
@@ -51,7 +52,7 @@ export default function GuestStatus() {
       <div className="login-wrap">
         <div className="card login-card">
           <PublicPageHeader />
-          <p style={{ opacity: 0.6 }}>Cargando...</p>
+          <Loading label="Cargando" />
         </div>
       </div>
     )

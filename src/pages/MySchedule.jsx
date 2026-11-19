@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import PushPrompt from '../components/PushPrompt'
 import { hondurasDateStr, formatDateLong, addDays, mondayOf, weekLabel, formatTime } from '../lib/attendance'
+import Loading from '../components/Loading'
 
 const DAY_NAMES = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 const hm = (t) => (t ? t.slice(0, 5) : '')
@@ -50,7 +51,7 @@ export default function MySchedule() {
       </div>
 
       {error && <p className="error-text">{error}</p>}
-      {loading ? <p style={{ opacity: 0.6 }}>Cargando...</p> : (
+      {loading ? <Loading label="Cargando" /> : (
         <div className="card" style={{ marginTop: 12 }}>
           {days.map((d) => (
             <div key={d.work_date} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '10px 0', borderTop: '1px solid rgba(0,0,0,0.06)', background: d.work_date === today ? 'rgba(43,100,89,0.07)' : undefined }}>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import AttendanceQr from './AttendanceQr'
 import { EVENT_LABELS, BUTTON_LABELS, NO_PHOTO_EVENTS, lunchRemainingSeconds, formatClock, formatTime, hondurasDateStr, formatMinutes } from '../lib/attendance'
+import Loading from './Loading'
 
 // Hoja inferior del botón "Marcar".
 //  - Si la empresa habilitó la marcación directa: botones de lo que toca
@@ -67,7 +68,7 @@ export default function AttendanceSheet({ orgId, onClose }) {
         style={{ width: '100%', maxWidth: 420, borderRadius: '20px 20px 0 0', padding: '20px 20px 28px', textAlign: 'center', maxHeight: '92vh', overflowY: 'auto' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {view === 'loading' && <p style={{ opacity: 0.6 }}>Cargando...</p>}
+        {view === 'loading' && <Loading label="Cargando" />}
 
         {view === 'buttons' && (
           <>
