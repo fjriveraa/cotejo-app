@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom'
+import { useEffect, useLayoutEffect, useRef } from 'react'
+import { Routes, Route, Navigate, Link, useNavigate, useLocation, useNavigationType } from 'react-router-dom'
 import BackButton from './components/BackButton'
 import WelcomeCard from './components/WelcomeCard'
 import { useAuth } from './hooks/useAuth'
@@ -43,6 +43,31 @@ import { IconBuilding, IconBriefcase, IconLink, IconSearch } from './components/
 
 const OWNER_ROLES = ['propietario', 'admin']
 const QUEUE_ROLES = ['contador', 'propietario', 'supervisor', 'admin', 'auditor']
+
+// Transición entre pantallas según cómo se llegó:
+//  - back: se desliza desde la izquierda (botón Volver / atrás)
+//  - forward: se desliza desde la derecha (abrir un detalle)
+//  - up: sube desde abajo (formularios y pasos de registro)
+//  - fade: aparece suave (pestañas principales, primera carga)
+// Un Link puede forzarla con state={{ anim: 'up' }}.
+const ANIM_TOP = ['/', '/registrar', '/cola', '/grupos', '/asistencia', '/mi-asistencia', '/login', '/asistencia/marcar']
+const ANIM_UP = ['/registro', '/signup', '/unirme', '/empresas', '/autonomo', '/comprobante']
+function useNavAnimation() {
+  const location = useLocation()
+  const type = useNavigationType()
+  const first = useRef(true)
+  useLayoutEffect(() => {
+    const clean = location.pathname.replace(/\/+$/, '') || '/'
+    let anim = 'forward'
+    if (first.current) anim = 'fade'
+    else if (location.state && location.state.anim) anim = location.state.anim
+    else if (type === 'POP') anim = 'back'
+    else if (ANIM_UP.includes(clean)) anim = 'up'
+    else if (ANIM_TOP.includes(clean)) anim = 'fade'
+    first.current = false
+    document.documentElement.dataset.nav = anim
+  }, [location, type])
+}
 
 function LoadingScreen() {
   // Esta es la primera pantalla que ve absolutamente cualquiera al abrir la
@@ -148,6 +173,11 @@ function WelcomeSlot() {
   )
 }
 
+function PageAnim({ children }) {
+  const { pathname } = useLocation()
+  return <div className="page-anim page-anim-fill" key={pathname}>{children}</div>
+}
+
 function ProtectedLayout({ children }) {
   const { session, membership, isLoading, membershipError, needsOrgConfirmation } = useAuth()
 
@@ -168,7 +198,7 @@ function ProtectedLayout({ children }) {
         <TopBar />
         <AutoBack />
         <WelcomeSlot />
-        {children}
+        <PageAnim>{children}</PageAnim>
       </div>
     </BiometricLockScreen>
   )
@@ -228,6 +258,7 @@ function RequireSessionLayout({ children }) {
 export default function App() {
   const { session } = useAuth()
   const navigate = useNavigate()
+  useNavAnimation()
 
   // Traduce un tap sobre una notificación push nativa (la app estaba en
   // segundo plano o cerrada) en una navegación dentro de la app -- en la

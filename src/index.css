@@ -1285,10 +1285,24 @@ html, body { overflow-x: hidden; }
 }
 
 /* Cada pantalla entra con un fundido corto en vez de aparecer de golpe. */
-.container, .login-wrap, .landing-wrap { animation: screen-in 0.28s ease both; }
-@keyframes screen-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .loading-dots i, .loading-logo, .container, .login-wrap, .landing-wrap { animation: none; }
+  .loading-dots i, .loading-logo, .page-anim, .login-wrap, .landing-wrap { animation: none !important; }
   .loading-inline { opacity: 1; animation: none; }
 }
+
+/* Transiciones entre pantallas (ver useNavAnimation en App.jsx). */
+.page-anim-fill { display: flex; flex-direction: column; flex: 1; width: 100%; }
+html[data-nav] .page-anim, html[data-nav] .login-wrap, html[data-nav] .landing-wrap {
+  animation-duration: 0.34s;
+  animation-timing-function: cubic-bezier(0.22, 0.8, 0.3, 1);
+  animation-fill-mode: backwards;
+}
+html[data-nav="forward"] .page-anim, html[data-nav="forward"] .login-wrap, html[data-nav="forward"] .landing-wrap { animation-name: nav-forward; }
+html[data-nav="back"] .page-anim, html[data-nav="back"] .login-wrap, html[data-nav="back"] .landing-wrap { animation-name: nav-back; }
+html[data-nav="up"] .page-anim, html[data-nav="up"] .login-wrap, html[data-nav="up"] .landing-wrap { animation-name: nav-up; animation-duration: 0.4s; }
+html[data-nav="fade"] .page-anim, html[data-nav="fade"] .login-wrap, html[data-nav="fade"] .landing-wrap { animation-name: nav-fade; animation-duration: 0.3s; }
+@keyframes nav-forward { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes nav-back { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+@keyframes nav-up { from { opacity: 0; transform: translateY(36px); } to { opacity: 1; transform: none; } }
+@keyframes nav-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
