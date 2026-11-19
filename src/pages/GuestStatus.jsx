@@ -16,6 +16,11 @@ const STATUS_INFO = {
     color: '#2B6459',
     message: 'Tu pago quedó confirmado. No necesitas hacer nada más.'
   },
+  discarded: {
+    label: 'Envío no registrado',
+    color: '#6B7280',
+    message: 'Este envío no se registró (era un duplicado o no era un comprobante de pago). Si ya enviaste tu pago, no necesitas hacer nada más.'
+  },
   not_confirmed: {
     label: 'No pudimos confirmarlo',
     color: '#B91C1C',

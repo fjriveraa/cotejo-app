@@ -335,6 +335,20 @@ export default function GuestQueue() {
     loadArchive()
   }
 
+  async function discard(item) {
+    const ok = window.confirm('¿Descartar este envío? Se saca de la cola y no cuenta como pago (útil para duplicados o capturas equivocadas). Quien lo envió verá que no se registró.')
+    if (!ok) return
+    setBusyId(item.submission_id)
+    setError(null)
+    const { error } = await supabase.rpc('discard_guest_submission', { p_submission_id: item.submission_id, p_reason: null })
+    setBusyId(null)
+    if (error) {
+      setError(error.message)
+      return
+    }
+    load()
+  }
+
   const bankOf = (s) => canonicalBank(s.detected_bank)
   const bankCounts = items.reduce((acc, it) => {
     const b = bankOf(it)
@@ -531,6 +545,9 @@ export default function GuestQueue() {
                 </button>
                 <button className="btn btn-amber" disabled={busyId === s.submission_id} onClick={() => decide(s, false)}>
                   No se pudo confirmar
+                </button>
+                <button className="btn btn-secondary" disabled={busyId === s.submission_id} onClick={() => discard(s)}>
+                  Descartar (duplicado o error)
                 </button>
               </div>
             </div>
