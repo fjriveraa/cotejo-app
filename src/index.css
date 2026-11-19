@@ -1311,7 +1311,7 @@ html[data-nav="fade"] .page-anim, html[data-nav="fade"] .login-wrap, html[data-n
 
 /* Control segmentado (pestañas de la cola): una sola pastilla, la opción
    activa "flota" sobre el fondo. */
-.seg-container { padding-bottom: 0; }
+.seg-container { padding-bottom: 0; flex: 0 0 auto; }
 .seg-container + .container { padding-top: 18px; }
 .seg-control {
   display: flex;
@@ -1429,3 +1429,6 @@ select.org-select { padding: 6px 28px 6px 10px; border-radius: 10px; }
 .activity-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
 .activity-row:last-child { border-bottom: none; }
 .activity-icon { flex: 0 0 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+
+/* Estados vacíos: compactos y bien ubicados, sin empujar el contenido. */
+.container > .empty-state-friendly { padding: 36px 16px; }

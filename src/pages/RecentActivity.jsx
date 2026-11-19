@@ -76,7 +76,6 @@ export default function RecentActivity({ onSeen }) {
 
   return (
     <div className="container">
-      <h2 style={{ marginTop: 0 }}>Actividad reciente</h2>
       {error && <p className="error-text">{error}</p>}
       {!error && items.length === 0 && (
         <div className="empty-state-friendly">
