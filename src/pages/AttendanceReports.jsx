@@ -603,24 +603,22 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
 
   return (
     <div>
-      <div className="card" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <button type="button" className="btn btn-secondary" onClick={() => step(-1)}>←</button>
-          <strong style={{ textTransform: 'capitalize' }}>{span === 'semana' ? weekLabel(from) : monthLabel(from.slice(0, 7))}</strong>
-          <button type="button" className="btn btn-secondary" onClick={() => step(1)}>→</button>
-          <span className="att-seg" style={{ marginLeft: 6 }}>
-            {[['semana', 'Semana'], ['mes', 'Mes']].map(([k, l]) => (
-              <button key={k} type="button" className={span === k ? 'active' : ''} onClick={() => setSpan(k)}>{l}</button>
-            ))}
-          </span>
+      <div className="card sched-head">
+        <div className="sched-nav">
+          <button type="button" className="sched-step" aria-label="Anterior" onClick={() => step(-1)}>←</button>
+          <strong className="sched-label">{span === 'semana' ? weekLabel(from) : monthLabel(from.slice(0, 7))}</strong>
+          <button type="button" className="sched-step" aria-label="Siguiente" onClick={() => step(1)}>→</button>
         </div>
-        {canEdit && (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" className="btn" onClick={() => setImportOpen(true)}>Importar horario</button>
-            {span === 'semana' && <button type="button" className="btn btn-secondary" onClick={copyPrevious}>Copiar semana anterior</button>}
-          </div>
-        )}
-        <button type="button" className="btn btn-secondary" onClick={downloadImage}>Descargar imagen</button>
+        <div className="att-seg att-seg-full">
+          {[['semana', 'Semana'], ['mes', 'Mes']].map(([k, l]) => (
+            <button key={k} type="button" className={span === k ? 'active' : ''} onClick={() => setSpan(k)}>{l}</button>
+          ))}
+        </div>
+        <div className="sched-actions">
+          {canEdit && <button type="button" className="btn btn-primary" onClick={() => setImportOpen(true)}>Importar horario</button>}
+          {canEdit && span === 'semana' && <button type="button" className="btn btn-secondary" onClick={copyPrevious}>Copiar semana anterior</button>}
+          <button type="button" className="btn btn-secondary" onClick={downloadImage}>Descargar imagen</button>
+        </div>
       </div>
       <div className="att-seg" style={{ margin: '10px 0 0' }}>
         {[['grid', 'Cuadrícula'], ['branch', 'Por sucursal'], ['person', 'Por persona']].map(([k, l]) => (
@@ -646,7 +644,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
           <table style={{ borderCollapse: 'separate', borderSpacing: '4px 6px', width: 'max-content', minWidth: '100%' }}>
             <thead>
               <tr>
-                <th style={{ ...stickyCol, width: 128, minWidth: 128, maxWidth: 128, background: 'var(--card)', zIndex: 3, textAlign: 'left', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 1, color: 'var(--ink-soft, #7d7668)', padding: '4px 6px' }}>Equipo</th>
+                <th style={{ ...stickyCol, width: 140, minWidth: 140, maxWidth: 140, background: 'var(--card)', zIndex: 3, textAlign: 'left', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 1, color: 'var(--ink-soft, #7d7668)', padding: '4px 6px' }}>Equipo</th>
                 {days.map((d) => {
                   const dow = (new Date(`${d}T00:00:00Z`).getUTCDay() + 6) % 7
                   const isToday = d === hondurasDateStr()
@@ -674,15 +672,22 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
                 const initials = (e.display_name || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
                 return (
                   <tr key={e.membership_id}>
-                    <td style={{ ...stickyCol, width: 128, minWidth: 128, maxWidth: 128, padding: '2px 6px 2px 2px', verticalAlign: 'middle' }}>
+                    <td style={{ ...stickyCol, width: 140, minWidth: 140, maxWidth: 140, padding: '2px 6px 2px 2px', verticalAlign: 'middle' }}>
                       <button type="button" disabled={!canEdit} onClick={() => setProfileEdit({ membership_id: e.membership_id, name: e.display_name, current: profiles.find((x) => x.membership_id === e.membership_id) })}
                         style={{ all: 'unset', cursor: canEdit ? 'pointer' : 'default', display: 'flex', gap: 8, alignItems: 'center', width: '100%' }}>
                         <span style={{ flex: '0 0 30px', height: 30, borderRadius: '50%', background: 'rgba(43,100,89,0.14)', color: '#2B6459', fontWeight: 700, fontSize: 12, display: 'grid', placeItems: 'center' }}>{initials}</span>
                         <span style={{ minWidth: 0 }}>
                           <strong style={{ display: 'block', fontSize: 14, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.display_name}</strong>
-                          <span style={{ display: 'block', fontSize: 11, opacity: 0.65, whiteSpace: 'nowrap' }}>
-                            {workDays ? `${Math.round(mins / 6) / 10 || '—'} h · ${workDays} d` : 'Sin turnos'}{freeDays ? ` · ${freeDays} libre` : ''}{vacDays ? ` · ${vacDays} vac.` : ''}
+                          <span style={{ display: 'block', fontSize: 11, opacity: 0.65, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {workDays ? `${Math.round(mins / 6) / 10 || '—'} h · ${workDays} d` : 'Sin turnos'}
                           </span>
+                          {(freeDays > 0 || vacDays > 0) && (
+                            <span style={{ display: 'flex', gap: 4, marginTop: 2, flexWrap: 'nowrap' }}>
+                              {freeDays > 0 && <em className="sched-tag sched-tag-free">{freeDays} libre</em>}
+                              {vacDays > 0 && <em className="sched-tag sched-tag-vac">{vacDays} vac.</em>}
+                            </span>
+                          )}
+
                         </span>
                       </button>
                     </td>
@@ -699,7 +704,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
                             disabled={!canEdit}
                             onClick={() => setEdit({ membership_id: e.membership_id, name: e.display_name, date: d, current: c, off, vac })}
                             style={{
-                              width: '100%', minHeight: 54, borderRadius: 10, fontSize: 12, lineHeight: 1.25, padding: '4px 2px', cursor: canEdit ? 'pointer' : 'default',
+                              width: '100%', minHeight: 54, overflow: 'hidden', borderRadius: 10, fontSize: 12, lineHeight: 1.25, padding: '4px 2px', cursor: canEdit ? 'pointer' : 'default',
                               display: 'grid', placeItems: 'center', alignContent: 'center',
                               color: vac ? '#8A5A00' : off ? '#A2483A' : 'var(--ink, #1f1b14)',
                               border: vac ? '1px solid rgba(201,146,30,0.55)' : off ? '1px solid rgba(162,72,58,0.35)' : c ? `1px ${c.is_default ? 'dashed' : 'solid'} ${col.border}` : '1px dashed rgba(0,0,0,0.12)',

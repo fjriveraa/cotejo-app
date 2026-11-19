@@ -1394,3 +1394,21 @@ select.org-select { padding: 6px 28px 6px 10px; border-radius: 10px; }
 /* Títulos de pantalla y estados vacíos con más aire y jerarquía. */
 .container > h2:first-child, .container h2.page-title { font-size: 24px; letter-spacing: -0.015em; }
 .card, .payment-row { transition: box-shadow 0.2s ease, border-color 0.2s ease; }
+
+/* Encabezado de Horarios: navegación, rango y acciones ordenados en filas. */
+.sched-head { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
+.sched-nav { display: flex; align-items: center; gap: 8px; }
+.sched-label { flex: 1; text-align: center; font-family: var(--font-display); font-size: 17px; text-transform: capitalize; }
+.sched-step {
+  width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--card);
+  color: var(--teal-text); font-size: 18px; line-height: 1;
+}
+.sched-step:active { transform: scale(0.94); }
+.att-seg-full { display: flex; width: 100%; }
+.att-seg-full button { flex: 1; }
+.sched-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.sched-actions .btn { flex: 1 1 auto; padding: 9px 14px; font-size: 13px; border-radius: 10px; }
+.sched-tag { font-style: normal; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+.sched-tag-free { background: rgba(162, 72, 58, 0.12); color: #A2483A; }
+.sched-tag-vac { background: rgba(201, 146, 30, 0.18); color: #8A5A00; }
