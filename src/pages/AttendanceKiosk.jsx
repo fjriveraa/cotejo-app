@@ -112,7 +112,7 @@ export default function AttendanceKiosk() {
       <div className="container" style={{ maxWidth: 520 }}>
         <KioskBar />
         <h1 className="page-title">Marcación</h1>
-        <p>La empresa tiene desactivada la marcación con QR. Puedes activarla en Asistencia → Dispositivos y reglas.</p>
+        <p>La empresa tiene desactivada la marcación con QR. Puedes activarla en Asistencia → Ajustes.</p>
       </div>
     )
   }

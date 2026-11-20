@@ -1485,3 +1485,17 @@ select.org-select { padding: 6px 28px 6px 10px; border-radius: 10px; }
 }
 .seg-container + .container h3 { font-size: 18px; margin: 0 0 4px; }
 .seg-container + .container h3 + p { font-size: 13px; opacity: 0.62; margin: 0 0 14px; }
+
+/* Asistencia: tipografía, orden y alineación coherentes con el resto de la app. */
+.att-header { display: flex; flex-direction: column; align-items: stretch; gap: 14px; }
+.att-title { font-size: 30px; line-height: 1.1; letter-spacing: -0.02em; margin: 0; }
+.att-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.att-actions .btn { text-align: center; padding: 10px 12px; font-size: 13.5px; border-radius: 12px; }
+.att-actions .btn:only-child { grid-column: 1 / -1; }
+.att-tabs { margin: 16px 0 14px; }
+.att-tab { flex: 1 1 auto; text-align: center; font-size: 14px; padding: 10px 10px; }
+@media (max-width: 480px) { .att-tab { font-size: 13.5px; padding: 10px 6px; } }
+.sched-legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; }
+.legend-chip { display: inline-flex; align-items: center; height: 26px; padding: 0 11px; border: 1px solid transparent; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: 0.01em; text-transform: none; }
+.att-grid-card { margin-top: 12px; }
+.att-grid-card th { font-size: 11px; letter-spacing: 0.06em; }

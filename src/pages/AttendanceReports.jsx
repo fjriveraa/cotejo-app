@@ -19,7 +19,7 @@ const TABS = [
   { id: 'reporte', label: 'Reportes' },
   { id: 'horarios', label: 'Horarios' },
   { id: 'correcciones', label: 'Correcciones' },
-  { id: 'config', label: 'Dispositivos y reglas' }
+  { id: 'config', label: 'Ajustes' }
 ]
 
 export default function AttendanceReports() {
@@ -57,10 +57,7 @@ export default function AttendanceReports() {
   return (
     <div className="container">
       <div className="att-header">
-        <div>
-          <h1 className="page-title att-title">Asistencia</h1>
-          <p className="att-sub">{membership?.organizations?.name}</p>
-        </div>
+        <h1 className="page-title att-title">Asistencia</h1>
         <div className="att-actions">
           {isOwner && <Link to="/invitar" className="btn btn-secondary">+ Invitar empleado</Link>}
           {canSupervise && <Link to="/asistencia/marcar" className="btn btn-secondary">Abrir reloj</Link>}
@@ -620,7 +617,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
           <button type="button" className="btn btn-secondary" onClick={downloadImage}>Descargar imagen</button>
         </div>
       </div>
-      <div className="att-seg" style={{ margin: '10px 0 0' }}>
+      <div className="att-seg att-seg-full" style={{ margin: '12px 0 0' }}>
         {[['grid', 'Cuadrícula'], ['branch', 'Por sucursal'], ['person', 'Por persona']].map(([k, l]) => (
           <button key={k} type="button" className={view === k ? 'active' : ''} onClick={() => setView(k)}>{l}</button>
         ))}
@@ -628,13 +625,13 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
       {msg && <p style={{ color: '#2B6459' }}>{msg}</p>}
       {error && <p className="error-text">{error}</p>}
       {branches.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '10px 0 0', fontSize: 12 }}>
+        <div className="sched-legend">
           {branches.map((b) => {
             const col = branchColor(branches, b.id)
-            return <span key={b.id} style={{ background: col.bg, border: `1px solid ${col.border}`, borderRadius: 10, padding: '2px 10px' }}>{b.name}</span>
+            return <span key={b.id} className="legend-chip" style={{ background: col.bg, borderColor: col.border }}>{b.name}</span>
           })}
-          <span style={{ background: 'rgba(162,72,58,0.12)', border: '1px solid rgba(162,72,58,0.45)', color: '#A2483A', borderRadius: 10, padding: '2px 10px', fontWeight: 700 }}>Libre</span>
-          <span style={{ background: 'rgba(201,146,30,0.16)', border: '1px solid rgba(201,146,30,0.55)', color: '#8A5A00', borderRadius: 10, padding: '2px 10px', fontWeight: 700 }}>🏖 Vacaciones</span>
+          <span className="legend-chip" style={{ background: 'rgba(162,72,58,0.12)', borderColor: 'rgba(162,72,58,0.45)', color: '#A2483A' }}>Libre</span>
+          <span className="legend-chip" style={{ background: 'rgba(201,146,30,0.16)', borderColor: 'rgba(201,146,30,0.55)', color: '#8A5A00' }}>🏖 Vacaciones</span>
         </div>
       )}
       {!loading && view === 'branch' && <BranchView days={days} items={items} offs={offs} employees={employees} branches={branches} />}
@@ -677,7 +674,7 @@ function ScheduleTab({ orgId, employees: allEmployees, branches, canEdit, onEmpl
                         style={{ all: 'unset', cursor: canEdit ? 'pointer' : 'default', display: 'flex', gap: 8, alignItems: 'center', width: '100%' }}>
                         <span style={{ flex: '0 0 30px', height: 30, borderRadius: '50%', background: 'rgba(43,100,89,0.14)', color: '#2B6459', fontWeight: 700, fontSize: 12, display: 'grid', placeItems: 'center' }}>{initials}</span>
                         <span style={{ minWidth: 0 }}>
-                          <strong style={{ display: 'block', fontSize: 14, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.display_name}</strong>
+                          <strong style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', fontSize: 14, lineHeight: 1.2, overflow: 'hidden', wordBreak: 'break-word' }}>{e.display_name}</strong>
                           <span style={{ display: 'block', fontSize: 11, opacity: 0.65, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {workDays ? `${Math.round(mins / 6) / 10 || '—'} h · ${workDays} d` : 'Sin turnos'}
                           </span>
