@@ -602,7 +602,7 @@ export default function PaymentGroupDetail() {
       const { data: info } = await supabase.rpc('payment_group_public_info', { p_link_code: groupData[0].link_code })
       setImages(info?.[0]?.image_paths || [])
     }
-    // Paquetes dentro de este grupo y a qué grupo principal pertenece (si falla, se ignora).
+    // Subgrupos dentro de este grupo y a qué grupo principal pertenece (si falla, se ignora).
     try {
       const orgId = groupData?.[0]?.organization_id
       const [kidsRes, treeRes, listRes] = await Promise.all([
@@ -615,7 +615,7 @@ export default function PaymentGroupDetail() {
       setParentInfo({ parent: mine?.parent_group_id || null, label: mine?.option_label || '' })
       const hasParent = new Set((treeRes.data || []).filter((r) => r.parent_group_id).map((r) => r.group_id))
       setOrgGroups((listRes.data || []).filter((g) => g.group_id !== groupId && !hasParent.has(g.group_id)))
-    } catch { /* sin paquetes si falla */ }
+    } catch { /* sin subgrupos si falla */ }
     setMembers(memberData || [])
     // Periodos e historial son "extra" -- si fallan (ej. rol sin acceso a auditor, o el RPC
     // todavía no está desplegado), no se bloquea la pantalla principal por eso.
@@ -686,7 +686,7 @@ export default function PaymentGroupDetail() {
       setPkgLabel(''); setPkgAmount(''); setPkgOpen(false)
       await load()
     } catch (err) {
-      setPkgError(err?.message || 'No se pudo crear el paquete.')
+      setPkgError(err?.message || 'No se pudo crear el subgrupo.')
     }
     setPkgBusy(false)
   }
@@ -823,7 +823,7 @@ export default function PaymentGroupDetail() {
         <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Imágenes de referencia</div>
           <p style={{ fontSize: 13, opacity: 0.7, margin: '0 0 10px' }}>
-            Las ve quien va a pagar (afiche, paquete, precios). La primera sale también en la vista previa del enlace.
+            Las ve quien va a pagar (afiche, grupo, precios). La primera sale también en la vista previa del enlace.
           </p>
           {images.length > 0 && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
@@ -850,9 +850,9 @@ export default function PaymentGroupDetail() {
 
       {(kids.length > 0 || (canManage && members.length === 0 && !parentInfo.parent)) && (
         <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
-          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{kids.length > 0 ? 'Paquetes' : 'Paquetes (subgrupos)'}</div>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{kids.length > 0 ? 'Subgrupos' : 'Subgrupos'}</div>
           <p style={{ fontSize: 12, opacity: 0.65, margin: '0 0 10px' }}>
-            {kids.length > 0 ? 'Quien abre el enlace de este grupo elige su paquete y sube el comprobante. Cada pago queda en el paquete elegido.' : 'Si este cobro tiene opciones (Paquete 1, 2, 3…), crea aquí cada una: se comparte un solo enlace y cada persona elige. Cada paquete también tiene su propio enlace.'}
+            {kids.length > 0 ? 'Quien abre el enlace de este grupo elige su opción y sube el comprobante. Cada pago queda en el subgrupo elegido.' : 'Si este cobro tiene opciones (Paquete 1, 2, 3…), crea aquí cada una: se comparte un solo enlace y cada persona elige. Cada paquete también tiene su propio enlace.'}
           </p>
           <div style={{ display: 'grid', gap: 8 }}>
             {kids.map((k) => {
@@ -879,11 +879,11 @@ export default function PaymentGroupDetail() {
           {canManage && (
             <div style={{ marginTop: 12 }}>
               {!pkgOpen ? (
-                <button type="button" className="btn btn-secondary" style={{ fontSize: 13, padding: '6px 14px' }} onClick={() => setPkgOpen(true)}>+ Nuevo paquete</button>
+                <button type="button" className="btn btn-secondary" style={{ fontSize: 13, padding: '6px 14px' }} onClick={() => setPkgOpen(true)}>+ Nuevo subgrupo</button>
               ) : (
                 <form onSubmit={createPackage}>
                   <div className="field">
-                    <label htmlFor="pkgLabel">Nombre del paquete (ej. Paquete 4)</label>
+                    <label htmlFor="pkgLabel">Nombre del subgrupo (ej. Prek 4)</label>
                     <input id="pkgLabel" type="text" maxLength={40} value={pkgLabel} onChange={(e) => setPkgLabel(e.target.value)} required />
                   </div>
                   <div className="field">
@@ -892,7 +892,7 @@ export default function PaymentGroupDetail() {
                   </div>
                   {pkgError && <p className="error-text" style={{ fontSize: 13 }}>{pkgError}</p>}
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button type="submit" className="btn btn-primary" disabled={pkgBusy}>{pkgBusy ? 'Creando...' : 'Crear paquete'}</button>
+                    <button type="submit" className="btn btn-primary" disabled={pkgBusy}>{pkgBusy ? 'Creando...' : 'Crear subgrupo'}</button>
                     <button type="button" className="btn btn-secondary" onClick={() => setPkgOpen(false)}>Cancelar</button>
                   </div>
                 </form>
@@ -924,14 +924,14 @@ export default function PaymentGroupDetail() {
         <div style={{ display: 'flex', gap: 8 }}>
           <input readOnly value={groupLink} onFocus={(e) => e.target.select()} style={{ flex: 1, fontSize: 13 }} />
           <CopyLink link={groupLink} />
-          <WhatsAppShare link={groupLink} text={kids.length > 0 ? 'Hola 👋 Aquí eliges tu paquete y envías tu comprobante de pago:' : 'Hola 👋 Aquí puedes enviar tu comprobante de pago:'} />
+          <WhatsAppShare link={groupLink} text={kids.length > 0 ? 'Hola 👋 Aquí eliges tu grupo y envías tu comprobante de pago:' : 'Hola 👋 Aquí puedes enviar tu comprobante de pago:'} />
         </div>
       </div>
 
       <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
         <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Descargar informe</div>
         <p style={{ fontSize: 12, opacity: 0.65, margin: '0 0 10px' }}>
-          {kids.length > 0 ? 'Incluye todos los paquetes de este grupo, con el total y quién pagó, está en revisión o falta.' : 'Quién pagó, quién está en revisión y quién falta, con el total confirmado.'}
+          {kids.length > 0 ? 'Incluye todos los subgrupos de este grupo, con el total y quién pagó, está en revisión o falta.' : 'Quién pagó, quién está en revisión y quién falta, con el total confirmado.'}
         </p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button type="button" className="btn btn-secondary" disabled={Boolean(reportBusy)} onClick={() => downloadReport('png')}>{reportBusy === 'png' ? 'Generando...' : '🖼 Imagen'}</button>
@@ -1042,7 +1042,7 @@ export default function PaymentGroupDetail() {
         <div className="card" style={{ marginTop: 28, maxWidth: 480 }}>
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Dentro de un grupo principal</div>
           <p style={{ fontSize: 12, opacity: 0.65, margin: '0 0 10px' }}>
-            Si este grupo es un paquete u opción de otro grupo, elígelo aquí: se comparte un solo enlace y cada persona escoge.
+            Si este grupo es un subgrupo u opción de otro grupo, elígelo aquí: se comparte un solo enlace y cada persona escoge.
           </p>
           <div className="field">
             <label htmlFor="parentSel">Grupo principal</label>
@@ -1053,7 +1053,7 @@ export default function PaymentGroupDetail() {
           </div>
           {parentInfo.parent && (
             <div className="field">
-              <label htmlFor="optLabel">Nombre corto que verá quien paga (ej. Paquete 1)</label>
+              <label htmlFor="optLabel">Nombre corto que verá quien paga (ej. Prek 1)</label>
               <input id="optLabel" type="text" maxLength={40} value={parentInfo.label} onChange={(e) => setParentInfo((p) => ({ ...p, label: e.target.value }))} />
             </div>
           )}

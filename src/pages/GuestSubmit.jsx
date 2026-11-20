@@ -541,7 +541,7 @@ export default function GuestSubmit() {
             )}
             {needsPick ? (
               <div style={{ margin: '4px 0 18px' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#2B6459', marginBottom: 10 }}>Elige tu paquete</div>
+                <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#2B6459', marginBottom: 10 }}>Elige tu grupo</div>
                 <div style={{ display: 'grid', gap: 10 }}>
                   {groupOptions.map((o) => (
                     <button
@@ -563,7 +563,7 @@ export default function GuestSubmit() {
             ) : (<>
             {groupOptions.length > 0 && (
               <p style={{ fontSize: 13, margin: '0 0 8px' }}>
-                <button type="button" onClick={() => setChosenOption(null)} style={{ background: 'none', border: 'none', color: '#2B6459', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: 13 }}>← Cambiar paquete</button>
+                <button type="button" onClick={() => setChosenOption(null)} style={{ background: 'none', border: 'none', color: '#2B6459', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: 13 }}>← Cambiar grupo</button>
               </p>
             )}
             <form onSubmit={handleSubmit}>

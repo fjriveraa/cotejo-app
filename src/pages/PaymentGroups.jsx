@@ -140,7 +140,7 @@ export default function PaymentGroups() {
                     <div className="row-title">{g.name}</div>
                     <div className="meta">
                       {kids.length > 0
-                        ? `Grupo principal · ${kids.length} ${kids.length === 1 ? 'paquete' : 'paquetes'}`
+                        ? `Grupo principal · ${kids.length} ${kids.length === 1 ? 'subgrupo' : 'subgrupos'}`
                         : `${g.member_count} ${g.member_count === 1 ? 'persona' : 'personas'} en la lista · ${g.period_type === 'monthly' ? 'cobro mensual' : 'cobro único'}`}
                       {!g.active && ' · 📦 archivado'}
                     </div>

@@ -1,4 +1,4 @@
-// Informe de cobros de un grupo (o de un grupo principal con todos sus paquetes):
+// Informe de cobros de un grupo (o de un grupo principal con todos sus subgrupos):
 // imagen PNG, PDF y Excel. Todo se arma en el navegador, sin librerías nuevas.
 import * as XLSX from 'xlsx'
 
@@ -21,7 +21,7 @@ function statusOf(m) {
   return { key: 'no', text: 'Falta' }
 }
 
-// Reúne los datos: un grupo suelto es una sola sección; un principal, una sección por paquete.
+// Reúne los datos: un grupo suelto es una sola sección; un principal, una sección por subgrupo.
 export async function fetchGroupReport(supabase, { groupId, group, kids, orgName }) {
   const targets = kids && kids.length > 0
     ? kids.map((k) => ({ id: k.group_id, label: k.option_label || k.name, amount: k.default_expected_amount }))
@@ -252,7 +252,7 @@ export function reportToXlsx(report) {
     [report.title],
     [`Informe de cobros · ${nowText()}`],
     [],
-    [report.isParent ? 'Paquete' : 'Grupo', 'Monto', 'Confirmados', 'En revisión', 'Faltan', 'Total confirmado (L)']
+    [report.isParent ? 'Subgrupo' : 'Grupo', 'Monto', 'Confirmados', 'En revisión', 'Faltan', 'Total confirmado (L)']
   ]
   report.sections.forEach((s) => resumen.push([s.label, s.amount ?? '', s.ok, s.rev, s.no, s.total]))
   if (report.sections.length > 1) resumen.push(['TOTAL', '', report.totals.ok, report.totals.rev, report.totals.no, report.totals.amount])
@@ -260,7 +260,7 @@ export function reportToXlsx(report) {
   ws1['!cols'] = [{ wch: 44 }, { wch: 12 }, { wch: 13 }, { wch: 13 }, { wch: 10 }, { wch: 20 }]
   XLSX.utils.book_append_sheet(wb, ws1, 'Resumen')
 
-  const detalle = [[report.isParent ? 'Paquete' : 'Grupo', 'Persona', 'Identificador', 'Estado', 'Esperado (L)', 'Pagado (L)', 'Fecha de envío']]
+  const detalle = [[report.isParent ? 'Subgrupo' : 'Grupo', 'Persona', 'Identificador', 'Estado', 'Esperado (L)', 'Pagado (L)', 'Fecha de envío']]
   report.sections.forEach((s) => s.rows.forEach((r) => detalle.push([s.label, r.name, r.identifier, r.statusText, r.expected ?? '', r.paid || '', dateShort(r.date)])))
   const ws2 = XLSX.utils.aoa_to_sheet(detalle)
   ws2['!cols'] = [{ wch: 30 }, { wch: 36 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }]

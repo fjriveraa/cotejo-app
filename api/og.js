@@ -46,7 +46,7 @@ export default async function handler(req, res) {
       const fmt = (n) => Number(n).toLocaleString('es-HN', { minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2, maximumFractionDigits: 2 })
       const amounts = opts.map((o) => Number(o.expected_amount)).filter((n) => n > 0)
       const cta = opts.length
-        ? (org ? `Elige tu paquete y sube tu comprobante de pago a ${org}.` : 'Elige tu paquete y sube tu comprobante de pago.')
+        ? (org ? `Elige tu grupo y sube tu comprobante de pago a ${org}.` : 'Elige tu grupo y sube tu comprobante de pago.')
         : (org ? `Sube tu comprobante de pago a ${org} y consulta su confirmación.` : 'Sube tu comprobante de pago y consulta su confirmación.')
       const money = amounts.length
         ? amounts.map((n) => bold(`L ${fmt(n)}`)).join(' · ')
