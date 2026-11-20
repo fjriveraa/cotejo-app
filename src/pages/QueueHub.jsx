@@ -49,6 +49,13 @@ export default function QueueHub() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId])
 
+  useEffect(() => {
+    const h = () => loadCounts()
+    window.addEventListener('cotejo:queue-changed', h)
+    return () => window.removeEventListener('cotejo:queue-changed', h)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId])
+
   const pending = (counts.pagos || 0) + (counts.invitados || 0)
 
   function chooseSub(next) {
@@ -89,7 +96,7 @@ export default function QueueHub() {
         )}
       </div>
       {tab === 'reciente' && <RecentActivity onSeen={() => setUnseen(0)} />}
-      {tab === 'hacer' && (sub === 'invitados' ? <GuestQueue /> : <AccountantQueue />)}
+      {tab === 'hacer' && (sub === 'invitados' ? <GuestQueue embedded /> : <AccountantQueue embedded />)}
     </>
   )
 }

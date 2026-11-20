@@ -218,7 +218,8 @@ function QueueBell() {
     }
     load()
     const interval = setInterval(load, 45000)
-    return () => { alive = false; clearInterval(interval) }
+    window.addEventListener('cotejo:queue-changed', load)
+    return () => { alive = false; clearInterval(interval); window.removeEventListener('cotejo:queue-changed', load) }
   }, [orgId])
 
   return (

@@ -352,7 +352,7 @@ export function EvidenceThumb({ path, onClick }) {
   )
 }
 
-export default function AccountantQueue() {
+export default function AccountantQueue({ embedded = false }) {
   const { membership } = useAuth()
   const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
@@ -452,6 +452,7 @@ export default function AccountantQueue() {
       setPayments(data || [])
     }
     setLoading(false)
+    window.dispatchEvent(new Event('cotejo:queue-changed'))
   }
 
   // Fecha del banco confiable primero, sin fecha (o fecha dudosa) al final —
@@ -622,7 +623,7 @@ export default function AccountantQueue() {
   return (
     <div className="container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-        <h2 style={{ marginTop: 0, marginBottom: 0 }}>Cola de confirmación</h2>
+        {embedded ? <p className="hub-intro" style={{ margin: 0, flex: 1 }}>Pagos del equipo por revisar.</p> : <h2 style={{ marginTop: 0, marginBottom: 0 }}>Cola de confirmación</h2>}
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, maxWidth: '100%', minWidth: 0 }}>
           <span style={{ opacity: 0.6, whiteSpace: 'nowrap' }}>Ordenar por</span>
           <select

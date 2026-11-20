@@ -262,7 +262,8 @@ export default function TopBar() {
     }
     loadCounts()
     const interval = setInterval(loadCounts, 45000)
-    return () => { cancelled = true; clearInterval(interval) }
+    window.addEventListener('cotejo:queue-changed', loadCounts)
+    return () => { cancelled = true; clearInterval(interval); window.removeEventListener('cotejo:queue-changed', loadCounts) }
     // location.pathname entra como dependencia para que, al salir de "Cola" o
     // "Invitados" justo después de confirmar/rechazar algo, el número del
     // badge se recalcule de inmediato en vez de esperar hasta 45s.

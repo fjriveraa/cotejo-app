@@ -1474,3 +1474,14 @@ select.org-select { padding: 6px 28px 6px 10px; border-radius: 10px; }
 .gq-link:disabled { opacity: 0.4; }
 .gq-actions-main > span { display: block; }
 .gq-actions-main > span .btn { width: 100%; }
+
+/* Actividad: encabezado compacto y bloques con el mismo ritmo. */
+.hub-intro { font-size: 13px; opacity: 0.62; line-height: 1.45; margin: 0 0 16px; }
+.seg-container .sub-pills { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.seg-container .sub-pill { justify-content: center; padding: 9px 8px; font-size: 13px; }
+.seg-container + .container { padding-top: 14px; }
+.seg-container + .container .empty-state-friendly {
+  margin: 4px 0 28px; padding: 30px 18px; border: 1px dashed var(--border); border-radius: 16px; background: rgba(255, 255, 255, 0.35);
+}
+.seg-container + .container h3 { font-size: 18px; margin: 0 0 4px; }
+.seg-container + .container h3 + p { font-size: 13px; opacity: 0.62; margin: 0 0 14px; }

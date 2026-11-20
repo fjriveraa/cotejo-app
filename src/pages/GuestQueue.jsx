@@ -249,7 +249,7 @@ function GuestArchive({ rows, loading, error }) {
   )
 }
 
-export default function GuestQueue() {
+export default function GuestQueue({ embedded = false }) {
   const { membership } = useAuth()
   const [items, setItems] = useState([])
   const [archive, setArchive] = useState([])
@@ -311,6 +311,7 @@ export default function GuestQueue() {
     const map = {}
     for (const m of matchRes?.data || []) map[m.submission_id] = m
     setBranchMatches(map)
+    window.dispatchEvent(new Event('cotejo:queue-changed'))
   }
 
   async function decide(item, approve, presetNotes = null) {
@@ -376,11 +377,17 @@ export default function GuestQueue() {
 
   return (
     <div className="container">
-      <h2 style={{ marginTop: 0 }}>Comprobantes de invitados</h2>
-      <p style={{ opacity: 0.7, fontSize: 14, marginTop: -8, marginBottom: 24 }}>
-        Comprobantes que clientes enviaron directamente, sin necesitar cuenta en Cotejo. Al confirmar o no poder
-        confirmar, la persona ve el resultado en el enlace que le dimos al enviarlo.
-      </p>
+      {embedded ? (
+        <p className="hub-intro">Clientes que enviaron su comprobante sin cuenta. La persona ve el resultado en el enlace que recibió.</p>
+      ) : (
+        <>
+          <h2 style={{ marginTop: 0 }}>Comprobantes de invitados</h2>
+          <p style={{ opacity: 0.7, fontSize: 14, marginTop: -8, marginBottom: 24 }}>
+            Comprobantes que clientes enviaron directamente, sin necesitar cuenta en Cotejo. Al confirmar o no poder
+            confirmar, la persona ve el resultado en el enlace que le dimos al enviarlo.
+          </p>
+        </>
+      )}
 
       {error && <p className="error-text">{error}</p>}
 
