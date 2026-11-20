@@ -412,143 +412,127 @@ export default function GuestQueue() {
         )}
         <div className="payment-list">
           {visibleItems.map((s) => (
-            <div key={s.submission_id} className="payment-row" style={{ flexWrap: 'wrap', gap: 12 }}>
-              <div>
-                <div className="amount">
+            <div key={s.submission_id} className="gq-card">
+              <div className="gq-head">
+                <div className="gq-amount">
                   {s.currency} {Number(s.amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
-                  <span style={{ marginLeft: 10, fontSize: 11.5, fontWeight: 700, color: 'white', background: bankOf(s) === NO_BANK ? '#6B7280' : bankColor(bankOf(s)), padding: '2px 8px', borderRadius: 6, verticalAlign: 'middle' }}>
-                    {bankOf(s)}
+                </div>
+                <span className="gq-bank" style={{ background: bankOf(s) === NO_BANK ? '#6B7280' : bankColor(bankOf(s)) }}>
+                  {bankOf(s)}
+                </span>
+              </div>
+
+              <div className="gq-person">
+                <div className="gq-name">{s.submitter_name || 'Sin nombre'}</div>
+                {s.submitter_contact && <div className="gq-contact">{s.submitter_contact}</div>}
+              </div>
+
+              {s.group_name && (
+                <div className="gq-group">
+                  <span>📁</span>
+                  <span>
+                    {s.group_name}
+                    {s.group_member_name && s.group_member_name.trim().toLowerCase() !== (s.submitter_name || '').trim().toLowerCase()
+                      ? ` · ${s.group_member_name}` : ''}
                   </span>
                 </div>
-                <div className="meta">
-                  {s.submitter_name || 'Sin nombre'}{s.submitter_contact ? ` · ${s.submitter_contact}` : ''}
-                  {s.reference_raw ? ` · ref: ${s.reference_raw}` : ''}
+              )}
+
+              <dl className="gq-grid">
+                <div>
+                  <dt>Referencia</dt>
+                  <dd>{s.reference_raw || '—'}</dd>
                 </div>
-                {s.group_name && (
-                  <div className="meta" style={{ fontWeight: 600 }}>
-                    📁 {s.group_name}{s.group_member_name ? ` · ${s.group_member_name}` : ''}
+                <div>
+                  <dt>Fecha del comprobante</dt>
+                  <dd className={s.transaction_date && isPlausibleTransactionDate(s.transaction_date) ? 'gq-ok' : 'gq-warn'}>
+                    {s.transaction_date && isPlausibleTransactionDate(s.transaction_date)
+                      ? parseLocalDate(s.transaction_date).toLocaleDateString('es-HN', { day: 'numeric', month: 'short', year: 'numeric' })
+                      : s.transaction_date
+                        ? `⚠ Dudosa: ${parseLocalDate(s.transaction_date).toLocaleDateString('es-HN')}`
+                        : '⚠ No detectada'}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Enviado</dt>
+                  <dd>{new Date(s.created_at).toLocaleString('es-HN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</dd>
+                </div>
+                {(s.origin_account_holder || s.origin_bank) && (
+                  <div>
+                    <dt>Cuenta de origen</dt>
+                    <dd>{[s.origin_account_holder, s.origin_bank ? `(${s.origin_bank})` : null].filter(Boolean).join(' ')}</dd>
                   </div>
                 )}
-                <div className="meta" style={{ fontWeight: 600, color: s.transaction_date && isPlausibleTransactionDate(s.transaction_date) ? '#2B6459' : '#B08900' }}>
-                  {s.transaction_date && isPlausibleTransactionDate(s.transaction_date)
-                    ? `Fecha del comprobante: ${parseLocalDate(s.transaction_date).toLocaleDateString('es-HN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}`
-                    : s.transaction_date
-                      ? `⚠ Fecha dudosa en el comprobante: ${parseLocalDate(s.transaction_date).toLocaleDateString('es-HN')}`
-                      : '⚠ Fecha no detectada en el comprobante'}
-                </div>
-                <div className="meta">
-                  Enviado: {new Date(s.created_at).toLocaleString('es-HN')}
-                  {s.origin_account_holder ? ` · de: ${s.origin_account_holder}` : ''}
-                  {s.origin_bank ? ` (${s.origin_bank})` : ''}
-                </div>
-                <div style={{ marginTop: 4 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: s.is_in_person ? '#2B6459' : '#6B7280' }}>
-                    {s.is_in_person ? '📍 Enviado en tienda' : 'Enviado a distancia'}
-                  </span>
-                  {s.duplicate_reference && (
-                    <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 600, color: '#B91C1C' }}>
-                      ⚠ Esta referencia ya se usó en otra solicitud — revisa con cuidado
-                    </span>
-                  )}
+              </dl>
+
+              <div className="gq-chips">
+                <span className={`gq-chip ${s.is_in_person ? 'gq-chip-ok' : ''}`}>
+                  {s.is_in_person ? '📍 Enviado en tienda' : 'Enviado a distancia'}
+                </span>
+              </div>
+
+              {(s.duplicate_reference || s.hash_seen_elsewhere || (!s.hash_seen_elsewhere && s.similar_hash_elsewhere) || s.account_mismatch || (s.edited_fields && s.edited_fields.length > 0) || branchMatches[s.submission_id]) && (
+                <div className="gq-alerts">
                   {s.hash_seen_elsewhere && (
-                    <span
-                      style={{
-                        marginLeft: 10,
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: '#7C2D12',
-                        background: '#FEE2E2',
-                        padding: '2px 8px',
-                        borderRadius: 6
-                      }}
-                    >
-                      🚨 Este mismo archivo ya fue enviado a otra empresa — posible comprobante reciclado
-                    </span>
-                  )}
-                  {!s.hash_seen_elsewhere && s.similar_hash_elsewhere && (
-                    <span
-                      style={{
-                        marginLeft: 10,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: '#92400E',
-                        background: '#FEF3C7',
-                        padding: '2px 8px',
-                        borderRadius: 6
-                      }}
-                    >
-                      ⚠ Comprobante muy parecido a uno enviado a otra empresa — verificar con calma
-                    </span>
+                    <div className="gq-alert gq-alert-danger">🚨 Este mismo archivo ya fue enviado a otra empresa — posible comprobante reciclado</div>
                   )}
                   {s.account_mismatch && (
-                    <span
-                      style={{
-                        marginLeft: 10,
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: '#7C2D12',
-                        background: '#FEE2E2',
-                        padding: '2px 8px',
-                        borderRadius: 6
-                      }}
-                    >
-                      🚨 El comprobante muestra {s.detected_bank}, que no coincide con ninguna de tus cuentas registradas — pudo ser un pago a otro negocio
-                    </span>
+                    <div className="gq-alert gq-alert-danger">🚨 El comprobante muestra {s.detected_bank}, que no coincide con ninguna de tus cuentas registradas — pudo ser un pago a otro negocio</div>
+                  )}
+                  {s.duplicate_reference && (
+                    <div className="gq-alert gq-alert-danger">⚠ Esta referencia ya se usó en otra solicitud — revisa con cuidado</div>
+                  )}
+                  {!s.hash_seen_elsewhere && s.similar_hash_elsewhere && (
+                    <div className="gq-alert gq-alert-warn">⚠ Comprobante muy parecido a uno enviado a otra empresa — verificar con calma</div>
                   )}
                   {s.edited_fields && s.edited_fields.length > 0 && (
-                    <span
-                      style={{
-                        marginLeft: 10,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: '#92400E',
-                        background: '#FEF3C7',
-                        padding: '2px 8px',
-                        borderRadius: 6
-                      }}
-                    >
-                      ⚠ El cliente cambió {s.edited_fields.join(' y ')} que la IA leyó de la imagen — compara contra el comprobante antes de confirmar
-                    </span>
+                    <div className="gq-alert gq-alert-warn">⚠ El cliente cambió {s.edited_fields.join(' y ')} que la IA leyó de la imagen — compara contra el comprobante antes de confirmar</div>
+                  )}
+                  {branchMatches[s.submission_id] && (
+                    <div className="gq-alert gq-alert-warn">
+                      ⚠ Posible doble envío: la sucursal ya registró este pago ({branchMatches[s.submission_id].payment_public_id}) el{' '}
+                      {new Date(branchMatches[s.submission_id].payment_created_at).toLocaleString('es-HN')}.
+                    </div>
                   )}
                 </div>
-                {forensicsEnabled && (
-                  <div style={{ marginTop: 6 }}>
-                    <ForensicsCheck
-                      submissionId={s.submission_id}
-                      existingScore={s.forensics_score}
-                      existingLabel={s.forensics_label}
-                      onChecked={(result) => applyForensicsResult(s.submission_id, result)}
-                    />
-                  </div>
-                )}
-                {s.notes && <div className="meta">Nota del cliente: {s.notes}</div>}
-                {branchMatches[s.submission_id] && (
-                  <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: '#92400E', background: '#FEF3C7', padding: '6px 10px', borderRadius: 6 }}>
-                    ⚠ Posible doble envío: la sucursal ya registró este pago ({branchMatches[s.submission_id].payment_public_id}) el{' '}
-                    {new Date(branchMatches[s.submission_id].payment_created_at).toLocaleString('es-HN')}.
-                  </div>
-                )}
-              </div>
-              <div className="actions-row">
-                <ViewEvidence path={s.evidence_path} />
-                {branchMatches[s.submission_id] && (
-                  <button
-                    className="btn btn-secondary"
-                    disabled={busyId === s.submission_id}
-                    onClick={() => decide(s, false, `Ya registramos tu pago en la tienda (${branchMatches[s.submission_id].payment_public_id}). No necesitas hacer nada más.`)}
-                  >
-                    Ya registrado en sucursal
+              )}
+
+              {forensicsEnabled && (
+                <div style={{ marginTop: 10 }}>
+                  <ForensicsCheck
+                    submissionId={s.submission_id}
+                    existingScore={s.forensics_score}
+                    existingLabel={s.forensics_label}
+                    onChecked={(result) => applyForensicsResult(s.submission_id, result)}
+                  />
+                </div>
+              )}
+              {s.notes && <div className="gq-note">Nota del cliente: {s.notes}</div>}
+
+              <div className="gq-actions">
+                <div className="gq-actions-main">
+                  <ViewEvidence path={s.evidence_path} />
+                  <button className="btn btn-primary" disabled={busyId === s.submission_id} onClick={() => decide(s, true)}>
+                    {busyId === s.submission_id ? 'Un momento...' : 'Confirmar'}
                   </button>
-                )}
-                <button className="btn btn-primary" disabled={busyId === s.submission_id} onClick={() => decide(s, true)}>
-                  {busyId === s.submission_id ? 'Un momento...' : 'Confirmar'}
-                </button>
-                <button className="btn btn-amber" disabled={busyId === s.submission_id} onClick={() => decide(s, false)}>
-                  No se pudo confirmar
-                </button>
-                <button className="btn btn-secondary" disabled={busyId === s.submission_id} onClick={() => discard(s)}>
-                  Descartar (duplicado o error)
-                </button>
+                </div>
+                <div className="gq-actions-more">
+                  {branchMatches[s.submission_id] && (
+                    <button
+                      className="gq-link"
+                      disabled={busyId === s.submission_id}
+                      onClick={() => decide(s, false, `Ya registramos tu pago en la tienda (${branchMatches[s.submission_id].payment_public_id}). No necesitas hacer nada más.`)}
+                    >
+                      Ya registrado en sucursal
+                    </button>
+                  )}
+                  <button className="gq-link gq-link-amber" disabled={busyId === s.submission_id} onClick={() => decide(s, false)}>
+                    No se pudo confirmar
+                  </button>
+                  <button className="gq-link" disabled={busyId === s.submission_id} onClick={() => discard(s)}>
+                    Descartar
+                  </button>
+                </div>
               </div>
             </div>
           ))}
