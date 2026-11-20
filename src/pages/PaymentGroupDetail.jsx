@@ -852,7 +852,7 @@ export default function PaymentGroupDetail() {
         <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{kids.length > 0 ? 'Subgrupos' : 'Subgrupos'}</div>
           <p style={{ fontSize: 12, opacity: 0.65, margin: '0 0 10px' }}>
-            {kids.length > 0 ? 'Quien abre el enlace de este grupo elige su opción y sube el comprobante. Cada pago queda en el subgrupo elegido.' : 'Si este cobro tiene opciones (Paquete 1, 2, 3…), crea aquí cada una: se comparte un solo enlace y cada persona elige. Cada subgrupo también tiene su propio enlace.'}
+            {kids.length > 0 ? 'Quien abre el enlace de este grupo elige su opción y sube el comprobante. Cada pago queda en el subgrupo elegido.' : 'Si este cobro tiene opciones (Prek 1, Prek 2…), crea aquí cada una: se comparte un solo enlace y cada persona elige. Cada subgrupo también tiene su propio enlace.'}
           </p>
           <div style={{ display: 'grid', gap: 8 }}>
             {kids.map((k) => {
