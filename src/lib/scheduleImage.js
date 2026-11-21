@@ -109,3 +109,61 @@ export async function saveOrShareImage(blob, filename) {
   a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 2000)
 }
+
+// Tabla genérica como PNG (informe de asistencia). cols: [{ label, w, align }], rows: arrays de texto
+// (o { text, color, bold }).
+export function tableToPng({ orgName, title, period, cols, rows, note }) {
+  const scale = 2
+  const pad = 36, topH = 130, headH = 44, rowH = 40, footH = 60
+  const W = pad * 2 + cols.reduce((a, c) => a + c.w, 0)
+  const H = topH + headH + rowH * Math.max(rows.length, 1) + footH
+  const c = document.createElement('canvas')
+  c.width = W * scale; c.height = H * scale
+  const g = c.getContext('2d')
+  g.scale(scale, scale)
+  g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, W, H)
+  const font = (w, s) => `${w} ${s}px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif`
+  const fit = (t, max) => { let s = String(t); const o = s; while (s.length > 1 && g.measureText(s).width > max) s = s.slice(0, -1); return s === o ? o : s.trimEnd() + '…' }
+  const spaced = (t, x, y, sp) => { for (const ch of t) { g.fillText(ch, x, y); x += g.measureText(ch).width + sp } }
+
+  g.textBaseline = 'alphabetic'; g.textAlign = 'left'
+  g.fillStyle = '#7d7668'; g.font = font('700', 12); spaced((orgName || '').toUpperCase(), pad, pad + 8, 1.5)
+  g.fillStyle = '#1f1b14'; g.font = font('700', 28); g.fillText(title, pad, pad + 42)
+  g.fillStyle = '#4a4438'; g.font = font('400', 15); g.fillText(period, pad, pad + 64)
+  g.textAlign = 'right'; g.fillStyle = '#2B6459'; g.font = font('700', 20); g.fillText('Cotejo', W - pad, pad + 14)
+  g.fillStyle = '#9a9384'; g.font = font('400', 11); g.fillText('Control de asistencia', W - pad, pad + 32)
+  g.fillStyle = '#2B6459'; g.fillRect(pad, topH - 14, W - pad * 2, 2)
+
+  const xs = []; let x = pad
+  cols.forEach((col) => { xs.push(x); x += col.w })
+  g.textBaseline = 'middle'
+  cols.forEach((col, i) => {
+    g.fillStyle = '#9a9384'; g.font = font('700', 11)
+    g.textAlign = col.align === 'right' ? 'right' : col.align === 'center' ? 'center' : 'left'
+    const tx = col.align === 'right' ? xs[i] + col.w - 8 : col.align === 'center' ? xs[i] + col.w / 2 : xs[i] + 8
+    g.fillText(col.label.toUpperCase(), tx, topH + headH / 2)
+  })
+  g.fillStyle = '#D9D3C6'; g.fillRect(pad, topH + headH - 1, W - pad * 2, 1)
+
+  if (rows.length === 0) { g.textAlign = 'left'; g.fillStyle = '#7d7668'; g.font = font('400', 14); g.fillText('Sin datos en este período.', pad + 8, topH + headH + rowH / 2) }
+  rows.forEach((r, ri) => {
+    const y = topH + headH + ri * rowH
+    if (ri % 2 === 1) { g.fillStyle = '#FAF8F3'; g.fillRect(pad, y, W - pad * 2, rowH) }
+    if (ri > 0) { g.fillStyle = '#EFEBE0'; g.fillRect(pad, y, W - pad * 2, 1) }
+    cols.forEach((col, i) => {
+      const cell = r[i]
+      const t = cell && typeof cell === 'object' ? cell.text : cell
+      g.fillStyle = (cell && cell.color) || '#1f1b14'
+      g.font = font(i === 0 || (cell && cell.bold) ? '700' : '400', 14)
+      g.textAlign = col.align === 'right' ? 'right' : col.align === 'center' ? 'center' : 'left'
+      const tx = col.align === 'right' ? xs[i] + col.w - 8 : col.align === 'center' ? xs[i] + col.w / 2 : xs[i] + 8
+      g.fillText(fit(t ?? '', col.w - 16), tx, y + rowH / 2)
+    })
+  })
+
+  const fy = topH + headH + rowH * Math.max(rows.length, 1) + 22
+  g.fillStyle = '#D9D3C6'; g.fillRect(pad, fy - 12, W - pad * 2, 1)
+  g.textAlign = 'left'; g.fillStyle = '#7d7668'; g.font = font('400', 12); g.fillText(note || '', pad, fy + 8)
+  g.textAlign = 'right'; g.fillStyle = '#9a9384'; g.font = font('400', 11); g.fillText(`Emitido el ${todayText()}`, W - pad, fy + 8)
+  return new Promise((res) => c.toBlob(res, 'image/png'))
+}

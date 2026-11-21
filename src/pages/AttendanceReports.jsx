@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import * as XLSX from 'xlsx'
-import { scheduleToPng, saveOrShareImage, rangeText } from '../lib/scheduleImage'
+import { scheduleToPng, tableToPng, saveOrShareImage, rangeText } from '../lib/scheduleImage'
 import ScheduleImport from '../components/ScheduleImport'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -70,7 +70,7 @@ export default function AttendanceReports() {
         ))}
       </div>
 
-      {tab === 'reporte' && <ReportTab orgId={orgId} employees={employees} branches={branches} canSupervise={canSupervise} />}
+      {tab === 'reporte' && <ReportTab orgId={orgId} orgName={membership?.organizations?.name || ''} employees={employees} branches={branches} canSupervise={canSupervise} />}
       {tab === 'horarios' && <ScheduleTab orgId={orgId} employees={employees} branches={branches} canEdit={canSupervise} onEmployeesChanged={loadEmployees} />}
       {tab === 'correcciones' && <CorrectionsTab orgId={orgId} canReview={canSupervise} />}
       {tab === 'config' && isOwner && <ConfigTab orgId={orgId} branches={branches} onBranchesChanged={loadBranches} />}
@@ -105,7 +105,7 @@ function groupLabel(view, key) {
   return `Año ${key}`
 }
 
-function ReportTab({ orgId, employees, branches, canSupervise }) {
+function ReportTab({ orgId, orgName, employees, branches, canSupervise }) {
   const [period, setPeriod] = useState('semana')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
@@ -186,6 +186,50 @@ function ReportTab({ orgId, employees, branches, canSupervise }) {
     XLSX.writeFile(wb, `asistencia_${from}_a_${to}.xlsx`)
   }
 
+  async function exportImage() {
+    const sorted = [...rows].sort((a, b) => (a.work_date < b.work_date ? -1 : 1))
+    const ids = new Set(rows.map((r) => r.membership_id))
+    const hm = (m) => `${Math.floor((m || 0) / 60)}:${String(Math.round((m || 0) % 60)).padStart(2, '0')}`
+    const red = '#A2483A'
+    let cols, tableRows, title
+    if (ids.size === 1) {
+      title = `Asistencia de ${shortName(rows[0].employee_name)}`
+      cols = [
+        { label: 'Fecha', w: 130 }, { label: 'Entrada', w: 90, align: 'center' }, { label: 'Salida', w: 90, align: 'center' },
+        { label: 'Almuerzo', w: 100, align: 'center' }, { label: 'Horas', w: 80, align: 'right' }, { label: 'Tarde', w: 80, align: 'right' },
+        { label: 'Extra', w: 80, align: 'right' }, { label: 'Estado', w: 110 }
+      ]
+      tableRows = sorted.map((r) => [
+        r.work_date.split('-').reverse().join('/'),
+        r.first_in ? formatTime(r.first_in) : '',
+        r.last_out ? formatTime(r.last_out) : '',
+        r.absent ? '' : `${r.lunch_minutes || 0} min`,
+        r.absent ? '' : hm(r.worked_minutes),
+        (r.late_minutes || 0) > 0 ? { text: `${r.late_minutes} min`, color: red } : '',
+        (r.overtime_minutes || 0) > 0 ? hm(r.overtime_minutes) : '',
+        r.absent ? { text: 'Ausente', color: red, bold: true } : r.incomplete ? { text: 'Incompleto', color: '#8A5A00', bold: true } : 'Completo'
+      ])
+    } else {
+      title = 'Resumen de asistencia'
+      const byEmp = new Map()
+      for (const r of rows) {
+        if (!byEmp.has(r.membership_id)) byEmp.set(r.membership_id, { name: shortName(r.employee_name), rows: [] })
+        byEmp.get(r.membership_id).rows.push(r)
+      }
+      cols = [
+        { label: 'Empleado', w: 200 }, { label: 'Días', w: 70, align: 'right' }, { label: 'Horas', w: 90, align: 'right' },
+        { label: 'Tarde (min)', w: 110, align: 'right' }, { label: 'Extra', w: 80, align: 'right' },
+        { label: 'Ausencias', w: 100, align: 'right' }, { label: 'Incompletos', w: 110, align: 'right' }
+      ]
+      tableRows = [...byEmp.values()].map(({ name, rows: rs }) => {
+        const s = summarize(rs)
+        return [name, String(s.days), hm(s.worked), s.late ? { text: String(s.late), color: red } : '0', s.overtime ? hm(s.overtime) : '', s.absences ? { text: String(s.absences), color: red } : '0', s.incomplete ? String(s.incomplete) : '0']
+      })
+    }
+    const blob = await tableToPng({ orgName, title, period: rangeText(from, to), cols, rows: tableRows, note: 'Horas efectivas, sin contar el almuerzo.' })
+    await saveOrShareImage(blob, `asistencia_${from}_a_${to}.png`)
+  }
+
   return (
     <div>
       <div className="card att-panel">
@@ -224,7 +268,10 @@ function ReportTab({ orgId, employees, branches, canSupervise }) {
         </div>
         <div className="att-foot">
           <span className="range">Del {from ? formatDateLong(from) : '…'} al {to ? formatDateLong(to) : '…'}</span>
-          <button type="button" className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 12px' }} onClick={exportExcel} disabled={rows.length === 0}>Descargar Excel</button>
+          <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 12px' }} onClick={exportExcel} disabled={rows.length === 0}>Descargar Excel</button>
+            <button type="button" className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 12px' }} onClick={exportImage} disabled={rows.length === 0}>Descargar imagen</button>
+          </span>
         </div>
       </div>
 
