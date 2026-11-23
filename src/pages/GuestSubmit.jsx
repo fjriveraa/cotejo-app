@@ -87,7 +87,7 @@ export default function GuestSubmit() {
   // no el genérico del grupo), no tiene sentido pedirle su nombre otra vez
   // ni dejar que lo cambie -- ya sabemos quién es.
   const [groupInfo, setGroupInfo] = useState(null)
-  const [qtyCfg, setQtyCfg] = useState({ allow: false, label: '', max: 10 })
+  const [qtyCfg, setQtyCfg] = useState({ allow: false, label: '', max: 10, v2: false, linkAmount: null })
   const [qty, setQty] = useState(1)
   const [groupImages, setGroupImages] = useState([])
   const [groupOptions, setGroupOptions] = useState([])
@@ -104,6 +104,11 @@ export default function GuestSubmit() {
     return () => { cancelled = true }
   }, [payOrgId])
   const needsPick = groupOptions.length > 0 && !chosenOption
+  const v2 = qtyCfg.v2
+  const unitAmount = Number(groupInfo?.member_expected_amount || groupInfo?.default_expected_amount || (v2 ? qtyCfg.linkAmount : 0)) || 0
+  const stepBadge = (n, inv) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 11, background: inv ? '#fff' : '#2B6459', color: inv ? '#2B6459' : '#fff', fontSize: 13, fontWeight: 700, marginRight: 8, letterSpacing: 0 }}>{n}</span>
+  )
   const [form, setForm] = useState(emptyForm)
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
@@ -172,7 +177,7 @@ export default function GuestSubmit() {
       supabase.rpc('payment_group_public_info', { p_link_code: linkCode }).then(({ data: info }) => {
         if (!cancelled) {
           setGroupImages(info?.[0]?.image_paths || [])
-          setQtyCfg({ allow: Boolean(info?.[0]?.allow_quantity), label: info?.[0]?.quantity_label || '', max: info?.[0]?.quantity_max || 10 })
+          setQtyCfg({ allow: Boolean(info?.[0]?.allow_quantity), label: info?.[0]?.quantity_label || '', max: info?.[0]?.quantity_max || 10, v2: Boolean(info?.[0]?.compact_layout), linkAmount: info?.[0]?.expected_amount ?? null })
         }
       })
       if (row.member_id) {
@@ -506,7 +511,17 @@ export default function GuestSubmit() {
                 Enviando como <strong>{groupInfo.member_display_name}</strong>.
               </p>
             )}
-            {groupImages.length > 0 && (
+            {groupImages.length > 0 && v2 && (
+              <div style={{ display: 'flex', gap: 10, overflowX: 'auto', margin: '0 0 14px', WebkitOverflowScrolling: 'touch', alignItems: 'center' }}>
+                {groupImages.map((p, i) => (
+                  <a key={p} href={groupImageUrl(p)} target="_blank" rel="noreferrer" style={{ flex: 'none', position: 'relative' }}>
+                    <img src={groupImageUrl(p)} alt={`Referencia ${i + 1}`} style={{ height: 120, width: 'auto', maxWidth: 220, objectFit: 'contain', borderRadius: 10, display: 'block', border: '1px solid rgba(0,0,0,0.10)', background: '#fff' }} />
+                  </a>
+                ))}
+                <span style={{ fontSize: 12.5, opacity: 0.65, flex: 'none', maxWidth: 90, lineHeight: 1.3 }}>Toca la imagen para ampliarla</span>
+              </div>
+            )}
+            {groupImages.length > 0 && !v2 && (
               <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '0 0 14px', WebkitOverflowScrolling: 'touch' }}>
                 {groupImages.map((p, i) => (
                   <a key={p} href={groupImageUrl(p)} target="_blank" rel="noreferrer" style={{ flex: 'none', width: groupImages.length === 1 ? '100%' : '78%' }}>
@@ -525,22 +540,22 @@ export default function GuestSubmit() {
                 </div>
               </div>
             )}
-            {!needsPick && (groupInfo?.member_expected_amount || groupInfo?.default_expected_amount) && (
+            {!needsPick && unitAmount > 0 && (
               <div style={{ margin: '4px 0 18px', padding: '14px 16px', borderRadius: 14, background: 'rgba(43,100,89,0.10)', border: '1px solid rgba(43,100,89,0.25)', textAlign: 'center' }}>
                 <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#2B6459' }}>Monto a pagar</div>
                 <div style={{ fontFamily: 'var(--font-display, Fraunces, serif)', fontSize: 38, fontWeight: 700, lineHeight: 1.15, color: '#16483F' }}>
-                  L {(Number(groupInfo.member_expected_amount || groupInfo.default_expected_amount) * (qtyCfg.allow ? qty : 1)).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+                  L {(unitAmount * (qtyCfg.allow ? qty : 1)).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
                 </div>
                 {qtyCfg.allow && qty > 1 && (
                   <div style={{ fontSize: 14, opacity: 0.75, marginTop: 2 }}>
-                    {qty} × L {Number(groupInfo.member_expected_amount || groupInfo.default_expected_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+                    {qty} × L {unitAmount.toLocaleString('es-HN', { minimumFractionDigits: 2 })}
                   </div>
                 )}
               </div>
             )}
             {!needsPick && payAccounts.length > 0 && (
               <div style={{ margin: '0 0 18px', padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(0,0,0,0.12)', background: '#fff' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#2B6459', marginBottom: 8 }}>Dónde pagar</div>
+                <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#2B6459', marginBottom: 8 }}>{v2 && stepBadge(1)}{v2 ? 'Deposita aquí' : 'Dónde pagar'}</div>
                 <div style={{ display: 'grid', gap: 12 }}>
                   {payAccounts.map((a, i) => (
                     <div key={`${a.bank}-${a.account_number}-${i}`}>
@@ -550,7 +565,7 @@ export default function GuestSubmit() {
                         <button
                           type="button"
                           className="btn btn-secondary"
-                          style={{ fontSize: 12, padding: '3px 10px' }}
+                          style={v2 ? { fontSize: 14, padding: '10px 16px', minHeight: 44 } : { fontSize: 12, padding: '3px 10px' }}
                           onClick={() => { navigator.clipboard?.writeText(String(a.account_number).replace(/\s/g, '')); setCopiedAcc(i); setTimeout(() => setCopiedAcc(null), 2000) }}
                         >{copiedAcc === i ? 'Copiado' : 'Copiar'}</button>
                       </div>
@@ -584,7 +599,7 @@ export default function GuestSubmit() {
             ) : (<>
             {groupOptions.length > 0 && (
               <p style={{ fontSize: 13, margin: '0 0 8px' }}>
-                <button type="button" onClick={() => setChosenOption(null)} style={{ background: 'none', border: 'none', color: '#2B6459', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: 13 }}>← Cambiar grupo</button>
+                <button type="button" onClick={() => setChosenOption(null)} style={v2 ? { background: 'none', border: '1px solid rgba(43,100,89,0.35)', borderRadius: 10, color: '#2B6459', cursor: 'pointer', padding: '10px 14px', minHeight: 44, fontSize: 14, fontWeight: 600 } : { background: 'none', border: 'none', color: '#2B6459', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: 13 }}>← Cambiar grupo</button>
               </p>
             )}
             <form onSubmit={handleSubmit}>
@@ -595,7 +610,7 @@ export default function GuestSubmit() {
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '28px 16px', border: '2px dashed #2B6459', borderRadius: 14, background: 'rgba(43, 100, 89, 0.06)', cursor: 'pointer', textAlign: 'center', fontWeight: 600, color: '#2B6459' }}
                   >
                     <span style={{ fontSize: 34, lineHeight: 1 }}>📷</span>
-                    <span style={{ fontSize: 16 }}>Subir o tomar foto del comprobante</span>
+                    <span style={{ fontSize: 16 }}>{v2 && stepBadge(2)}{v2 ? 'Sube tu comprobante de pago' : 'Subir o tomar foto del comprobante'}</span>
                     <span style={{ fontSize: 12.5, fontWeight: 400, opacity: 0.75 }}>Nosotros leemos los datos por ti</span>
                   </label>
                 )}
@@ -743,8 +758,16 @@ export default function GuestSubmit() {
               </div>
               </>)}
             </form>
+            {v2 && <div style={{ height: 96 }} aria-hidden="true" />}
             </>)}
           </>
+        )}
+        {v2 && selectedOrg && !needsPick && !processing && !showFields && (
+          <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 20, padding: '10px 16px calc(10px + env(safe-area-inset-bottom))', background: 'rgba(250,247,240,0.96)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+            <label htmlFor="file" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', maxWidth: 520, margin: '0 auto', minHeight: 52, fontSize: 16, fontWeight: 700, cursor: 'pointer', boxSizing: 'border-box' }}>
+              📷 {stepBadge(2, true)}Subir comprobante{unitAmount > 0 ? ` · L ${(unitAmount * (qtyCfg.allow ? qty : 1)).toLocaleString('es-HN', { minimumFractionDigits: 2 })}` : ''}
+            </label>
+          </div>
         )}
 
         {!isDirectLink && !isGroupLink && (
