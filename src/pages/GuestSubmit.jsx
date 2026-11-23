@@ -604,7 +604,7 @@ export default function GuestSubmit() {
             )}
             <form onSubmit={handleSubmit}>
               <div className="field">
-                {!processing && !showFields && (
+                {!processing && !showFields && !v2 && (
                   <label
                     htmlFor="file"
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '28px 16px', border: '2px dashed #2B6459', borderRadius: 14, background: 'rgba(43, 100, 89, 0.06)', cursor: 'pointer', textAlign: 'center', fontWeight: 600, color: '#2B6459' }}
