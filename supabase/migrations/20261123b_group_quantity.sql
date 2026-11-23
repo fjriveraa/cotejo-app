@@ -1,0 +1,7 @@
+-- Cantidad elegible por quien paga (aplicada en producción como "group_quantity").
+-- payment_groups: allow_quantity, quantity_label, quantity_max. guest_submissions: quantity (default 1).
+-- group_quantity_settings(gid): los ajustes efectivos (un subgrupo usa los del grupo principal).
+-- set_payment_group_quantity(gid, allow, label, max): solo propietario/admin.
+-- payment_group_public_info: + allow_quantity, quantity_label, quantity_max.
+-- submit_guest_payment: + p_quantity (se limita al máximo del grupo; 1 si no se permite).
+-- list_payment_group_members: + paid_quantity. list_guest_submissions: + quantity.

@@ -87,6 +87,8 @@ export default function GuestSubmit() {
   // no el genérico del grupo), no tiene sentido pedirle su nombre otra vez
   // ni dejar que lo cambie -- ya sabemos quién es.
   const [groupInfo, setGroupInfo] = useState(null)
+  const [qtyCfg, setQtyCfg] = useState({ allow: false, label: '', max: 10 })
+  const [qty, setQty] = useState(1)
   const [groupImages, setGroupImages] = useState([])
   const [groupOptions, setGroupOptions] = useState([])
   const [payAccounts, setPayAccounts] = useState([])
@@ -168,7 +170,10 @@ export default function GuestSubmit() {
         if (!cancelled) setGroupOptions(opts || [])
       })
       supabase.rpc('payment_group_public_info', { p_link_code: linkCode }).then(({ data: info }) => {
-        if (!cancelled) setGroupImages(info?.[0]?.image_paths || [])
+        if (!cancelled) {
+          setGroupImages(info?.[0]?.image_paths || [])
+          setQtyCfg({ allow: Boolean(info?.[0]?.allow_quantity), label: info?.[0]?.quantity_label || '', max: info?.[0]?.quantity_max || 10 })
+        }
       })
       if (row.member_id) {
         // Enlace individual: ya sabemos quién es -- se precarga el nombre y
@@ -381,7 +386,8 @@ export default function GuestSubmit() {
         p_ai_transaction_date: /^\d{4}-\d{2}-\d{2}$/.test(rawExtraction?.transaction_date || '') ? rawExtraction.transaction_date : null,
         p_ai_confidence: rawExtraction?.confidence || null,
         p_group_id: groupInfo?.group_id || null,
-        p_group_member_id: groupInfo?.member_id || null
+        p_group_member_id: groupInfo?.member_id || null,
+        p_quantity: qtyCfg.allow ? qty : 1
       })
 
       if (rpcError) throw rpcError
@@ -509,12 +515,27 @@ export default function GuestSubmit() {
                 ))}
               </div>
             )}
+            {!needsPick && qtyCfg.allow && (
+              <div style={{ margin: '4px 0 14px', padding: '12px 16px', borderRadius: 14, border: '1px solid rgba(0,0,0,0.12)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>{qtyCfg.label ? `¿Cuántas ${qtyCfg.label}?` : 'Cantidad'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <button type="button" aria-label="Menos" onClick={() => setQty((q) => Math.max(1, q - 1))} disabled={qty <= 1} style={{ width: 44, height: 44, borderRadius: 12, border: '1px solid #2B6459', background: '#fff', color: '#2B6459', fontSize: 24, fontWeight: 700, cursor: 'pointer', opacity: qty <= 1 ? 0.35 : 1 }}>−</button>
+                  <span style={{ minWidth: 40, textAlign: 'center', fontSize: 24, fontWeight: 700, fontFamily: 'var(--font-display, Fraunces, serif)' }}>{qty}</span>
+                  <button type="button" aria-label="Más" onClick={() => setQty((q) => Math.min(qtyCfg.max, q + 1))} disabled={qty >= qtyCfg.max} style={{ width: 44, height: 44, borderRadius: 12, border: '1px solid #2B6459', background: '#2B6459', color: '#fff', fontSize: 24, fontWeight: 700, cursor: 'pointer', opacity: qty >= qtyCfg.max ? 0.35 : 1 }}>+</button>
+                </div>
+              </div>
+            )}
             {!needsPick && (groupInfo?.member_expected_amount || groupInfo?.default_expected_amount) && (
               <div style={{ margin: '4px 0 18px', padding: '14px 16px', borderRadius: 14, background: 'rgba(43,100,89,0.10)', border: '1px solid rgba(43,100,89,0.25)', textAlign: 'center' }}>
                 <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#2B6459' }}>Monto a pagar</div>
                 <div style={{ fontFamily: 'var(--font-display, Fraunces, serif)', fontSize: 38, fontWeight: 700, lineHeight: 1.15, color: '#16483F' }}>
-                  L {Number(groupInfo.member_expected_amount || groupInfo.default_expected_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+                  L {(Number(groupInfo.member_expected_amount || groupInfo.default_expected_amount) * (qtyCfg.allow ? qty : 1)).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
                 </div>
+                {qtyCfg.allow && qty > 1 && (
+                  <div style={{ fontSize: 14, opacity: 0.75, marginTop: 2 }}>
+                    {qty} × L {Number(groupInfo.member_expected_amount || groupInfo.default_expected_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+                  </div>
+                )}
               </div>
             )}
             {!needsPick && payAccounts.length > 0 && (

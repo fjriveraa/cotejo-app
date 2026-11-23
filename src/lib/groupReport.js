@@ -37,6 +37,7 @@ export async function fetchGroupReport(supabase, { groupId, group, kids, orgName
         identifier: m.identifier || '',
         expected: m.expected_amount != null ? Number(m.expected_amount) : (t.amount != null ? Number(t.amount) : null),
         paid: m.paid ? Number(m.paid_amount || 0) : 0,
+        qty: m.paid ? Number(m.paid_quantity || 1) : 0,
         status: st.key,
         statusText: st.text,
         date: m.submitted_at || null
@@ -49,7 +50,8 @@ export async function fetchGroupReport(supabase, { groupId, group, kids, orgName
       ok: rows.filter((r) => r.status === 'ok').length,
       rev: rows.filter((r) => r.status === 'rev').length,
       no: rows.filter((r) => r.status === 'no').length,
-      total: rows.filter((r) => r.status === 'ok').reduce((s, r) => s + r.paid, 0)
+      total: rows.filter((r) => r.status === 'ok').reduce((s, r) => s + r.paid, 0),
+      units: rows.filter((r) => r.status === 'ok').reduce((s, r) => s + r.qty, 0)
     })
   }
   const sum = (k) => sections.reduce((s, x) => s + x[k], 0)
@@ -58,7 +60,7 @@ export async function fetchGroupReport(supabase, { groupId, group, kids, orgName
     title: group.name,
     isParent: Boolean(kids && kids.length > 0),
     sections,
-    totals: { ok: sum('ok'), rev: sum('rev'), no: sum('no'), amount: sum('total') }
+    totals: { ok: sum('ok'), rev: sum('rev'), no: sum('no'), amount: sum('total'), units: sum('units') }
   }
 }
 
@@ -100,7 +102,7 @@ function buildItems(report) {
     draw(g, y) {
       const boxes = [
         ['TOTAL CONFIRMADO', money(report.totals.amount), '#16483F'],
-        ['PAGOS CONFIRMADOS', String(report.totals.ok), COLORS.ok],
+        [report.totals.units > report.totals.ok ? 'UNIDADES CONFIRMADAS' : 'PAGOS CONFIRMADOS', String(report.totals.units > report.totals.ok ? report.totals.units : report.totals.ok), COLORS.ok],
         ['EN REVISIÓN', String(report.totals.rev), COLORS.rev],
         ['FALTAN', String(report.totals.no), COLORS.no]
       ]
@@ -124,7 +126,7 @@ function buildItems(report) {
           g.fillStyle = '#16483F'; g.font = font('700', 32)
           g.fillText(`${s.label}${s.amount != null ? ` · ${money(s.amount)}` : ''}`, PAD, y + 50)
           g.textAlign = 'right'; g.fillStyle = '#4a4438'; g.font = font('400', 22)
-          g.fillText(`${s.ok} confirmados · ${money(s.total)}${s.rev ? ` · ${s.rev} en revisión` : ''}${s.no ? ` · ${s.no} faltan` : ''}`, W - PAD, y + 50)
+          g.fillText(`${s.ok} confirmados${s.units > s.ok ? ` (${s.units} uds.)` : ''} · ${money(s.total)}${s.rev ? ` · ${s.rev} en revisión` : ''}${s.no ? ` · ${s.no} faltan` : ''}`, W - PAD, y + 50)
         }
       })
     }
@@ -252,18 +254,18 @@ export function reportToXlsx(report) {
     [report.title],
     [`Informe de cobros · ${nowText()}`],
     [],
-    [report.isParent ? 'Subgrupo' : 'Grupo', 'Monto', 'Confirmados', 'En revisión', 'Faltan', 'Total confirmado (L)']
+    [report.isParent ? 'Subgrupo' : 'Grupo', 'Monto', 'Confirmados', 'Unidades confirmadas', 'En revisión', 'Faltan', 'Total confirmado (L)']
   ]
-  report.sections.forEach((s) => resumen.push([s.label, s.amount ?? '', s.ok, s.rev, s.no, s.total]))
-  if (report.sections.length > 1) resumen.push(['TOTAL', '', report.totals.ok, report.totals.rev, report.totals.no, report.totals.amount])
+  report.sections.forEach((s) => resumen.push([s.label, s.amount ?? '', s.ok, s.units, s.rev, s.no, s.total]))
+  if (report.sections.length > 1) resumen.push(['TOTAL', '', report.totals.ok, report.totals.units, report.totals.rev, report.totals.no, report.totals.amount])
   const ws1 = XLSX.utils.aoa_to_sheet(resumen)
-  ws1['!cols'] = [{ wch: 44 }, { wch: 12 }, { wch: 13 }, { wch: 13 }, { wch: 10 }, { wch: 20 }]
+  ws1['!cols'] = [{ wch: 44 }, { wch: 12 }, { wch: 13 }, { wch: 20 }, { wch: 13 }, { wch: 10 }, { wch: 20 }]
   XLSX.utils.book_append_sheet(wb, ws1, 'Resumen')
 
-  const detalle = [[report.isParent ? 'Subgrupo' : 'Grupo', 'Persona', 'Identificador', 'Estado', 'Esperado (L)', 'Pagado (L)', 'Fecha de envío']]
-  report.sections.forEach((s) => s.rows.forEach((r) => detalle.push([s.label, r.name, r.identifier, r.statusText, r.expected ?? '', r.paid || '', dateShort(r.date)])))
+  const detalle = [[report.isParent ? 'Subgrupo' : 'Grupo', 'Persona', 'Identificador', 'Estado', 'Esperado (L)', 'Cantidad', 'Pagado (L)', 'Fecha de envío']]
+  report.sections.forEach((s) => s.rows.forEach((r) => detalle.push([s.label, r.name, r.identifier, r.statusText, r.expected ?? '', r.qty || '', r.paid || '', dateShort(r.date)])))
   const ws2 = XLSX.utils.aoa_to_sheet(detalle)
-  ws2['!cols'] = [{ wch: 30 }, { wch: 36 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }]
+  ws2['!cols'] = [{ wch: 30 }, { wch: 36 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 16 }]
   XLSX.utils.book_append_sheet(wb, ws2, 'Detalle')
   const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
   return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })

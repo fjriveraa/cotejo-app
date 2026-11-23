@@ -439,6 +439,7 @@ export default function GuestQueue({ embedded = false }) {
                   <span>📁</span>
                   <span>
                     {s.group_name}
+                    {s.quantity > 1 ? ` · ×${s.quantity}` : ''}
                     {s.group_member_name && s.group_member_name.trim().toLowerCase() !== (s.submitter_name || '').trim().toLowerCase()
                       ? ` · ${s.group_member_name}` : ''}
                   </span>

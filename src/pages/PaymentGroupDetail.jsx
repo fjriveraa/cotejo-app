@@ -149,7 +149,7 @@ function MonthHistorySection({ groupId, period, paidCount, totalCount, defaultOp
             <div key={m.member_id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '6px 0', borderTop: '1px solid #f1f1f1' }}>
               <span style={{ fontSize: 13 }}>{m.display_name}{m.identifier ? ` · ${m.identifier}` : ''}</span>
               <span style={{ fontSize: 12, opacity: 0.7 }}>
-                {m.paid ? `✓ L ${Number(m.paid_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}` : '✗ No pagó'}
+                {m.paid ? `✓ L ${Number(m.paid_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}${m.paid_quantity > 1 ? ` · ×${m.paid_quantity}` : ''}` : '✗ No pagó'}
               </span>
             </div>
           ))}
@@ -553,6 +553,11 @@ export default function PaymentGroupDetail() {
   const [msgDraft, setMsgDraft] = useState('')
   const [msgBusy, setMsgBusy] = useState(false)
   const [msgInfo, setMsgInfo] = useState(null)
+  const [qtyOn, setQtyOn] = useState(false)
+  const [qtyLabel, setQtyLabel] = useState('')
+  const [qtyMax, setQtyMax] = useState('10')
+  const [qtyBusy, setQtyBusy] = useState(false)
+  const [qtyInfo, setQtyInfo] = useState(null)
   const [editName, setEditName] = useState('')
   const [editAmount, setEditAmount] = useState('')
   const [group, setGroup] = useState(null)
@@ -610,6 +615,7 @@ export default function PaymentGroupDetail() {
     if (groupData?.[0]?.link_code) {
       const { data: info } = await supabase.rpc('payment_group_public_info', { p_link_code: groupData[0].link_code })
       setImages(info?.[0]?.image_paths || [])
+      setQtyOn(Boolean(info?.[0]?.allow_quantity)); setQtyLabel(info?.[0]?.quantity_label || ''); setQtyMax(String(info?.[0]?.quantity_max || 10))
     }
     // Subgrupos dentro de este grupo y a qué grupo principal pertenece (si falla, se ignora).
     try {
@@ -660,6 +666,13 @@ export default function PaymentGroupDetail() {
     if (err) { setMsgInfo({ error: err.message }); return }
     setShareMsg(msgDraft.trim())
     setMsgInfo({ ok: msgDraft.trim() ? 'Mensaje guardado.' : 'Mensaje quitado.' })
+  }
+
+  async function saveQuantity() {
+    setQtyBusy(true); setQtyInfo(null)
+    const { error: err } = await supabase.rpc('set_payment_group_quantity', { p_group_id: groupId, p_allow: qtyOn, p_label: qtyLabel, p_max: Number(qtyMax) || 10 })
+    setQtyBusy(false)
+    setQtyInfo(err ? { error: err.message } : { ok: 'Guardado.' })
   }
 
   async function toggleArchive() {
@@ -866,6 +879,33 @@ export default function PaymentGroupDetail() {
         </div>
       )}
 
+      {canManage && !parentInfo?.parent && (
+        <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Cantidad</div>
+          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, cursor: 'pointer' }}>
+            <input type="checkbox" checked={qtyOn} onChange={(e) => { setQtyOn(e.target.checked); setQtyInfo(null) }} style={{ marginTop: 3 }} />
+            <span>Quien paga puede elegir cuántas unidades quiere. El monto a pagar se multiplica solo.</span>
+          </label>
+          {qtyOn && (
+            <div style={{ display: 'grid', gap: 10, marginTop: 12, gridTemplateColumns: '1fr 110px' }}>
+              <div>
+                <label htmlFor="qtyLabel">Qué se cuenta (opcional)</label>
+                <input id="qtyLabel" value={qtyLabel} onChange={(e) => { setQtyLabel(e.target.value); setQtyInfo(null) }} maxLength={30} placeholder="ej. casitas, entradas" />
+              </div>
+              <div>
+                <label htmlFor="qtyMax">Máximo</label>
+                <input id="qtyMax" type="number" min="2" max="100" value={qtyMax} onChange={(e) => { setQtyMax(e.target.value); setQtyInfo(null) }} />
+              </div>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 12 }}>
+            <button type="button" className="btn btn-secondary" style={{ fontSize: 13, padding: '6px 14px' }} onClick={saveQuantity} disabled={qtyBusy}>{qtyBusy ? 'Guardando...' : 'Guardar'}</button>
+            {qtyInfo?.ok && <span style={{ fontSize: 13, color: '#2B6459' }}>{qtyInfo.ok}</span>}
+            {qtyInfo?.error && <span className="error-text" style={{ fontSize: 13 }}>{qtyInfo.error}</span>}
+          </div>
+        </div>
+      )}
+
       {(canManage || shareMsg) && (
         <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Mensaje para compartir</div>
@@ -1052,6 +1092,7 @@ export default function PaymentGroupDetail() {
                   </div>
                   <div className="meta">
                     L {Number(m.paid_amount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+                    {m.paid_quantity > 1 ? ` · ×${m.paid_quantity}` : ''}
                     {' · '}{m.entry_method === 'manual' ? 'Registrado manualmente' : m.entry_status === 'confirmed' ? 'Comprobante confirmado' : 'Comprobante en revisión'}
                   </div>
                   <PaymentStreak history={historyByMember[m.member_id]} />
