@@ -207,7 +207,8 @@ function WhatsAppShare({ link, text, phone, label = 'WhatsApp' }) {
     let digits = String(phone || '').replace(/\D/g, '')
     if (digits.length === 8) digits = `504${digits}`
     const to = digits.length >= 10 ? digits : ''
-    window.open(`https://wa.me/${to}?text=${encodeURIComponent(`${text}\n${link}`)}`, '_blank', 'noopener')
+    const sep = String(text).includes('\n') ? '\n\n' : '\n'
+    window.open(`https://wa.me/${to}?text=${encodeURIComponent(`${text}${sep}${link}`)}`, '_blank', 'noopener')
   }
   return (
     <button type="button" className="btn btn-secondary" onClick={send} style={{ fontSize: 12, padding: '4px 10px', color: '#1B7F4B', borderColor: 'rgba(27,127,75,0.5)' }}>
@@ -548,6 +549,10 @@ export default function PaymentGroupDetail() {
   const canManage = ['propietario', 'admin'].includes(membership?.role)
   const [manageBusy, setManageBusy] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [shareMsg, setShareMsg] = useState('')
+  const [msgDraft, setMsgDraft] = useState('')
+  const [msgBusy, setMsgBusy] = useState(false)
+  const [msgInfo, setMsgInfo] = useState(null)
   const [editName, setEditName] = useState('')
   const [editAmount, setEditAmount] = useState('')
   const [group, setGroup] = useState(null)
@@ -598,6 +603,10 @@ export default function PaymentGroupDetail() {
       return
     }
     setGroup(groupData?.[0] || null)
+    try {
+      const { data: msg } = await supabase.rpc('get_payment_group_message', { p_group_id: groupId })
+      setShareMsg(msg || ''); setMsgDraft(msg || '')
+    } catch { /* sin mensaje si falla */ }
     if (groupData?.[0]?.link_code) {
       const { data: info } = await supabase.rpc('payment_group_public_info', { p_link_code: groupData[0].link_code })
       setImages(info?.[0]?.image_paths || [])
@@ -642,6 +651,15 @@ export default function PaymentGroupDetail() {
     if (err) { setError(err.message); return }
     setEditing(false)
     load()
+  }
+
+  async function saveMessage() {
+    setMsgBusy(true); setMsgInfo(null)
+    const { error: err } = await supabase.rpc('set_payment_group_message', { p_group_id: groupId, p_message: msgDraft })
+    setMsgBusy(false)
+    if (err) { setMsgInfo({ error: err.message }); return }
+    setShareMsg(msgDraft.trim())
+    setMsgInfo({ ok: msgDraft.trim() ? 'Mensaje guardado.' : 'Mensaje quitado.' })
   }
 
   async function toggleArchive() {
@@ -848,6 +866,37 @@ export default function PaymentGroupDetail() {
         </div>
       )}
 
+      {(canManage || shareMsg) && (
+        <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Mensaje para compartir</div>
+          <p style={{ fontSize: 13, opacity: 0.7, margin: '0 0 10px' }}>
+            Es el texto que se envía por WhatsApp junto con el enlace: la descripción, precio, fecha de entrega, etc.
+          </p>
+          {canManage ? (
+            <>
+              <textarea
+                value={msgDraft}
+                onChange={(e) => { setMsgDraft(e.target.value); setMsgInfo(null) }}
+                rows={10}
+                maxLength={3000}
+                placeholder={'ej. 🎄 *¡Arrancamos la PREVENTA!* ...\nPrecio: L.550'}
+                style={{ width: '100%', fontSize: 14, lineHeight: 1.45, resize: 'vertical', boxSizing: 'border-box' }}
+              />
+              <p style={{ fontSize: 12, opacity: 0.6, margin: '4px 0 10px' }}>
+                Para negrita en WhatsApp escribe *así*. Si lo dejas vacío se envía el saludo normal. El enlace se agrega solo al final.
+              </p>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button type="button" className="btn btn-secondary" style={{ fontSize: 13, padding: '6px 14px' }} onClick={saveMessage} disabled={msgBusy || msgDraft.trim() === shareMsg}>{msgBusy ? 'Guardando...' : 'Guardar mensaje'}</button>
+                {msgInfo?.ok && <span style={{ fontSize: 13, color: '#2B6459' }}>{msgInfo.ok}</span>}
+                {msgInfo?.error && <span className="error-text" style={{ fontSize: 13 }}>{msgInfo.error}</span>}
+              </div>
+            </>
+          ) : (
+            <p style={{ fontSize: 14, whiteSpace: 'pre-wrap', margin: 0 }}>{shareMsg}</p>
+          )}
+        </div>
+      )}
+
       {(kids.length > 0 || (canManage && members.length === 0 && !parentInfo.parent)) && (
         <div className="card" style={{ marginBottom: 20, maxWidth: 480 }}>
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{kids.length > 0 ? 'Subgrupos' : 'Subgrupos'}</div>
@@ -870,7 +919,7 @@ export default function PaymentGroupDetail() {
                   </button>
                   <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                     <CopyLink link={kLink} />
-                    <WhatsAppShare link={kLink} text="Hola 👋 Aquí puedes enviar tu comprobante de pago:" />
+                    <WhatsAppShare link={kLink} text={shareMsg || 'Hola 👋 Aquí puedes enviar tu comprobante de pago:'} />
                   </div>
                 </div>
               )
@@ -924,7 +973,7 @@ export default function PaymentGroupDetail() {
         <div style={{ display: 'flex', gap: 8 }}>
           <input readOnly value={groupLink} onFocus={(e) => e.target.select()} style={{ flex: 1, fontSize: 13 }} />
           <CopyLink link={groupLink} />
-          <WhatsAppShare link={groupLink} text={kids.length > 0 ? 'Hola 👋 Aquí eliges tu grupo y envías tu comprobante de pago:' : 'Hola 👋 Aquí puedes enviar tu comprobante de pago:'} />
+          <WhatsAppShare link={groupLink} text={shareMsg || (kids.length > 0 ? 'Hola 👋 Aquí eliges tu grupo y envías tu comprobante de pago:' : 'Hola 👋 Aquí puedes enviar tu comprobante de pago:')} />
         </div>
       </div>
 
