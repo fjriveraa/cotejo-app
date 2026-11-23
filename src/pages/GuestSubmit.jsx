@@ -448,8 +448,8 @@ export default function GuestSubmit() {
   return (
     <div className="login-wrap">
       <div className="card login-card" style={{ maxWidth: 480 }}>
-        <PublicPageHeader />
-        <h1>Enviar comprobante de pago</h1>
+        <PublicPageHeader compact={v2} />
+        <h1 style={v2 ? { fontSize: 26, margin: '0 0 12px' } : undefined}>{v2 ? 'Enviar comprobante' : 'Enviar comprobante de pago'}</h1>
         {!isDirectLink && !isGroupLink && <p>Busca la empresa a la que le hiciste la transferencia para que confirmen tu pago.</p>}
 
         {!selectedOrg ? (
@@ -497,7 +497,7 @@ export default function GuestSubmit() {
           </>
         ) : (
           <>
-            <p style={{ fontSize: 14 }}>
+            {!v2 && <p style={{ fontSize: 14 }}>
               Enviando comprobante a <strong>{selectedOrg.name}</strong>
               {groupInfo?.group_name ? <> · <strong>{groupInfo.group_name}</strong></> : null}.{' '}
               {!isDirectLink && !isGroupLink && (
@@ -505,20 +505,27 @@ export default function GuestSubmit() {
                   Cambiar empresa
                 </button>
               )}
-            </p>
+            </p>}
             {groupInfo?.member_id && (
               <p style={{ fontSize: 13, opacity: 0.75, marginTop: -8 }}>
                 Enviando como <strong>{groupInfo.member_display_name}</strong>.
               </p>
             )}
-            {groupImages.length > 0 && v2 && (
-              <div style={{ display: 'flex', gap: 10, overflowX: 'auto', margin: '0 0 14px', WebkitOverflowScrolling: 'touch', alignItems: 'center' }}>
-                {groupImages.map((p, i) => (
-                  <a key={p} href={groupImageUrl(p)} target="_blank" rel="noreferrer" style={{ flex: 'none', position: 'relative' }}>
-                    <img src={groupImageUrl(p)} alt={`Referencia ${i + 1}`} style={{ height: 120, width: 'auto', maxWidth: 220, objectFit: 'contain', borderRadius: 10, display: 'block', border: '1px solid rgba(0,0,0,0.10)', background: '#fff' }} />
-                  </a>
-                ))}
-                <span style={{ fontSize: 12.5, opacity: 0.65, flex: 'none', maxWidth: 90, lineHeight: 1.3 }}>Toca la imagen para ampliarla</span>
+            {v2 && (
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', margin: '0 0 14px' }}>
+                {groupImages.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, flex: 'none' }}>
+                    {groupImages.slice(0, 2).map((p, i) => (
+                      <a key={p} href={groupImageUrl(p)} target="_blank" rel="noreferrer" aria-label="Ampliar imagen" style={{ flex: 'none' }}>
+                        <img src={groupImageUrl(p)} alt={`Referencia ${i + 1}`} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 10, display: 'block', border: '1px solid rgba(0,0,0,0.10)', background: '#fff' }} />
+                      </a>
+                    ))}
+                  </div>
+                )}
+                <div style={{ minWidth: 0, lineHeight: 1.3 }}>
+                  {groupInfo?.group_name && <div style={{ fontWeight: 700, fontSize: 17, color: '#16483F' }}>{groupInfo.group_name}</div>}
+                  <div style={{ fontSize: 13, opacity: 0.7 }}>Para {selectedOrg.name}{groupImages.length > 0 ? ' · toca la imagen para ampliarla' : ''}</div>
+                </div>
               </div>
             )}
             {groupImages.length > 0 && !v2 && (
@@ -758,14 +765,19 @@ export default function GuestSubmit() {
               </div>
               </>)}
             </form>
-            {v2 && <div style={{ height: 96 }} aria-hidden="true" />}
+            {v2 && <div style={{ height: 120 }} aria-hidden="true" />}
             </>)}
           </>
         )}
         {v2 && selectedOrg && !needsPick && !processing && !showFields && (
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 20, padding: '10px 16px calc(10px + env(safe-area-inset-bottom))', background: 'rgba(250,247,240,0.96)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+            {unitAmount > 0 && (
+              <div style={{ textAlign: 'center', fontSize: 13, opacity: 0.75, margin: '0 auto 6px', maxWidth: 520 }}>
+                Primero deposita <strong>L {(unitAmount * (qtyCfg.allow ? qty : 1)).toLocaleString('es-HN', { minimumFractionDigits: 2 })}</strong> a la cuenta
+              </div>
+            )}
             <label htmlFor="file" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', maxWidth: 520, margin: '0 auto', minHeight: 52, fontSize: 16, fontWeight: 700, cursor: 'pointer', boxSizing: 'border-box' }}>
-              📷 {stepBadge(2, true)}Subir comprobante{unitAmount > 0 ? ` · L ${(unitAmount * (qtyCfg.allow ? qty : 1)).toLocaleString('es-HN', { minimumFractionDigits: 2 })}` : ''}
+              📷 {stepBadge(2, true)}Ya deposité · Subir comprobante
             </label>
           </div>
         )}
