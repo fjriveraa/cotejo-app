@@ -79,6 +79,15 @@ export default function CompanyHub() {
   // Reportes lo puede ver cualquiera que llegue a esta pantalla (contador,
   // supervisor, auditor incluidos) -- el resto son cosas de administrar la
   // empresa, solo para quien puede invitar gente o cambiar cuentas.
+  const attOn = membership?.organizations?.attendance_enabled === true
+  const canManageAtt = ['propietario', 'admin'].includes(membership?.role)
+  async function toggleAttendance() {
+    const next = !attOn
+    if (!next && !window.confirm('¿Desactivar asistencia y horarios? Se esconden los botones, pero no se borra nada: al volver a activarla todo sigue ahí.')) return
+    const { error } = await supabase.rpc('set_attendance_enabled', { p_organization_id: membership.organization_id, p_enabled: next })
+    if (error) { alert(error.message); return }
+    refreshMemberships()
+  }
   const cards = [
     { to: '/reportes', icon: IconChart, title: 'Reportes', subtitle: 'Exportar pagos y comprobantes a Excel', ownerOnly: false },
     { to: '/equipo', icon: IconUsers, title: 'Mi equipo', subtitle: 'Ver colaboradores, roles y desactivar acceso', ownerOnly: true },
@@ -163,6 +172,20 @@ export default function CompanyHub() {
           </Link>
         ))}
       </div>
+
+      {canManageAtt && (
+        <div className="card" style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>Asistencia y horarios del personal</div>
+            <div style={{ fontSize: 12.5, opacity: 0.65 }}>
+              {attOn ? 'Activada: ves Asistencia, horarios y el reloj en el menú.' : 'Desactivada: actívala si vas a controlar horarios y marcas de tu personal.'}
+            </div>
+          </div>
+          <button type="button" className="btn btn-secondary" style={{ flexShrink: 0 }} onClick={toggleAttendance}>
+            {attOn ? 'Desactivar' : 'Activar'}
+          </button>
+        </div>
+      )}
 
       {isOwner && (
         <div className="card" style={{ marginTop: 32, borderColor: 'rgba(185, 28, 28, 0.3)' }}>

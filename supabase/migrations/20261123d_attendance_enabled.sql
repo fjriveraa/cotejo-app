@@ -1,0 +1,2 @@
+-- Aplicada en prod via MCP (attendance_enabled_flag): organizations.attendance_enabled (default false;
+-- activa para orgs con mas de una persona o con datos de asistencia) + rpc set_attendance_enabled.

@@ -36,7 +36,7 @@ function CountBadge({ count }) {
 }
 
 export default function TopBar() {
-  const { membership, memberships, switchOrg, signOut, user, isPlatformAdmin } = useAuth()
+  const { membership, memberships, switchOrg, signOut, user, isPlatformAdmin, refreshMemberships } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const showToast = useToast()
@@ -201,9 +201,20 @@ export default function TopBar() {
 
   const canSeeQueue = membership && QUEUE_ROLES.includes(membership.role)
   const isMarcador = membership?.role === 'marcador'
-  const canOperateKiosk = membership && ['propietario', 'admin', 'supervisor'].includes(membership.role)
+  // Asistencia/horarios/reloj son opcionales: escondidos hasta que el
+  // propietario o un admin los activa (menú → "Activar asistencia del personal").
+  const attOn = membership?.organizations?.attendance_enabled === true
+  const canManageAtt = membership && ['propietario', 'admin'].includes(membership.role)
+  const canOperateKiosk = attOn && membership && ['propietario', 'admin', 'supervisor'].includes(membership.role)
+  async function handleEnableAttendance() {
+    const { error } = await supabase.rpc('set_attendance_enabled', { p_organization_id: membership.organization_id, p_enabled: true })
+    if (error) { showToast(error.message || 'No se pudo activar', { tone: 'error' }); return }
+    await refreshMemberships()
+    showToast('Asistencia activada', { tone: 'success' })
+    navigate('/asistencia')
+  }
   // Rojo: abre el modo reloj (el dispositivo donde los colaboradores marcan).
-  const relojButton = (canOperateKiosk || isMarcador) ? (
+  const relojButton = (attOn && (canOperateKiosk || isMarcador)) ? (
     <NavLink to="/asistencia/marcar" className="tabbar-mark tabbar-mark-reloj" aria-label="Modo reloj">
       <span className="tabbar-mark-circle">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -396,9 +407,11 @@ export default function TopBar() {
             <IconUsers /> Grupos
           </NavLink>
         )}
-        <button type="button" className="nav-pill" onClick={() => setAttendanceOpen(true)}>
-          <IconCheckCircle /> Marcar asistencia
-        </button>
+        {attOn && (
+          <button type="button" className="nav-pill" onClick={() => setAttendanceOpen(true)}>
+            <IconCheckCircle /> Marcar asistencia
+          </button>
+        )}
         {canOperateKiosk && (
           <NavLink to="/asistencia/marcar" className="nav-pill nav-pill-reloj">
             Modo reloj
@@ -479,7 +492,13 @@ export default function TopBar() {
                     como links sueltos acá -- ahora son una sola pantalla que
                     junta todo lo que le pertenece a esta empresa. */}
                 <NavLink to="/empresa" className="menu-link"><IconBuilding /> {isPersonalOrg ? 'Mi negocio' : 'Mi empresa'}</NavLink>
-                <NavLink to="/asistencia" className="menu-link"><IconUsers /> Asistencia del personal</NavLink>
+                {attOn ? (
+                  <NavLink to="/asistencia" className="menu-link"><IconUsers /> Asistencia del personal</NavLink>
+                ) : canManageAtt && (
+                  <button type="button" className="menu-link" onClick={handleEnableAttendance}>
+                    <IconUsers /> Activar asistencia y horarios del personal
+                  </button>
+                )}
                 {canOperateKiosk && (
                   <NavLink to="/asistencia/marcar" className="menu-link"><IconCheckCircle /> Modo marcador (reloj de la sucursal)</NavLink>
                 )}
@@ -503,8 +522,8 @@ export default function TopBar() {
               <div className="menu-section-title">Cuenta</div>
               {!isMarcador && (
                 <>
-                  <NavLink to="/mi-asistencia" className="menu-link"><IconCheckCircle /> Mi asistencia (QR)</NavLink>
-                  <NavLink to="/mi-horario" className="menu-link"><IconCheckCircle /> Mi horario</NavLink>
+                  {attOn && <NavLink to="/mi-asistencia" className="menu-link"><IconCheckCircle /> Mi asistencia (QR)</NavLink>}
+                  {attOn && <NavLink to="/mi-horario" className="menu-link"><IconCheckCircle /> Mi horario</NavLink>}
                   <NavLink to="/mi-identificacion" className="menu-link"><IconIdCard /> Mi identificación</NavLink>
                   <NavLink to="/unirme" className="menu-link"><IconLink /> {isPersonalOrg ? 'Unirme a un equipo o empresa' : 'Unirme a otra empresa'}</NavLink>
                   <NavLink to="/nueva-cuenta" className="menu-link"><IconBuilding /> Crear otra cuenta</NavLink>
@@ -570,12 +589,14 @@ export default function TopBar() {
               <IconUsers width={21} height={21} />
               <span>Grupos</span>
             </NavLink>
-            <NavLink to="/asistencia" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
-              <IconChart width={21} height={21} />
-              <span>Asistencia</span>
-            </NavLink>
+            {attOn && (
+              <NavLink to="/asistencia" className={({ isActive }) => `tabbar-item${isActive ? ' active' : ''}`}>
+                <IconChart width={21} height={21} />
+                <span>Asistencia</span>
+              </NavLink>
+            )}
           </>
-        ) : isMarcador ? null : (
+        ) : isMarcador || !attOn ? null : (
           <>
             {/* Empleados: Marcar va al centro, entre Registrar y Mis marcas. */}
             {markButton}
@@ -586,7 +607,7 @@ export default function TopBar() {
           </>
         )}
         {canSeeQueue && relojButton}
-        {canSeeQueue && !canOperateKiosk && markButton}
+        {attOn && canSeeQueue && !canOperateKiosk && markButton}
       </nav>
       )}
 
