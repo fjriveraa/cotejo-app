@@ -15,7 +15,7 @@ export default function OrgPicker() {
   const { memberships, confirmActiveOrg } = useAuth()
 
   return (
-    <div className="login-wrap">
+    <div className="login-wrap" style={{ alignItems: 'flex-start', minHeight: 0, padding: '20px 16px 32px' }}>
       <div className="card login-card" style={{ maxWidth: 460 }}>
         <img src="/logo.png" alt="Cotejo" style={{ height: 26, width: 'auto', marginBottom: 20 }} />
         <h1 style={{ fontSize: 20 }}>¿Con cuál cuenta vas a trabajar?</h1>
@@ -31,7 +31,7 @@ export default function OrgPicker() {
               type="button"
               className="choice-card"
               style={{
-                flexDirection: 'row', alignItems: 'center', textAlign: 'left', gap: 12, width: '100%',
+                flex: '0 0 auto', flexDirection: 'row', alignItems: 'center', textAlign: 'left', gap: 12, width: '100%',
                 cursor: 'pointer', font: 'inherit'
               }}
               onClick={() => confirmActiveOrg(m.organization_id)}
