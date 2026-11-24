@@ -57,6 +57,7 @@ Extrae TODOS los datos que aparezcan en el comprobante de la imagen, con el mayo
   "amount": number o null,
   "currency": "HNL" o "USD" o null,
   "bank": string o null,
+  "destination_account_text": string o null,
   "account_last4": string de 4 dígitos o null,
   "origin_bank": string o null,
   "origin_account_holder": string o null,
@@ -76,6 +77,7 @@ Reglas:
 - Si un dato no aparece claramente en la imagen, usa null en ese campo y confidence 0 para ese campo. Nunca inventes datos.
 - "amount" es el monto de la transacción (el campo "Monto" o "Monto debitado"), como número (sin símbolos de moneda ni comas). IMPORTANTE: en Honduras la letra "L" pegada o antes del monto (ej. "L500.00", "L 1,250.00") es el SÍMBOLO de lempiras, NUNCA un dígito: "L500.00" es 500, no 1500. Cuando el comprobante muestre "Monto" y "Monto debitado", deben coincidir; si no coinciden, o si dudas entre dos lecturas de un dígito, baja la confianza de "amount" a 0.5 o menos y explícalo en "notes". Lee los dígitos uno por uno, con cuidado, sobre todo si la foto es una captura tomada a otra pantalla (inclinada o borrosa).
 - "bank" es el banco de la cuenta que RECIBE el pago (cuenta destino, del comercio), usando el catálogo de arriba cuando sea reconocible. "account_last4" son los últimos 4 dígitos de esa cuenta destino, si aparecen. Estos dos se usan para comparar contra las cuentas receptoras reales de la empresa, así que solo repórtalos con confianza si de verdad se leen en la imagen -- nunca los inventes ni los asumas iguales al banco de origen.
+- "destination_account_text" es la transcripción LITERAL, carácter por carácter, de cómo aparece escrita la cuenta destino en la imagen (por ejemplo "****4281", "756-354-281" o "XXXX XXXX 4281"), incluyendo los asteriscos o guiones tal cual. Transcríbela PRIMERO, con calma, dígito por dígito, y SOLO después deriva "account_last4" a partir de esa transcripción: son los últimos 4 dígitos que aparecen en ella, nada más. Si un dígito se ve dudoso (por ejemplo 4 contra 5, 1 contra 7, 3 contra 8), baja la confianza de "account_last4" a 0.5 o menos y menciónalo en "notes". Si la cuenta destino no aparece, deja ambos campos en null.
 - "origin_bank" es el banco de la cuenta que ENVÍA el pago (la cuenta del cliente), si se puede determinar.
 - "origin_account_holder" es el nombre completo de la persona o empresa titular de la cuenta ORIGEN (quien envía), tal como aparece en "Cuenta origen".
 - "origin_account_number" es el número de cuenta completo de origen, tal como aparece (no solo los últimos 4 dígitos).
@@ -269,6 +271,19 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "content-type": "application/json" }
       })
     }
+
+    // Coherencia: account_last4 debe salir de la transcripción. Si la IA los
+    // dejó inconsistentes, manda la transcripción (es la lectura más cuidadosa).
+    try {
+      const digits = String(extraction?.destination_account_text ?? "").replace(/\D/g, "")
+      if (digits.length >= 4) {
+        const fromText = digits.slice(-4)
+        if (extraction.account_last4 && extraction.account_last4 !== fromText) {
+          extraction.notes = [extraction.notes, `last4 corregido desde la transcripción (${extraction.account_last4} → ${fromText})`].filter(Boolean).join(" · ")
+        }
+        extraction.account_last4 = fromText
+      }
+    } catch (_e) { /* no bloquear el flujo por esto */ }
 
     return new Response(JSON.stringify({ extraction }), {
       headers: { ...corsHeaders, "content-type": "application/json" }
