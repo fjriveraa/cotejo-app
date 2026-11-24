@@ -517,7 +517,7 @@ export default function GuestSubmit() {
                   <div style={{ display: 'flex', gap: 6, flex: 'none' }}>
                     {groupImages.slice(0, 2).map((p, i) => (
                       <a key={p} href={groupImageUrl(p)} target="_blank" rel="noreferrer" aria-label="Ampliar imagen" style={{ flex: 'none' }}>
-                        <img src={groupImageUrl(p)} alt={`Referencia ${i + 1}`} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 10, display: 'block', border: '1px solid rgba(0,0,0,0.10)', background: '#fff' }} />
+                        <img src={groupImageUrl(p)} alt={`Referencia ${i + 1}`} style={{ width: 112, height: 112, objectFit: 'cover', borderRadius: 12, display: 'block', border: '1px solid rgba(0,0,0,0.10)', background: '#fff' }} />
                       </a>
                     ))}
                   </div>
@@ -579,13 +579,13 @@ export default function GuestSubmit() {
                     <div key={`${a.bank}-${a.account_number}-${i}`}>
                       <div style={{ fontWeight: 700, fontSize: 16 }}>{a.bank}{a.account_type ? ` · ${a.account_type}` : ''}{a.currency && a.currency !== 'HNL' ? ` · ${a.currency}` : ''}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '2px 0' }}>
-                        <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 20, fontWeight: 600, letterSpacing: '.03em' }}>{a.account_number}</span>
+                        <span className={v2 ? `acc-num${copiedAcc === i ? ' copied' : ''}` : undefined} style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 20, fontWeight: 600, letterSpacing: '.03em' }}>{a.account_number}</span>
                         <button
                           type="button"
-                          className="btn btn-secondary"
-                          style={v2 ? { fontSize: 14, padding: '10px 16px', minHeight: 44 } : { fontSize: 12, padding: '3px 10px' }}
+                          className={`btn btn-secondary${v2 ? ' copy-btn' : ''}${v2 && copiedAcc === i ? ' copied' : ''}`}
+                          style={v2 ? { fontSize: 14, padding: '10px 16px', minHeight: 44, minWidth: 104 } : { fontSize: 12, padding: '3px 10px' }}
                           onClick={() => { navigator.clipboard?.writeText(String(a.account_number).replace(/\s/g, '')); setCopiedAcc(i); setTimeout(() => setCopiedAcc(null), 2000) }}
-                        >{copiedAcc === i ? 'Copiado' : 'Copiar'}</button>
+                        >{copiedAcc === i ? (v2 ? '✓ Copiado' : 'Copiado') : 'Copiar'}</button>
                       </div>
                       {(a.holder_name || v2) && <div style={{ fontSize: v2 ? 14 : 13, opacity: v2 ? 0.85 : 0.75, fontWeight: v2 ? 600 : 400 }}>{a.holder_name ? 'A nombre de' : 'Encargado'}: {a.holder_name || selectedOrg.name}</div>}
                     </div>

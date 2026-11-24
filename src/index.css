@@ -1499,3 +1499,12 @@ select.org-select { padding: 6px 28px 6px 10px; border-radius: 10px; }
 .legend-chip { display: inline-flex; align-items: center; height: 26px; padding: 0 11px; border: 1px solid transparent; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: 0.01em; text-transform: none; }
 .att-grid-card { margin-top: 12px; }
 .att-grid-card th { font-size: 11px; letter-spacing: 0.06em; }
+
+/* Pago por enlace: efecto sutil al copiar la cuenta. */
+.copy-btn { transition: background-color .2s ease, border-color .2s ease, color .2s ease, transform .15s ease; }
+.copy-btn:active { transform: scale(0.96); }
+.copy-btn.copied { background: rgba(43, 100, 89, 0.12); border-color: #2B6459; color: #16483F; animation: copy-pop .38s ease; }
+.acc-num { border-radius: 6px; transition: background-color .25s ease; }
+.acc-num.copied { background: rgba(43, 100, 89, 0.14); }
+@keyframes copy-pop { 0% { transform: scale(1); } 40% { transform: scale(1.07); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .copy-btn.copied { animation: none; } }
