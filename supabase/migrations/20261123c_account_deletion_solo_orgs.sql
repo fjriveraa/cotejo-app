@@ -1,0 +1,3 @@
+-- Aplicada en prod via MCP (account_deletion_allow_solo_orgs): get_account_deletion_preview y
+-- request_account_deletion bloquean solo si la organizacion tiene otras personas activas;
+-- una cuenta de una sola persona se oculta del directorio y queda sin miembros (historial intacto).

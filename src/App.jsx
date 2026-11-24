@@ -15,6 +15,7 @@ import JoinManual from './pages/JoinManual'
 import Directory from './pages/Directory'
 import JoinRequests from './pages/JoinRequests'
 import Autonomo from './pages/Autonomo'
+import NewAccount from './pages/NewAccount'
 import Verify from './pages/Verify'
 import MyIdentification from './pages/MyIdentification'
 import Settings from './pages/Settings'
@@ -105,7 +106,7 @@ function ErrorScreen({ message }) {
       <div className="login-wrap">
         <div className="card login-card" style={{ maxWidth: 440 }}>
           <h1>¡Cuenta creada! ¿Cómo vas a usar Cotejo?</h1>
-          <p style={{ marginBottom: 20 }}>Elige una opción. Puedes cambiarla o agregar la otra después.</p>
+          <p style={{ marginBottom: 20 }}>Elige una opción. Después puedes crear otra cuenta desde el menú.</p>
 
           <div className="choice-row">
             <Link to="/signup" className="choice-card">
@@ -116,7 +117,7 @@ function ErrorScreen({ message }) {
             <Link to="/autonomo" className="choice-card">
               <IconBriefcase width={26} height={26} />
               <span className="choice-title">Personal</span>
-              <span className="choice-subtitle">Para mí solo: independiente, autónomo o uso propio</span>
+              <span className="choice-subtitle">Para mí, o para mi negocio propio</span>
             </Link>
           </div>
 
@@ -147,7 +148,7 @@ function ErrorScreen({ message }) {
 
 // Pantallas con barra de pestañas propia o que ya traen su botón Volver:
 // ahí no se agrega el automático.
-const NO_AUTO_BACK = ['/', '/registrar', '/cola', '/grupos', '/asistencia', '/asistencia/marcar', '/mi-asistencia', '/autonomo', '/empresas', '/unirme']
+const NO_AUTO_BACK = ['/', '/registrar', '/cola', '/grupos', '/asistencia', '/asistencia/marcar', '/mi-asistencia', '/autonomo', '/nueva-cuenta', '/empresas', '/unirme']
 function AutoBack() {
   const { pathname } = useLocation()
   const clean = pathname.replace(/\/+$/, '') || '/'
@@ -386,6 +387,14 @@ export default function App() {
               <JoinRequests />
             </RequireOwner>
           </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/nueva-cuenta"
+        element={
+          <RequireSessionLayout>
+            <NewAccount />
+          </RequireSessionLayout>
         }
       />
       <Route

@@ -122,8 +122,8 @@ export default function Settings() {
             <p style={{ fontSize: 13, marginTop: 0, marginBottom: 8 }}>
               No puedes eliminar tu cuenta todavía: eres la única persona propietaria en{' '}
               <strong>{blocking.map((b) => b.name).join(', ')}</strong>. Agrega otro propietario o transfiere la
-              empresa desde <em>Mi empresa → Equipo</em> antes de continuar — de lo contrario esa empresa se
-              quedaría sin nadie que pueda administrarla.
+              cuenta desde <em>Equipo</em> antes de continuar — hay más personas que dependen de ti y se
+              quedarían sin nadie que pueda administrarla.
             </p>
           </>
         ) : !confirming ? (

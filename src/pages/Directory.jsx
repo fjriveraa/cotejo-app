@@ -92,7 +92,7 @@ export default function Directory() {
                   )}
                 </div>
                 <div className="meta">
-                  {org.country || 'HN'} · {org.org_type === 'autonomo' ? 'Comerciante individual' : 'Empresa'}
+                  {org.country || 'HN'} · {org.org_type === 'autonomo' ? 'Personal' : 'Empresa'}
                 </div>
               </div>
               <div className="actions-row" style={{ alignItems: 'center' }}>

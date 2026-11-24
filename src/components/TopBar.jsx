@@ -507,6 +507,7 @@ export default function TopBar() {
                   <NavLink to="/mi-horario" className="menu-link"><IconCheckCircle /> Mi horario</NavLink>
                   <NavLink to="/mi-identificacion" className="menu-link"><IconIdCard /> Mi identificación</NavLink>
                   <NavLink to="/unirme" className="menu-link"><IconLink /> {isPersonalOrg ? 'Unirme a un equipo o empresa' : 'Unirme a otra empresa'}</NavLink>
+                  <NavLink to="/nueva-cuenta" className="menu-link"><IconBuilding /> Crear otra cuenta</NavLink>
                   <NavLink to="/empresas" className="menu-link"><IconSearch /> {isPersonalOrg ? 'Buscar negocios' : 'Buscar empresas'}</NavLink>
                 </>
               )}

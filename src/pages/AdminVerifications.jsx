@@ -82,7 +82,7 @@ export default function AdminVerifications() {
               <div>
                 <div className="amount" style={{ fontSize: 14 }}>{v.organization_name}</div>
                 <div className="meta">
-                  {v.country || 'HN'} · {v.org_type === 'autonomo' ? 'Comerciante individual' : 'Empresa'} ·{' '}
+                  {v.country || 'HN'} · {v.org_type === 'autonomo' ? 'Personal' : 'Empresa'} ·{' '}
                   {METHOD_LABELS[v.method] || v.method} · enviado por {v.submitted_by_email}
                 </div>
                 {v.rtn && <div className="meta">RTN: {v.rtn}</div>}
