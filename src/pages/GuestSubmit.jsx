@@ -446,7 +446,7 @@ export default function GuestSubmit() {
   }
 
   return (
-    <div className="login-wrap">
+    <div className="login-wrap" style={v2 ? { alignItems: 'flex-start', padding: '12px 12px 24px' } : undefined}>
       <div className="card login-card" style={{ maxWidth: 480 }}>
         <PublicPageHeader compact={v2} />
         <h1 style={v2 ? { fontSize: 26, margin: '0 0 12px' } : undefined}>{v2 ? 'Enviar comprobante' : 'Enviar comprobante de pago'}</h1>
@@ -522,9 +522,12 @@ export default function GuestSubmit() {
                     ))}
                   </div>
                 )}
-                <div style={{ minWidth: 0, lineHeight: 1.3 }}>
+                <div style={{ minWidth: 0, lineHeight: 1.3, flex: 1 }}>
                   {groupInfo?.group_name && <div style={{ fontWeight: 700, fontSize: 17, color: '#16483F' }}>{groupInfo.group_name}</div>}
                   <div style={{ fontSize: 13, opacity: 0.7 }}>{qtyCfg.linkName && qtyCfg.linkName !== groupInfo?.group_name ? qtyCfg.linkName : ''}{groupImages.length > 0 ? `${qtyCfg.linkName && qtyCfg.linkName !== groupInfo?.group_name ? ' · ' : ''}toca la imagen para ampliarla` : ''}</div>
+                  {groupOptions.length > 0 && !needsPick && (
+                    <button type="button" onClick={() => setChosenOption(null)} style={{ marginTop: 6, background: 'none', border: 'none', color: '#2B6459', fontWeight: 600, fontSize: 14, padding: '8px 0', minHeight: 44, cursor: 'pointer', textDecoration: 'underline' }}>← Cambiar grupo</button>
+                  )}
                 </div>
               </div>
             )}
@@ -584,7 +587,7 @@ export default function GuestSubmit() {
                           onClick={() => { navigator.clipboard?.writeText(String(a.account_number).replace(/\s/g, '')); setCopiedAcc(i); setTimeout(() => setCopiedAcc(null), 2000) }}
                         >{copiedAcc === i ? 'Copiado' : 'Copiar'}</button>
                       </div>
-                      {(a.holder_name || v2) && <div style={{ fontSize: v2 ? 14 : 13, opacity: v2 ? 0.85 : 0.75, fontWeight: v2 ? 600 : 400 }}>A nombre de: {a.holder_name || selectedOrg.name}</div>}
+                      {(a.holder_name || v2) && <div style={{ fontSize: v2 ? 14 : 13, opacity: v2 ? 0.85 : 0.75, fontWeight: v2 ? 600 : 400 }}>{a.holder_name ? 'A nombre de' : 'Encargado'}: {a.holder_name || selectedOrg.name}</div>}
                     </div>
                   ))}
                 </div>
@@ -612,7 +615,7 @@ export default function GuestSubmit() {
                 </div>
               </div>
             ) : (<>
-            {groupOptions.length > 0 && (
+            {groupOptions.length > 0 && !v2 && (
               <p style={{ fontSize: 13, margin: '0 0 8px' }}>
                 <button type="button" onClick={() => setChosenOption(null)} style={v2 ? { background: 'none', border: '1px solid rgba(43,100,89,0.35)', borderRadius: 10, color: '#2B6459', cursor: 'pointer', padding: '10px 14px', minHeight: 44, fontSize: 14, fontWeight: 600 } : { background: 'none', border: 'none', color: '#2B6459', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: 13 }}>← Cambiar grupo</button>
               </p>
