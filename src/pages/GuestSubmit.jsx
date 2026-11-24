@@ -446,8 +446,8 @@ export default function GuestSubmit() {
   }
 
   return (
-    <div className="login-wrap" style={v2 ? { alignItems: 'flex-start', padding: '12px 12px 24px' } : undefined}>
-      <div className="card login-card" style={{ maxWidth: 480 }}>
+    <div className="login-wrap" style={v2 ? { display: 'block', minHeight: 0, padding: '12px 12px 24px' } : undefined}>
+      <div className="card login-card" style={v2 ? { maxWidth: 480, margin: '0 auto' } : { maxWidth: 480 }}>
         <PublicPageHeader compact={v2} />
         <h1 style={v2 ? { fontSize: 26, margin: '0 0 12px' } : undefined}>{v2 ? 'Enviar comprobante' : 'Enviar comprobante de pago'}</h1>
         {!isDirectLink && !isGroupLink && <p>Busca la empresa a la que le hiciste la transferencia para que confirmen tu pago.</p>}
