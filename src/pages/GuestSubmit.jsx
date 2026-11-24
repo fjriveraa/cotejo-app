@@ -447,7 +447,7 @@ export default function GuestSubmit() {
 
   return (
     <div className="login-wrap" style={v2 ? { display: 'block', minHeight: 0, padding: '12px 12px 24px' } : undefined}>
-      <div className="card login-card" style={v2 ? { maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', minHeight: 'calc(100dvh - 36px)' } : { maxWidth: 480 }}>
+      <div className="card login-card" style={v2 ? { maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', minHeight: 'calc(100dvh - 24px)' } : { maxWidth: 480 }}>
         <PublicPageHeader compact={v2} />
         <h1 style={v2 ? { fontSize: 26, margin: '0 0 12px' } : undefined}>{v2 ? 'Enviar comprobante' : 'Enviar comprobante de pago'}</h1>
         {!isDirectLink && !isGroupLink && <p>Busca la empresa a la que le hiciste la transferencia para que confirmen tu pago.</p>}
@@ -521,7 +521,7 @@ export default function GuestSubmit() {
                   )}
                 </div>
                 {groupImages.length > 0 && (
-                  <a href={groupImageUrl(groupImages[0])} target="_blank" rel="noreferrer" aria-label="Ampliar imagen" style={{ display: 'block', flex: '1 1 0', minHeight: 130, maxHeight: 380, margin: '0 0 14px', position: 'relative', borderRadius: 14, overflow: 'hidden', background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.08)' }}>
+                  <a href={groupImageUrl(groupImages[0])} target="_blank" rel="noreferrer" aria-label="Ampliar imagen" style={{ display: 'block', flex: '1 1 0', minHeight: 130, maxHeight: 480, margin: '0 0 14px', position: 'relative', borderRadius: 14, overflow: 'hidden', background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.08)' }}>
                     <img src={groupImageUrl(groupImages[0])} alt="Referencia" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
                     <span style={{ position: 'absolute', right: 8, bottom: 8, fontSize: 12, fontWeight: 600, background: 'rgba(255,255,255,0.9)', color: '#16483F', borderRadius: 8, padding: '3px 8px' }}>Toca para ampliar</span>
                   </a>
@@ -773,7 +773,7 @@ export default function GuestSubmit() {
               </div>
               </>)}
             </form>
-            {v2 && <div style={{ height: 120 }} aria-hidden="true" />}
+            {v2 && <div style={{ height: 104 }} aria-hidden="true" />}
             </>)}
           </>
         )}
