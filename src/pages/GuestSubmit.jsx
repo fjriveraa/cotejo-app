@@ -517,7 +517,7 @@ export default function GuestSubmit() {
                   <div style={{ display: 'flex', gap: 6, flex: 'none' }}>
                     {groupImages.slice(0, 2).map((p, i) => (
                       <a key={p} href={groupImageUrl(p)} target="_blank" rel="noreferrer" aria-label="Ampliar imagen" style={{ flex: 'none' }}>
-                        <img src={groupImageUrl(p)} alt={`Referencia ${i + 1}`} style={{ width: 112, height: 112, objectFit: 'cover', borderRadius: 12, display: 'block', border: '1px solid rgba(0,0,0,0.10)', background: '#fff' }} />
+                        <img src={groupImageUrl(p)} alt={`Referencia ${i + 1}`} style={{ width: 'min(150px, 38vw)', height: 'min(150px, 38vw)', objectFit: 'cover', borderRadius: 14, display: 'block', border: '1px solid rgba(0,0,0,0.10)', background: '#fff' }} />
                       </a>
                     ))}
                   </div>
