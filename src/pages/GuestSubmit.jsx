@@ -787,9 +787,13 @@ export default function GuestSubmit() {
                 Primero deposita <strong>L {(unitAmount * (qtyCfg.allow ? qty : 1)).toLocaleString('es-HN', { minimumFractionDigits: 2 })}</strong> a la cuenta
               </div>
             )}
-            <label htmlFor="file" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', maxWidth: 520, margin: '0 auto', minHeight: 52, fontSize: 16, fontWeight: 700, cursor: 'pointer', boxSizing: 'border-box' }}>
-              📷 {stepBadge(2, true)}Ya deposité · Subir comprobante
-            </label>
+            <div style={{ maxWidth: 520, margin: '0 auto', padding: 5, border: '2px dashed #A2483A', borderRadius: 16, boxSizing: 'border-box' }}>
+              <label htmlFor="file" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', minHeight: 50, fontSize: 16, fontWeight: 700, cursor: 'pointer', boxSizing: 'border-box', background: '#A2483A', color: '#fff', borderRadius: 11 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4" /><path d="M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: 11, background: '#fff', color: '#A2483A', fontSize: 13, fontWeight: 700 }}>2</span>
+                Ya deposité · Subir comprobante
+              </label>
+            </div>
           </div>
         )}
 
