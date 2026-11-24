@@ -87,7 +87,7 @@ export default function GuestSubmit() {
   // no el genérico del grupo), no tiene sentido pedirle su nombre otra vez
   // ni dejar que lo cambie -- ya sabemos quién es.
   const [groupInfo, setGroupInfo] = useState(null)
-  const [qtyCfg, setQtyCfg] = useState({ allow: false, label: '', max: 10, v2: false, linkAmount: null })
+  const [qtyCfg, setQtyCfg] = useState({ allow: false, label: '', max: 10, v2: false, linkAmount: null, linkName: '' })
   const [qty, setQty] = useState(1)
   const [groupImages, setGroupImages] = useState([])
   const [groupOptions, setGroupOptions] = useState([])
@@ -177,7 +177,7 @@ export default function GuestSubmit() {
       supabase.rpc('payment_group_public_info', { p_link_code: linkCode }).then(({ data: info }) => {
         if (!cancelled) {
           setGroupImages(info?.[0]?.image_paths || [])
-          setQtyCfg({ allow: Boolean(info?.[0]?.allow_quantity), label: info?.[0]?.quantity_label || '', max: info?.[0]?.quantity_max || 10, v2: Boolean(info?.[0]?.compact_layout), linkAmount: info?.[0]?.expected_amount ?? null })
+          setQtyCfg({ allow: Boolean(info?.[0]?.allow_quantity), label: info?.[0]?.quantity_label || '', max: info?.[0]?.quantity_max || 10, v2: Boolean(info?.[0]?.compact_layout), linkAmount: info?.[0]?.expected_amount ?? null, linkName: info?.[0]?.group_name || '' })
         }
       })
       if (row.member_id) {
@@ -524,7 +524,7 @@ export default function GuestSubmit() {
                 )}
                 <div style={{ minWidth: 0, lineHeight: 1.3 }}>
                   {groupInfo?.group_name && <div style={{ fontWeight: 700, fontSize: 17, color: '#16483F' }}>{groupInfo.group_name}</div>}
-                  <div style={{ fontSize: 13, opacity: 0.7 }}>Para {selectedOrg.name}{groupImages.length > 0 ? ' · toca la imagen para ampliarla' : ''}</div>
+                  <div style={{ fontSize: 13, opacity: 0.7 }}>{qtyCfg.linkName && qtyCfg.linkName !== groupInfo?.group_name ? qtyCfg.linkName : ''}{groupImages.length > 0 ? `${qtyCfg.linkName && qtyCfg.linkName !== groupInfo?.group_name ? ' · ' : ''}toca la imagen para ampliarla` : ''}</div>
                 </div>
               </div>
             )}
@@ -547,7 +547,7 @@ export default function GuestSubmit() {
                 </div>
               </div>
             )}
-            {!needsPick && unitAmount > 0 && (
+            {!needsPick && unitAmount > 0 && !v2 && (
               <div style={{ margin: '4px 0 18px', padding: '14px 16px', borderRadius: 14, background: 'rgba(43,100,89,0.10)', border: '1px solid rgba(43,100,89,0.25)', textAlign: 'center' }}>
                 <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#2B6459' }}>Monto a pagar</div>
                 <div style={{ fontFamily: 'var(--font-display, Fraunces, serif)', fontSize: 38, fontWeight: 700, lineHeight: 1.15, color: '#16483F' }}>
@@ -563,6 +563,14 @@ export default function GuestSubmit() {
             {!needsPick && payAccounts.length > 0 && (
               <div style={{ margin: '0 0 18px', padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(0,0,0,0.12)', background: '#fff' }}>
                 <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: '#2B6459', marginBottom: 8 }}>{v2 && stepBadge(1)}{v2 ? 'Deposita aquí' : 'Dónde pagar'}</div>
+                {v2 && unitAmount > 0 && (
+                  <div style={{ margin: '2px 0 12px' }}>
+                    <div style={{ fontFamily: 'var(--font-display, Fraunces, serif)', fontSize: 38, fontWeight: 700, lineHeight: 1.1, color: '#16483F' }}>
+                      L {(unitAmount * (qtyCfg.allow ? qty : 1)).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
+                    </div>
+                    {qtyCfg.allow && qty > 1 && <div style={{ fontSize: 14, opacity: 0.75, marginTop: 2 }}>{qty} × L {unitAmount.toLocaleString('es-HN', { minimumFractionDigits: 2 })}</div>}
+                  </div>
+                )}
                 <div style={{ display: 'grid', gap: 12 }}>
                   {payAccounts.map((a, i) => (
                     <div key={`${a.bank}-${a.account_number}-${i}`}>
@@ -576,7 +584,7 @@ export default function GuestSubmit() {
                           onClick={() => { navigator.clipboard?.writeText(String(a.account_number).replace(/\s/g, '')); setCopiedAcc(i); setTimeout(() => setCopiedAcc(null), 2000) }}
                         >{copiedAcc === i ? 'Copiado' : 'Copiar'}</button>
                       </div>
-                      {a.holder_name && <div style={{ fontSize: 13, opacity: 0.75 }}>A nombre de {a.holder_name}</div>}
+                      {(a.holder_name || v2) && <div style={{ fontSize: v2 ? 14 : 13, opacity: v2 ? 0.85 : 0.75, fontWeight: v2 ? 600 : 400 }}>A nombre de: {a.holder_name || selectedOrg.name}</div>}
                     </div>
                   ))}
                 </div>
