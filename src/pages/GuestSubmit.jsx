@@ -447,7 +447,7 @@ export default function GuestSubmit() {
 
   return (
     <div className="login-wrap" style={v2 ? { display: 'block', minHeight: 0, padding: '12px 12px 24px' } : undefined}>
-      <div className="card login-card" style={v2 ? { maxWidth: 480, margin: '0 auto', display: 'flex', flexDirection: 'column', minHeight: 'calc(100dvh - 36px)' } : { maxWidth: 480 }}>
+      <div className="card login-card" style={v2 ? { maxWidth: 480, margin: '0 auto' } : { maxWidth: 480 }}>
         <PublicPageHeader compact={v2} />
         <h1 style={v2 ? { fontSize: 26, margin: '0 0 12px' } : undefined}>{v2 ? 'Enviar comprobante' : 'Enviar comprobante de pago'}</h1>
         {!isDirectLink && !isGroupLink && <p>Busca la empresa a la que le hiciste la transferencia para que confirmen tu pago.</p>}
@@ -512,21 +512,24 @@ export default function GuestSubmit() {
               </p>
             )}
             {v2 && (
-              <>
-                <div style={{ lineHeight: 1.3, margin: '0 0 10px' }}>
-                  {groupInfo?.group_name && <div style={{ fontWeight: 700, fontSize: 20, color: '#16483F' }}>{groupInfo.group_name}</div>}
-                  {qtyCfg.linkName && qtyCfg.linkName !== groupInfo?.group_name && <div style={{ fontSize: 14, opacity: 0.7 }}>{qtyCfg.linkName}</div>}
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', margin: '0 0 14px' }}>
+                {groupImages.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, flex: 'none' }}>
+                    {groupImages.slice(0, 2).map((p, i) => (
+                      <a key={p} href={groupImageUrl(p)} target="_blank" rel="noreferrer" aria-label="Ampliar imagen" style={{ flex: 'none' }}>
+                        <img src={groupImageUrl(p)} alt={`Referencia ${i + 1}`} style={{ width: 'min(150px, 38vw)', height: 'min(150px, 38vw)', objectFit: 'cover', borderRadius: 14, display: 'block', border: '1px solid rgba(0,0,0,0.10)', background: '#fff' }} />
+                      </a>
+                    ))}
+                  </div>
+                )}
+                <div style={{ minWidth: 0, lineHeight: 1.3, flex: 1 }}>
+                  {groupInfo?.group_name && <div style={{ fontWeight: 700, fontSize: 17, color: '#16483F' }}>{groupInfo.group_name}</div>}
+                  <div style={{ fontSize: 13, opacity: 0.7 }}>{qtyCfg.linkName && qtyCfg.linkName !== groupInfo?.group_name ? qtyCfg.linkName : ''}{groupImages.length > 0 ? `${qtyCfg.linkName && qtyCfg.linkName !== groupInfo?.group_name ? ' · ' : ''}toca la imagen para ampliarla` : ''}</div>
                   {groupOptions.length > 0 && !needsPick && (
-                    <button type="button" onClick={() => setChosenOption(null)} style={{ marginTop: 2, background: 'none', border: 'none', color: '#2B6459', fontWeight: 600, fontSize: 14, padding: '8px 0', minHeight: 44, cursor: 'pointer', textDecoration: 'underline' }}>← Cambiar grupo</button>
+                    <button type="button" onClick={() => setChosenOption(null)} style={{ marginTop: 6, background: 'none', border: 'none', color: '#2B6459', fontWeight: 600, fontSize: 14, padding: '8px 0', minHeight: 44, cursor: 'pointer', textDecoration: 'underline' }}>← Cambiar grupo</button>
                   )}
                 </div>
-                {groupImages.length > 0 && (
-                  <a href={groupImageUrl(groupImages[0])} target="_blank" rel="noreferrer" aria-label="Ampliar imagen" style={{ display: 'block', flex: '1 1 0', minHeight: 130, maxHeight: 380, margin: '0 0 14px', position: 'relative', borderRadius: 14, overflow: 'hidden', background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.08)' }}>
-                    <img src={groupImageUrl(groupImages[0])} alt="Referencia" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
-                    <span style={{ position: 'absolute', right: 8, bottom: 8, fontSize: 12, fontWeight: 600, background: 'rgba(255,255,255,0.9)', color: '#16483F', borderRadius: 8, padding: '3px 8px' }}>Toca para ampliar</span>
-                  </a>
-                )}
-              </>
+              </div>
             )}
             {groupImages.length > 0 && !v2 && (
               <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '0 0 14px', WebkitOverflowScrolling: 'touch' }}>
