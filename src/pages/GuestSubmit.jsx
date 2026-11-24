@@ -587,7 +587,7 @@ export default function GuestSubmit() {
                           onClick={() => { navigator.clipboard?.writeText(String(a.account_number).replace(/\s/g, '')); setCopiedAcc(i); setTimeout(() => setCopiedAcc(null), 2000) }}
                         >{copiedAcc === i ? (v2 ? '✓ Copiado' : 'Copiado') : 'Copiar'}</button>
                       </div>
-                      {(a.holder_name || v2) && <div style={{ fontSize: v2 ? 14 : 13, opacity: v2 ? 0.85 : 0.75, fontWeight: v2 ? 600 : 400 }}>{a.holder_name ? 'A nombre de' : 'Encargado'}: {a.holder_name || selectedOrg.name}</div>}
+                      {(a.holder_name || v2) && <div style={{ fontSize: v2 ? 14 : 13, opacity: v2 ? 0.85 : 0.75, fontWeight: v2 ? 600 : 400 }}>{a.holder_name && !v2 ? 'A nombre de' : 'Encargado'}: {a.holder_name || selectedOrg.name}</div>}
                     </div>
                   ))}
                 </div>
