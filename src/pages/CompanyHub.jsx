@@ -174,7 +174,7 @@ export default function CompanyHub() {
                 personas en el equipo -- pensado para empresas creadas por error.
               </p>
               <button className="btn btn-secondary" style={{ color: '#B91C1C', borderColor: 'rgba(185, 28, 28, 0.4)' }} onClick={() => setConfirmingDelete(true)}>
-                Borrar empresa
+                {membership?.organizations?.org_type === 'autonomo' ? 'Borrar cuenta' : 'Borrar empresa'}
               </button>
             </>
           ) : (
