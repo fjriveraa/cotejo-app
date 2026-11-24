@@ -18,9 +18,9 @@ export default function OrgPicker() {
     <div className="login-wrap">
       <div className="card login-card" style={{ maxWidth: 460 }}>
         <img src="/logo.png" alt="Cotejo" style={{ height: 26, width: 'auto', marginBottom: 20 }} />
-        <h1 style={{ fontSize: 20 }}>¿En cuál empresa vas a trabajar?</h1>
+        <h1 style={{ fontSize: 20 }}>¿Con cuál cuenta vas a trabajar?</h1>
         <p style={{ marginBottom: 20, fontSize: 13.5, opacity: 0.7 }}>
-          Perteneces a más de una — elige una para entrar. Puedes cambiar de empresa
+          Perteneces a más de una — elige una para entrar. Puedes cambiar de cuenta
           en cualquier momento desde el menú.
         </p>
 

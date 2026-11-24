@@ -149,7 +149,7 @@ export default function GuestSubmit() {
       if (cancelled) return
       setLoadingDirectOrg(false)
       if (error || !data || data.length === 0) {
-        setError('No encontramos esta empresa. Pídele el enlace correcto.')
+        setError('No encontramos a quien recibe este pago. Pídele el enlace correcto.')
       } else {
         setSelectedOrg(data[0])
       }
@@ -192,7 +192,7 @@ export default function GuestSubmit() {
 
   async function handleSearch(e) {
     e.preventDefault()
-    if (query.trim().length < 3) { setError('Escribe al menos 3 letras del nombre de la empresa.'); return }
+    if (query.trim().length < 3) { setError('Escribe al menos 3 letras del nombre de quien recibió el pago.'); return }
     setSearching(true)
     setSearched(true)
     setError(null)
@@ -450,13 +450,13 @@ export default function GuestSubmit() {
       <div className="card login-card" style={v2 ? { maxWidth: 480, margin: '0 auto' } : { maxWidth: 480 }}>
         <PublicPageHeader compact={v2} />
         <h1 style={v2 ? { fontSize: 26, margin: '0 0 12px' } : undefined}>{v2 ? 'Enviar comprobante' : 'Enviar comprobante de pago'}</h1>
-        {!isDirectLink && !isGroupLink && <p>Busca la empresa a la que le hiciste la transferencia para que confirmen tu pago.</p>}
+        {!isDirectLink && !isGroupLink && <p>Busca a quien le hiciste la transferencia para que confirme tu pago.</p>}
 
         {!selectedOrg ? (
           <>
             <form onSubmit={handleSearch}>
               <div className="field">
-                <label htmlFor="query">Nombre de la empresa</label>
+                <label htmlFor="query">Nombre de quien recibió el pago</label>
                 <input
                   id="query"
                   type="text"
@@ -474,7 +474,7 @@ export default function GuestSubmit() {
 
             {searched && !searching && (
               results.length === 0 ? (
-                <p className="empty-state" style={{ marginTop: 16 }}>No encontramos ninguna empresa con ese nombre.</p>
+                <p className="empty-state" style={{ marginTop: 16 }}>No encontramos a nadie con ese nombre.</p>
               ) : (
                 <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {results.map((org) => (
@@ -502,7 +502,7 @@ export default function GuestSubmit() {
               {groupInfo?.group_name ? <> · <strong>{groupInfo.group_name}</strong></> : null}.{' '}
               {!isDirectLink && !isGroupLink && (
                 <button type="button" onClick={() => setSelectedOrg(null)} style={{ background: 'none', border: 'none', color: '#2B6459', textDecoration: 'underline', cursor: 'pointer', padding: 0, fontSize: 14 }}>
-                  Cambiar empresa
+                  Cambiar
                 </button>
               )}
             </p>}

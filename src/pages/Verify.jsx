@@ -142,10 +142,9 @@ export default function Verify() {
 
   return (
     <div className="container">
-      <h2 style={{ marginTop: 0 }}>Verificar mi empresa</h2>
+      <h2 style={{ marginTop: 0 }}>{membership?.organizations?.org_type === 'autonomo' ? 'Verificar mi identidad' : 'Verificar mi empresa'}</h2>
       <p style={{ opacity: 0.7, fontSize: 14, marginTop: -8, marginBottom: 16 }}>
-        Verificar tu empresa le da confianza a quien la busque en el directorio de Cotejo. No es obligatorio para
-        usar la app, pero ayuda a que otros sepan que de verdad eres el dueño.
+        {membership?.organizations?.org_type === 'autonomo' ? 'Verificar tu identidad le da confianza a quien te busque en el directorio de Cotejo. No es obligatorio para usar la app, pero ayuda a que otros sepan que de verdad eres tú.' : 'Verificar tu empresa le da confianza a quien la busque en el directorio de Cotejo. No es obligatorio para usar la app, pero ayuda a que otros sepan que de verdad eres el dueño.'}
       </p>
 
       <div style={{ display: 'inline-block', padding: '4px 12px', borderRadius: 999, background: statusInfo.color, color: '#fff', fontSize: 13, fontWeight: 600, marginBottom: 24 }}>
@@ -161,14 +160,14 @@ export default function Verify() {
       {success ? (
         <div className="card">
           {autoApproved ? (
-            <p>¡Tu empresa quedó verificada al instante! La IA leyó tus documentos y todo coincidió — no hizo falta esperar revisión manual.</p>
+            <p>¡{membership?.organizations?.org_type === 'autonomo' ? 'Tu identidad' : 'Tu empresa'} quedó verificada al instante! La IA leyó tus documentos y todo coincidió — no hizo falta esperar revisión manual.</p>
           ) : (
             <p>Tu solicitud fue enviada. La vamos a revisar y te avisamos aquí mismo cuando quede lista.</p>
           )}
         </div>
       ) : status === 'pending' ? (
         <div className="card">
-          <p>Ya tienes una solicitud en revisión para esta empresa. Te avisamos aquí cuando quede resuelta.</p>
+          <p>Ya tienes una solicitud en revisión para {membership?.organizations?.org_type === 'autonomo' ? 'tu cuenta' : 'esta empresa'}. Te avisamos aquí cuando quede resuelta.</p>
         </div>
       ) : (
         <div className="card">

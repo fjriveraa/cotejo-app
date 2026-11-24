@@ -117,8 +117,8 @@ function OrgTeam({ membership: myMembership }) {
           <div style={{ fontWeight: 600, fontSize: 14 }}>Visible en el directorio de Cotejo</div>
           <div style={{ fontSize: 13, opacity: 0.7 }}>
             {myMembership?.organizations?.is_public === false
-              ? 'Tu empresa está oculta. Nadie puede encontrarla buscando; solo entra quien tenga un enlace de invitación.'
-              : 'Cualquier usuario de Cotejo puede encontrar tu empresa buscando y pedir unirse.'}
+              ? 'Está oculta. Nadie puede encontrarla buscando; solo entra quien tenga un enlace de invitación.'
+              : 'Cualquier usuario de Cotejo puede encontrarla buscando y pedir unirse.'}
           </div>
         </div>
         <button className="btn btn-secondary" disabled={visibilityBusy} onClick={handleToggleVisibility}>

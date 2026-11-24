@@ -24,7 +24,7 @@ const STATUS_INFO = {
   not_confirmed: {
     label: 'No pudimos confirmarlo',
     color: '#B91C1C',
-    message: 'La empresa no pudo confirmar este comprobante con la información que tiene. Te recomendamos contactarla directamente para resolverlo.'
+    message: 'Quien recibe el pago no pudo confirmar este comprobante con la información que tiene. Te recomendamos contactarle directamente para resolverlo.'
   }
 }
 
@@ -93,7 +93,7 @@ export default function GuestStatus() {
         <p>{status.message}</p>
 
         {info.status === 'not_confirmed' && info.review_notes && (
-          <p style={{ fontSize: 13, opacity: 0.8, marginTop: -8 }}>Nota de la empresa: {info.review_notes}</p>
+          <p style={{ fontSize: 13, opacity: 0.8, marginTop: -8 }}>Nota de quien recibe el pago: {info.review_notes}</p>
         )}
 
         <div style={{ fontSize: 13, opacity: 0.7, marginTop: 16 }}>

@@ -8,8 +8,8 @@ import { IconDoc, IconCheckCircle, IconInbox, IconShield } from '../components/i
 // Mensajes de verificación: solo se muestran cuando hace falta actuar
 // (pendiente o rechazada). Una vez verificada, esta alerta desaparece sola.
 const VERIFICATION_ALERTS = {
-  pending: { text: 'Tu empresa está en revisión. Te avisamos apenas quede verificada.', color: '#B45309', bg: '#FEF3C7' },
-  rejected: { text: 'La verificación de tu empresa fue rechazada. Revisa los documentos y vuelve a enviarlos.', color: '#B91C1C', bg: '#FEE2E2' }
+  pending: { text: 'Tu empresa está en revisión. Te avisamos apenas quede verificada.', personal: 'Tu identidad está en revisión. Te avisamos apenas quede verificada.', color: '#B45309', bg: '#FEF3C7' },
+  rejected: { text: 'La verificación de tu empresa fue rechazada. Revisa los documentos y vuelve a enviarlos.', personal: 'La verificación de tu identidad fue rechazada. Revisa los documentos y vuelve a enviarlos.', color: '#B91C1C', bg: '#FEE2E2' }
 }
 
 function greeting() {
@@ -73,7 +73,7 @@ export default function Dashboard() {
     <div className="container">
       <h2 style={{ marginTop: 0, marginBottom: 4 }}>{greeting()}</h2>
       <p style={{ opacity: 0.65, fontSize: 14, marginTop: 0, marginBottom: 24 }}>
-        Esto es lo que pasa hoy en {membership?.organizations?.name || 'tu empresa'}.
+        Esto es lo que pasa hoy en {membership?.organizations?.name || (membership?.organizations?.org_type === 'autonomo' ? 'tu cuenta' : 'tu empresa')}.
       </p>
 
       {['propietario', 'admin'].includes(membership?.role) && <AccessControlNotice />}
@@ -84,7 +84,7 @@ export default function Dashboard() {
           style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, background: verificationAlert.bg, borderColor: 'transparent' }}
         >
           <IconShield width={20} height={20} style={{ color: verificationAlert.color, flexShrink: 0 }} />
-          <span style={{ fontSize: 13.5, fontWeight: 600, color: verificationAlert.color }}>{verificationAlert.text}</span>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: verificationAlert.color }}>{membership?.organizations?.org_type === 'autonomo' ? verificationAlert.personal : verificationAlert.text}</span>
         </div>
       )}
 
