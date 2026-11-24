@@ -226,6 +226,9 @@ export default function TopBar() {
   // Solo el propietario puede certificar legalmente la empresa — un admin
   // que solo la configuró no debería ver esta opción como si pudiera usarla.
   const canVerify = membership && membership.role === 'propietario'
+  // Cuenta personal (autónomo) vs empresa: el menú no debe decirle "empresa"
+  // a quien creó una cuenta personal.
+  const isPersonalOrg = membership?.organizations?.org_type === 'autonomo'
   const verificationStatus = membership?.organizations?.verification_status
   const verificationBadge = VERIFICATION_BADGE[verificationStatus]
 
@@ -431,7 +434,7 @@ export default function TopBar() {
 
             {memberships.length > 1 && (
               <div className="menu-section">
-                <div className="menu-section-title">Mis empresas</div>
+                <div className="menu-section-title">{isPersonalOrg ? 'Mis cuentas' : 'Mis empresas'}</div>
                 {/* Solo tiene sentido ver todo mezclado desde la cuenta personal
                     (autónomo) -- entrando a una empresa puntual, lo esperado es
                     ver nada más lo de esa empresa. */}
@@ -471,11 +474,11 @@ export default function TopBar() {
 
             {canSeeQueue && (
               <div className="menu-section">
-                <div className="menu-section-title">Empresa</div>
+                <div className="menu-section-title">{isPersonalOrg ? 'Mi negocio' : 'Empresa'}</div>
                 {/* Equipo, cuentas, invitaciones, solicitudes y reportes vivían
                     como links sueltos acá -- ahora son una sola pantalla que
                     junta todo lo que le pertenece a esta empresa. */}
-                <NavLink to="/empresa" className="menu-link"><IconBuilding /> Mi empresa</NavLink>
+                <NavLink to="/empresa" className="menu-link"><IconBuilding /> {isPersonalOrg ? 'Mi negocio' : 'Mi empresa'}</NavLink>
                 <NavLink to="/asistencia" className="menu-link"><IconUsers /> Asistencia del personal</NavLink>
                 {canOperateKiosk && (
                   <NavLink to="/asistencia/marcar" className="menu-link"><IconCheckCircle /> Modo marcador (reloj de la sucursal)</NavLink>
@@ -483,7 +486,7 @@ export default function TopBar() {
                 {/* Una vez verificada, este paso ya se hizo — no tiene sentido seguir
                     mostrándolo junto a las tareas recurrentes del día a día. */}
                 {canVerify && verificationStatus !== 'verified' && (
-                  <NavLink to="/verificar" className="menu-link"><IconShield /> Verificar mi empresa</NavLink>
+                  <NavLink to="/verificar" className="menu-link"><IconShield /> {isPersonalOrg ? 'Verificar mi identidad' : 'Verificar mi empresa'}</NavLink>
                 )}
               </div>
             )}
@@ -503,8 +506,8 @@ export default function TopBar() {
                   <NavLink to="/mi-asistencia" className="menu-link"><IconCheckCircle /> Mi asistencia (QR)</NavLink>
                   <NavLink to="/mi-horario" className="menu-link"><IconCheckCircle /> Mi horario</NavLink>
                   <NavLink to="/mi-identificacion" className="menu-link"><IconIdCard /> Mi identificación</NavLink>
-                  <NavLink to="/unirme" className="menu-link"><IconLink /> Unirme a otra empresa</NavLink>
-                  <NavLink to="/empresas" className="menu-link"><IconSearch /> Buscar empresas</NavLink>
+                  <NavLink to="/unirme" className="menu-link"><IconLink /> {isPersonalOrg ? 'Unirme a un equipo o empresa' : 'Unirme a otra empresa'}</NavLink>
+                  <NavLink to="/empresas" className="menu-link"><IconSearch /> {isPersonalOrg ? 'Buscar negocios' : 'Buscar empresas'}</NavLink>
                 </>
               )}
               <NavLink to="/ajustes" className="menu-link"><IconSettings /> Ajustes</NavLink>

@@ -19,7 +19,7 @@ const VERIFICATION_BADGE = {
 export default function CompanyHub() {
   const { membership, refreshMemberships } = useAuth()
   const navigate = useNavigate()
-  const orgName = membership?.organizations?.name || 'tu empresa'
+  const orgName = membership?.organizations?.name || (membership?.organizations?.org_type === 'autonomo' ? 'tu negocio' : 'tu empresa')
   const verificationStatus = membership?.organizations?.verification_status
   const verificationBadge = VERIFICATION_BADGE[verificationStatus]
   const canInvite = OWNER_ROLES.includes(membership?.role)
@@ -91,7 +91,7 @@ export default function CompanyHub() {
     <div className="container">
       <h2 style={{ marginTop: 0, marginBottom: 4 }}>{orgName}</h2>
       <p style={{ opacity: 0.65, fontSize: 14, marginTop: 0, marginBottom: 16 }}>
-        Todo lo que le pertenece a esta empresa, en un solo lugar.
+        {membership?.organizations?.org_type === 'autonomo' ? 'Todo lo de tu cuenta, en un solo lugar.' : 'Todo lo que le pertenece a esta empresa, en un solo lugar.'}
       </p>
 
       {verificationBadge && (
@@ -107,7 +107,7 @@ export default function CompanyHub() {
             <span style={{ fontSize: 13.5, fontWeight: 600, color: verificationBadge.color }}>{verificationBadge.label}</span>
           </div>
           {verificationStatus !== 'verified' && membership?.role === 'propietario' && (
-            <Link to="/verificar" className="btn btn-secondary" style={{ fontSize: 12.5 }}>Verificar mi empresa</Link>
+            <Link to="/verificar" className="btn btn-secondary" style={{ fontSize: 12.5 }}>{membership?.organizations?.org_type === 'autonomo' ? 'Verificar mi identidad' : 'Verificar mi empresa'}</Link>
           )}
         </div>
       )}
@@ -116,7 +116,7 @@ export default function CompanyHub() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: editingEmail ? 10 : 0 }}>
           <IconMail width={18} height={18} style={{ opacity: 0.6, flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, opacity: 0.6 }}>Correo de contacto de esta empresa</div>
+            <div style={{ fontSize: 12, opacity: 0.6 }}>{membership?.organizations?.org_type === 'autonomo' ? 'Correo de contacto de tu cuenta' : 'Correo de contacto de esta empresa'}</div>
             {!editingEmail && (
               <div style={{ fontSize: 13.5, fontWeight: 600 }}>
                 {membership?.organizations?.contact_email || 'Sin asignar'}
@@ -170,7 +170,7 @@ export default function CompanyHub() {
           {!confirmingDelete ? (
             <>
               <p style={{ fontSize: 13, opacity: 0.7, marginTop: 0, marginBottom: 12 }}>
-                Borrar esta empresa es permanente. Solo funciona si no tiene comprobantes registrados ni otras
+                Borrar {membership?.organizations?.org_type === 'autonomo' ? 'esta cuenta' : 'esta empresa'} es permanente. Solo funciona si no tiene comprobantes registrados ni otras
                 personas en el equipo -- pensado para empresas creadas por error.
               </p>
               <button className="btn btn-secondary" style={{ color: '#B91C1C', borderColor: 'rgba(185, 28, 28, 0.4)' }} onClick={() => setConfirmingDelete(true)}>
