@@ -11,7 +11,18 @@ export default function PublicPageHeader({ compact = false }) {
       <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
         <img src="/logo.png" alt="Cotejo" style={{ height: 18, width: 'auto' }} />
       </Link>
-      {!compact && (
+      {compact ? (
+        <Link
+          to="/registro"
+          style={{
+            fontSize: 12.5, fontWeight: 600, textDecoration: 'none',
+            padding: '6px 12px', borderRadius: 999,
+            border: '1px solid currentColor', opacity: 0.85, whiteSpace: 'nowrap',
+          }}
+        >
+          Crea tu cuenta
+        </Link>
+      ) : (
         <Link to="/login" style={{ fontSize: 13, opacity: 0.75 }}>
           Iniciar sesión
         </Link>
