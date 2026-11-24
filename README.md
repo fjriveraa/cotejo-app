@@ -23,8 +23,7 @@ npm run dev
 
 ## Usuarios de prueba (ya sembrados en la base de datos)
 
-- **Marta (empleado):** amdreaosorio95@hotmail.com
-- **Ana (contadora):** fernando_mar15@hotmail.com
+- Hay usuarios de prueba sembrados en la base de datos (empleado y contadora); pide los correos al dueño del proyecto.
 
 (Las contraseñas las definió el usuario directamente en Supabase Auth.)
 
