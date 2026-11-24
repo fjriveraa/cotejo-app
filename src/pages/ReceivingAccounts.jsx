@@ -151,7 +151,7 @@ export default function ReceivingAccounts() {
     <div className="container">
       <h2 style={{ marginTop: 0 }}>Cuentas receptoras</h2>
       <p style={{ opacity: 0.7, fontSize: 14, marginTop: -8, marginBottom: 24 }}>
-        Las cuentas bancarias propias donde tu empresa recibe pagos. Aparecen como opciones al registrar un
+        Las cuentas bancarias propias donde {membership?.organizations?.org_type === 'autonomo' ? 'recibes tus pagos' : 'tu empresa recibe pagos'}. Aparecen como opciones al registrar un
         comprobante, y si un pago llega a una cuenta que no está aquí, se marca como "cuenta desconocida" en la
         cola de confirmación para que se revise con más cuidado.
       </p>
