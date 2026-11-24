@@ -541,7 +541,7 @@ export default function GuestSubmit() {
               </div>
             )}
             {!needsPick && qtyCfg.allow && (
-              <div style={{ margin: '4px 0 14px', padding: '12px 16px', borderRadius: 14, border: '1px solid rgba(0,0,0,0.12)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ margin: '2px 0 10px', padding: '10px 16px', borderRadius: 14, border: '1px solid rgba(0,0,0,0.12)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ fontSize: 15, fontWeight: 600 }}>{qtyCfg.label ? `¿Cuántas ${qtyCfg.label}?` : 'Cantidad'}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <button type="button" aria-label="Menos" onClick={() => setQty((q) => Math.max(1, q - 1))} disabled={qty <= 1} style={{ width: 44, height: 44, borderRadius: 12, border: '1px solid #2B6459', background: '#fff', color: '#2B6459', fontSize: 24, fontWeight: 700, cursor: 'pointer', opacity: qty <= 1 ? 0.35 : 1 }}>−</button>
@@ -564,29 +564,29 @@ export default function GuestSubmit() {
               </div>
             )}
             {!needsPick && payAccounts.length > 0 && (
-              <div style={{ margin: '0 0 18px', padding: v2 ? '16px 16px 16px' : '14px 16px', borderRadius: 14, border: '1px solid rgba(0,0,0,0.12)', background: '#fff', textAlign: v2 ? 'center' : 'left' }}>
+              <div style={{ margin: v2 ? '0 0 12px' : '0 0 18px', padding: v2 ? '12px 14px 14px' : '14px 16px', borderRadius: 14, border: '1px solid rgba(0,0,0,0.12)', background: '#fff', textAlign: v2 ? 'center' : 'left' }}>
                 {v2 && unitAmount > 0 && (
                   <div style={{ margin: '0 0 6px' }}>
-                    <div style={{ fontFamily: 'var(--font-display, Fraunces, serif)', fontSize: 38, fontWeight: 700, lineHeight: 1.05, color: '#16483F' }}>
+                    <div style={{ fontFamily: 'var(--font-display, Fraunces, serif)', fontSize: 32, fontWeight: 700, lineHeight: 1.05, color: '#16483F' }}>
                       L {(unitAmount * (qtyCfg.allow ? qty : 1)).toLocaleString('es-HN', { minimumFractionDigits: 2 })}
                     </div>
                     {qtyCfg.allow && qty > 1 && <div style={{ fontSize: 14, opacity: 0.75, marginTop: 4 }}>{qty} × L {unitAmount.toLocaleString('es-HN', { minimumFractionDigits: 2 })}</div>}
                   </div>
                 )}
-                <div style={{ display: v2 ? 'flex' : 'block', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: '#2B6459', marginBottom: v2 ? 12 : 8, paddingBottom: v2 ? 10 : 0, borderBottom: v2 ? '1px solid rgba(0,0,0,0.08)' : 'none' }}>
+                <div style={{ display: v2 ? 'flex' : 'block', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: '#2B6459', marginBottom: v2 ? 8 : 8, paddingBottom: v2 ? 8 : 0, borderBottom: v2 ? '1px solid rgba(0,0,0,0.08)' : 'none' }}>
                   {v2 && stepBadge(1)}{v2 ? 'Deposita aquí' : 'Dónde pagar'}
                 </div>
                 <div style={{ display: 'grid', gap: 14 }}>
                   {payAccounts.map((a, i) => (
                     <div key={`${a.bank}-${a.account_number}-${i}`}>
-                      <div style={{ fontWeight: 700, fontSize: v2 ? 16 : 16 }}>{a.bank}{a.account_type ? ` · ${a.account_type}` : ''}{a.currency && a.currency !== 'HNL' ? ` · ${a.currency}` : ''}</div>
-                      {v2 && <div style={{ fontSize: 13.5, opacity: 0.8, fontWeight: 600, marginTop: 2 }}>{a.holder_name && !v2 ? 'A nombre de' : 'Encargado'}: {a.holder_name || selectedOrg.name}</div>}
-                      <div style={{ display: 'flex', flexDirection: v2 ? 'column' : 'row', alignItems: 'center', justifyContent: v2 ? 'center' : 'flex-start', gap: v2 ? 8 : 10, flexWrap: 'wrap', margin: v2 ? '8px 0 0' : '2px 0' }}>
-                        <span className={v2 ? `acc-num${copiedAcc === i ? ' copied' : ''}` : undefined} style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: v2 ? 24 : 20, fontWeight: 600, letterSpacing: '.04em', padding: v2 ? '0 8px' : 0 }}>{a.account_number}</span>
+                      <div style={{ fontWeight: 700, fontSize: v2 ? 15 : 16 }}>{a.bank}{a.account_type ? ` · ${a.account_type}` : ''}{a.currency && a.currency !== 'HNL' ? ` · ${a.currency}` : ''}</div>
+                      {v2 && <div style={{ fontSize: 13, opacity: 0.8, fontWeight: 600, marginTop: 1 }}>{a.holder_name && !v2 ? 'A nombre de' : 'Encargado'}: {a.holder_name || selectedOrg.name}</div>}
+                      <div style={{ display: 'flex', flexDirection: v2 ? 'column' : 'row', alignItems: 'center', justifyContent: v2 ? 'center' : 'flex-start', gap: v2 ? 6 : 10, flexWrap: 'wrap', margin: v2 ? '6px 0 0' : '2px 0' }}>
+                        <span className={v2 ? `acc-num${copiedAcc === i ? ' copied' : ''}` : undefined} style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: v2 ? 21 : 20, fontWeight: 600, letterSpacing: '.04em', padding: v2 ? '0 8px' : 0 }}>{a.account_number}</span>
                         <button
                           type="button"
                           className={`btn btn-secondary${v2 ? ' copy-btn' : ''}${v2 && copiedAcc === i ? ' copied' : ''}`}
-                          style={v2 ? { fontSize: 14, padding: '8px 16px', minHeight: 44, width: '100%', maxWidth: 240 } : { fontSize: 12, padding: '3px 10px' }}
+                          style={v2 ? { fontSize: 14, padding: '8px 16px', minHeight: 44, width: '100%', maxWidth: 220 } : { fontSize: 12, padding: '3px 10px' }}
                           onClick={() => { navigator.clipboard?.writeText(String(a.account_number).replace(/\s/g, '')); setCopiedAcc(i); setTimeout(() => setCopiedAcc(null), 2000) }}
                         >{copiedAcc === i ? (v2 ? '✓ Copiado' : 'Copiado') : (v2 ? 'Copiar número' : 'Copiar')}</button>
                       </div>
