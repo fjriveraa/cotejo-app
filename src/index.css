@@ -70,7 +70,11 @@ a {
 }
 
 .topbar {
-  position: relative;
+  /* Fija y opaca: así Safari (iOS 26) no difumina el contenido que pasa por
+     debajo de su barra superior y el encabezado no queda "medio escondido". */
+  position: sticky;
+  top: 0;
+  z-index: 30;
   display: flex;
   flex-direction: column;
   gap: 12px;
